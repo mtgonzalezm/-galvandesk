@@ -82,41 +82,7 @@ const TIPOS   = ["Comportamiento", "Ausencia", "Académico", "Otro"];
 const HORAS   = ["1ª hora", "2ª hora", "3ª hora", "4ª hora", "5ª hora", "6ª hora", "7ª hora", "Recreo"];
 const MODULOS = ["Módulo A", "Módulo B", "Módulo C"];
 const MOTIVOS = ["Enfermedad", "Asunto personal", "Formación", "Baja médica", "Otro"];
-
-// ─── Contraseñas de acceso ───────────────────────────────────────────────────
-const PASSWORDS = {
-  jefatura:       "jefatura2024",
-  administracion: "admin2024",
-};
-
-// ─── Zonas del centro ────────────────────────────────────────────────────────
-const ZONAS_CENTRO = [
-  { id:"A0-pasillo",  label:"Edificio A · Planta 0 · Pasillo",    edificio:"A", tipo:"pasillo" },
-  { id:"A1-pasillo",  label:"Edificio A · Planta 1 · Pasillo",    edificio:"A", tipo:"pasillo" },
-  { id:"A2-pasillo",  label:"Edificio A · Planta 2 · Pasillo",    edificio:"A", tipo:"pasillo" },
-  { id:"A0-bano-n",   label:"Edificio A · Planta 0 · Baño Niñas", edificio:"A", tipo:"bano"    },
-  { id:"A1-bano-c",   label:"Edificio A · Planta 1 · Baño Niños", edificio:"A", tipo:"bano"    },
-  { id:"A0-biblio",   label:"Edificio A · Planta 0 · Biblioteca", edificio:"A", tipo:"especial"},
-  { id:"A0-maquina",  label:"Edificio A · Planta 0 · Máquina",    edificio:"A", tipo:"especial"},
-  { id:"B0-pasillo",  label:"Edificio B · Planta 0 · Pasillo",    edificio:"B", tipo:"pasillo" },
-  { id:"B1-pasillo",  label:"Edificio B · Planta 1 · Pasillo",    edificio:"B", tipo:"pasillo" },
-  { id:"B2-pasillo",  label:"Edificio B · Planta 2 · Pasillo",    edificio:"B", tipo:"pasillo" },
-  { id:"C0-pasillo",  label:"Edificio C · Planta 0 · Pasillo",    edificio:"C", tipo:"pasillo" },
-  { id:"C1-pasillo",  label:"Edificio C · Planta 1 · Pasillo",    edificio:"C", tipo:"pasillo" },
-  { id:"C2-pasillo",  label:"Edificio C · Planta 2 · Pasillo",    edificio:"C", tipo:"pasillo" },
-  { id:"aula",        label:"Aula — Sustitución de clase",         edificio:"-", tipo:"aula"    },
-  { id:"rec-puerta",  label:"Recreo · Zona Puerta",               edificio:"-", tipo:"recreo"  },
-  { id:"rec-central", label:"Recreo · Patio Central",             edificio:"-", tipo:"recreo"  },
-  { id:"rec-coches",  label:"Recreo · Zona Coches",               edificio:"-", tipo:"recreo"  },
-  { id:"rec-pistas",  label:"Recreo · Pistas de Fútbol",          edificio:"-", tipo:"recreo"  },
-  { id:"rec-bano-n",  label:"Recreo · Baño Niñas",                edificio:"-", tipo:"recreo"  },
-  { id:"rec-bano-c",  label:"Recreo · Baño Niños",                edificio:"-", tipo:"recreo"  },
-  { id:"rec-biblio",  label:"Recreo · Biblioteca",                edificio:"-", tipo:"recreo"  },
-  { id:"rec-maquina", label:"Recreo · Máquina de Bebidas",        edificio:"-", tipo:"recreo"  },
-];
-
-const HORAS_GUARDIA = ["1ª hora","2ª hora","3ª hora","4ª hora","Recreo","5ª hora","6ª hora","7ª hora"];
-const DIAS_SEMANA   = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+const ZONAS_GUARDIA = ["Patio A", "Patio B", "Pasillo Planta Baja", "Pasillo 1ª Planta", "Pasillo 2ª Planta", "Biblioteca", "Sala de Usos Múltiples", "Aula asignada", "Otra zona"];
 
 // ─── CSV import ──────────────────────────────────────────────────────────────
 const COLUMN_MAP = {
@@ -970,542 +936,6 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
 }
 
 // ─── App principal ────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════
-// LOGIN SCREEN con contraseña
-// ═══════════════════════════════════════════════════════════════════════════
-function LoginScreen({ onLogin, C }) {
-  const [loginPerfil, setLoginPerfil] = useState(null);
-  const [pass, setPass]               = useState("");
-  const [error, setError]             = useState(false);
-
-  function intentarLogin(perfil) {
-    if (perfil.id === "profesor") { onLogin(perfil); return; }
-    setLoginPerfil(perfil);
-    setPass(""); setError(false);
-  }
-
-  function confirmarPass() {
-    const key = loginPerfil.id === "jefatura" ? "jefatura" : "administracion";
-    if (pass === PASSWORDS[key]) { onLogin(loginPerfil); }
-    else { setError(true); setPass(""); }
-  }
-
-  return (
-    <div style={{ minHeight:"100vh", background:`linear-gradient(135deg,${C.dark},${C.blue})`, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"system-ui,sans-serif", padding:20 }}>
-      <style>{`* { box-sizing:border-box; } body { margin:0; }`}</style>
-      <div style={{ background:C.white, borderRadius:20, padding:"40px 36px", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
-        <div style={{ fontSize:52, marginBottom:4 }}>🏫</div>
-        <div style={{ fontSize:11, color:C.gray, letterSpacing:2, marginBottom:4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-        <h1 style={{ color:C.dark, margin:"0 0 4px", fontSize:28 }}>GalvánDesk</h1>
-        <p style={{ color:C.gray, marginBottom:32, fontSize:13 }}>Sistema de Gestión de Incidencias</p>
-
-        {!loginPerfil ? (
-          <>
-            {[
-              { id:"profesor",  label:"👨‍🏫 Profesor",      sinPass:true  },
-              { id:"jefatura",  label:"📊 Jefatura / Dirección", sinPass:false },
-              { id:"admin",     label:"⚙️ Administración",  sinPass:false },
-            ].map(p => (
-              <button key={p.id} onClick={() => intentarLogin(p)}
-                style={{ display:"block", width:"100%", padding:"14px 20px", marginBottom:12, background:C.cream, border:`2px solid ${C.teal}`, borderRadius:12, cursor:"pointer", fontSize:16, fontWeight:700, color:C.dark, transition:"all .2s" }}
-                onMouseOver={e => { e.currentTarget.style.background=C.teal; e.currentTarget.style.color="#fff"; }}
-                onMouseOut={e  => { e.currentTarget.style.background=C.cream; e.currentTarget.style.color=C.dark; }}>
-                {p.label} {!p.sinPass && <span style={{ fontSize:12, opacity:0.6 }}>🔒</span>}
-              </button>
-            ))}
-          </>
-        ) : (
-          <div>
-            <div style={{ fontSize:32, marginBottom:8 }}>🔒</div>
-            <div style={{ fontWeight:700, fontSize:16, color:C.dark, marginBottom:4 }}>{loginPerfil.label}</div>
-            <p style={{ color:C.gray, fontSize:13, marginBottom:20 }}>Introduce la contraseña de acceso</p>
-            <input
-              type="password"
-              value={pass}
-              onChange={e => { setPass(e.target.value); setError(false); }}
-              onKeyDown={e => { if(e.key==="Enter") confirmarPass(); }}
-              placeholder="Contraseña..."
-              autoFocus
-              style={{ width:"100%", padding:"12px 16px", borderRadius:10, border:`2px solid ${error?C.salmon:C.teal}`, fontSize:16, marginBottom:8, textAlign:"center", outline:"none" }}
-            />
-            {error && <div style={{ color:C.salmon, fontSize:13, marginBottom:10, fontWeight:600 }}>❌ Contraseña incorrecta</div>}
-            <div style={{ display:"flex", gap:10, marginTop:8 }}>
-              <button onClick={() => setLoginPerfil(null)}
-                style={{ flex:1, padding:"12px", borderRadius:10, border:`1px solid #ccc`, background:"#f5f5f5", cursor:"pointer", fontWeight:600, fontSize:14 }}>
-                ← Volver
-              </button>
-              <button onClick={confirmarPass}
-                style={{ flex:2, padding:"12px", borderRadius:10, border:"none", background:C.teal, color:"#fff", cursor:"pointer", fontWeight:700, fontSize:14 }}>
-                Entrar
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MI GUARDIA HOY (Profesor)
-// ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selStyle, labelStyle }) {
-  const hoy      = new Date();
-  const diasES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const diaHoy   = diasES[hoy.getDay()];
-  const esFinde  = hoy.getDay() === 0 || hoy.getDay() === 6;
-
-  const guardiasDia = HORAS_GUARDIA.map(hora => {
-    const key  = `${diaHoy}|${hora}|${fProfesor}`;
-    const zona = cuadrante[key];
-    const z    = ZONAS_CENTRO.find(z => z.id === zona);
-    return { hora, zona: z ? z.label : null };
-  }).filter(g => g.zona);
-
-  return (
-    <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>🔄 Mi Guardia Hoy</h2>
-      <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-        <label style={labelStyle}>Soy el/la profesor/a</label>
-        <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle}>
-          {profesores.map(p => <option key={p}>{p}</option>)}
-        </select>
-      </div>
-
-      {esFinde ? (
-        <div style={{ background:"#E8F5F3", borderRadius:12, padding:30, textAlign:"center", color:C.teal, fontWeight:600, fontSize:16 }}>
-          🎉 ¡Hoy es {diaHoy}! No hay guardias.
-        </div>
-      ) : guardiasDia.length === 0 ? (
-        <div style={{ background:C.white, borderRadius:12, padding:30, textAlign:"center", boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize:40, marginBottom:10 }}>✅</div>
-          <div style={{ fontWeight:700, color:C.dark, fontSize:16 }}>No tienes guardias asignadas hoy ({diaHoy})</div>
-          <div style={{ color:C.gray, fontSize:13, marginTop:6 }}>Consulta con Jefatura si crees que es un error</div>
-        </div>
-      ) : (
-        <div>
-          <div style={{ fontWeight:600, color:C.gray, fontSize:13, marginBottom:10 }}>
-            📅 {diaHoy} — {guardiasDia.length} guardia(s) asignada(s)
-          </div>
-          {guardiasDia.map((g, i) => {
-            const esRecreoo = g.hora === "Recreo";
-            const color = esRecreoo ? C.blue : C.teal;
-            return (
-              <div key={i} style={{ background:C.white, borderRadius:12, padding:18, marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", borderLeft:`5px solid ${color}` }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div>
-                    <div style={{ fontWeight:800, fontSize:18, color:C.dark }}>{g.hora}</div>
-                    <div style={{ fontSize:15, color:color, fontWeight:600, marginTop:4 }}>📍 {g.zona}</div>
-                  </div>
-                  <div style={{ background:esRecreoo?"#EEF5F8":"#E8F5F3", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:700, color }}>
-                    {esRecreoo ? "RECREO" : "GUARDIA"}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          <div style={{ background:"#FFF8E8", borderRadius:10, padding:14, marginTop:8, fontSize:13, color:C.dark, border:`1px solid #fbbf24` }}>
-            ⚠️ Si no puedes asistir a alguna guardia, notifícalo cuanto antes en la pestaña <strong>Notificar Ausencia</strong>.
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// NOTIFICAR AUSENCIA (Profesor)
-// ═══════════════════════════════════════════════════════════════════════════
-function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
-  const [enviado, setEnviado] = useState(false);
-
-  function toggleHora(h) {
-    setAusHoras(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
-  }
-
-  function enviar() {
-    if (!ausProfesor || !ausFecha || ausHoras.length === 0) return;
-    const nueva = {
-      id:        Date.now(),
-      profesor:  ausProfesor,
-      motivo:    ausMotivo,
-      fecha:     ausFecha,
-      horas:     ausHoras,
-      tarea:     ausTarea,
-      ts:        new Date().toISOString(),
-      leida:     false,
-    };
-    setAusencias(prev => [nueva, ...prev]);
-    setEnviado(true);
-    setAusFecha(""); setAusHoras([]); setAusTarea("");
-    setTimeout(() => setEnviado(false), 4000);
-  }
-
-  const misAusencias = ausencias.filter(a => a.profesor === fProfesor);
-
-  return (
-    <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📢 Notificar Ausencia</h2>
-
-      {enviado && (
-        <div style={{ background:"#E8F5F3", border:`2px solid ${C.teal}`, borderRadius:12, padding:16, marginBottom:16, fontWeight:700, color:C.teal, fontSize:15 }}>
-          ✅ Ausencia notificada correctamente. Jefatura ha sido informada.
-        </div>
-      )}
-
-      <div style={{ background:C.white, borderRadius:12, padding:20, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", marginBottom:16 }}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
-          <div>
-            <label style={labelStyle}>Soy el/la profesor/a *</label>
-            <select value={ausProfesor} onChange={e => setAusProfesor(e.target.value)} style={selStyle}>
-              <option value="">— Seleccionar —</option>
-              {profesores.map(p => <option key={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={labelStyle}>Fecha de ausencia *</label>
-            <input type="date" value={ausFecha} onChange={e => setAusFecha(e.target.value)} style={inpStyle} />
-          </div>
-          <div style={{ gridColumn:"1/-1" }}>
-            <label style={labelStyle}>Motivo</label>
-            <select value={ausMotivo} onChange={e => setAusMotivo(e.target.value)} style={selStyle}>
-              {MOTIVOS.map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-        </div>
-
-        <div style={{ marginBottom:16 }}>
-          <label style={labelStyle}>Horas afectadas * (selecciona todas las que correspondan)</label>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:6 }}>
-            {HORAS_GUARDIA.map(h => {
-              const sel = ausHoras.includes(h);
-              return (
-                <button key={h} onClick={() => toggleHora(h)}
-                  style={{ padding:"8px 14px", borderRadius:8, border:`2px solid ${sel?C.teal:"#d1d5db"}`, background:sel?C.teal:C.white, color:sel?"#fff":C.dark, cursor:"pointer", fontWeight:600, fontSize:13, transition:"all .15s" }}>
-                  {h}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ marginBottom:20 }}>
-          <label style={labelStyle}>Tarea para el profesor sustituto (opcional)</label>
-          <textarea value={ausTarea} onChange={e => setAusTarea(e.target.value)} rows={3}
-            placeholder="Describe qué deben hacer los alumnos, qué material hay preparado..."
-            style={{ ...inpStyle, resize:"vertical" }} />
-        </div>
-
-        <button onClick={enviar} disabled={!ausProfesor || !ausFecha || ausHoras.length === 0}
-          style={{ width:"100%", padding:14, borderRadius:10, border:"none", background:(!ausProfesor||!ausFecha||ausHoras.length===0)?"#94a3b8":C.salmon, color:"#fff", fontWeight:700, fontSize:15, cursor:(!ausProfesor||!ausFecha||ausHoras.length===0)?"not-allowed":"pointer" }}>
-          📢 Notificar Ausencia a Jefatura
-        </button>
-      </div>
-
-      {misAusencias.length > 0 && (
-        <div>
-          <h3 style={{ color:C.dark }}>Mis ausencias notificadas</h3>
-          {misAusencias.map(a => (
-            <div key={a.id} style={{ background:C.white, borderRadius:10, padding:14, marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${C.salmon}` }}>
-              <div style={{ fontWeight:700, color:C.dark }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
-              <div style={{ fontSize:13, color:C.gray, marginTop:4 }}>Horas: {a.horas.join(", ")}</div>
-              {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 {a.tarea}</div>}
-              <div style={{ fontSize:11, color:C.gray, marginTop:4 }}>Notificado el {fmt(a.ts)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// CUADRANTE DE GUARDIAS (Jefatura) — constructor
-// ═══════════════════════════════════════════════════════════════════════════
-function CuadranteGuardias({ profesores, cuadrante, setCuadrante, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
-  function setAsignacion(dia, hora, profesor, zonaId) {
-    const key = `${dia}|${hora}|${profesor}`;
-    setCuadrante(prev => {
-      const next = { ...prev };
-      if (zonaId === "") delete next[key];
-      else next[key] = zonaId;
-      return next;
-    });
-  }
-
-  function getAsignacion(dia, hora, profesor) {
-    return cuadrante[`${dia}|${hora}|${profesor}`] || "";
-  }
-
-  const profesorSel = quinceProfesor || (profesores[0] || "");
-
-  return (
-    <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📅 Cuadrante de Guardias</h2>
-
-      <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-          <div>
-            <label style={labelStyle}>Inicio de quincena</label>
-            <input type="date" value={quinceInicio} onChange={e => setQInicio(e.target.value)} style={inpStyle} />
-          </div>
-          <div>
-            <label style={labelStyle}>Profesor a configurar</label>
-            <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={selStyle}>
-              {profesores.map(p => <option key={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ background:C.white, borderRadius:12, padding:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", overflowX:"auto" }}>
-        <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>
-          Asignación de {profesorSel} — selecciona zona para cada hora
-        </div>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:600 }}>
-          <thead>
-            <tr style={{ background:C.dark }}>
-              <th style={{ padding:"8px 12px", color:"#fff", textAlign:"left", width:100 }}>Hora</th>
-              {DIAS_SEMANA.map(d => (
-                <th key={d} style={{ padding:"8px 12px", color:"#fff", textAlign:"left" }}>{d}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {HORAS_GUARDIA.map((hora, i) => (
-              <tr key={hora} style={{ background:i%2===0?"#fff":C.light }}>
-                <td style={{ padding:"6px 12px", fontWeight:700, color:C.dark, fontSize:13, whiteSpace:"nowrap" }}>{hora}</td>
-                {DIAS_SEMANA.map(dia => {
-                  const val = getAsignacion(dia, hora, profesorSel);
-                  const z   = ZONAS_CENTRO.find(z => z.id === val);
-                  return (
-                    <td key={dia} style={{ padding:"4px 8px" }}>
-                      <select
-                        value={val}
-                        onChange={e => setAsignacion(dia, hora, profesorSel, e.target.value)}
-                        style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${val?"#44A194":"#d1d5db"}`, fontSize:11, background:val?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer" }}>
-                        <option value="">— Libre —</option>
-                        <optgroup label="── Edificio A">
-                          {ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}
-                        </optgroup>
-                        <optgroup label="── Edificio B">
-                          {ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}
-                        </optgroup>
-                        <optgroup label="── Edificio C">
-                          {ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}
-                        </optgroup>
-                        <optgroup label="── Aula / Recreo">
-                          {ZONAS_CENTRO.filter(z=>z.edificio==="-").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}
-                        </optgroup>
-                      </select>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>
-          💾 Los cambios se guardan automáticamente. Configura profesor por profesor.
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PARTE DEL DÍA (Jefatura) — tabla cubierto/descubierta
-// ═══════════════════════════════════════════════════════════════════════════
-function ParteDia({ profesores, cuadrante, ausencias, C, fmt }) {
-  const hoy     = new Date();
-  const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-  const diaHoy  = diasES[hoy.getDay()];
-  const fechaHoy = hoy.toISOString().split("T")[0];
-
-  // Ausencias notificadas para hoy
-  const ausHoy = ausencias.filter(a => a.fecha === fechaHoy);
-  const profesoresAusentesHoy = new Set(ausHoy.flatMap(a => a.horas.map(h => `${a.profesor}|${h}`)));
-
-  // Construir mapa de todas las zonas asignadas hoy con su estado
-  const asignaciones = [];
-  HORAS_GUARDIA.forEach(hora => {
-    profesores.forEach(prof => {
-      const key  = `${diaHoy}|${hora}|${prof}`;
-      const zona = cuadrante[key];
-      if (!zona) return;
-      const z       = ZONAS_CENTRO.find(z => z.id === zona);
-      const ausente = profesoresAusentesHoy.has(`${prof}|${hora}`);
-      asignaciones.push({ hora, profesor: prof, zona: z?.label || zona, ausente });
-    });
-  });
-
-  // Agrupar por hora
-  const porHora = HORAS_GUARDIA.map(hora => ({
-    hora,
-    items: asignaciones.filter(a => a.hora === hora),
-  })).filter(h => h.items.length > 0);
-
-  const totalCubiertas   = asignaciones.filter(a => !a.ausente).length;
-  const totalDescubiertas = asignaciones.filter(a => a.ausente).length;
-
-  return (
-    <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>🔄 Parte del Día — {diaHoy}</h2>
-
-      {/* Resumen */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:16 }}>
-        {[
-          { label:"Total asignadas", value:asignaciones.length, color:C.dark },
-          { label:"Cubiertas",       value:totalCubiertas,      color:C.teal },
-          { label:"Descubiertas",    value:totalDescubiertas,   color:C.salmon },
-        ].map(s => (
-          <div key={s.label} style={{ background:C.white, borderRadius:10, padding:14, textAlign:"center", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderTop:`4px solid ${s.color}` }}>
-            <div style={{ fontSize:26, fontWeight:800, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:11, color:C.gray, marginTop:2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {ausHoy.length > 0 && (
-        <div style={{ background:"#FDF0EF", border:`1px solid ${C.salmon}`, borderRadius:10, padding:12, marginBottom:16, fontSize:13 }}>
-          <strong style={{ color:C.salmon }}>⚠️ Ausencias notificadas hoy:</strong>
-          {ausHoy.map(a => (
-            <div key={a.id} style={{ marginTop:4, color:C.dark }}>
-              · {a.profesor} — {a.horas.join(", ")} — {a.motivo}
-              {a.tarea && <span style={{ color:C.gray }}> · Tarea: {a.tarea.slice(0,50)}</span>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {porHora.length === 0 ? (
-        <div style={{ background:C.white, borderRadius:12, padding:30, textAlign:"center", color:C.gray, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-          No hay guardias configuradas para hoy.<br/>
-          <span style={{ fontSize:13 }}>Ve a <strong>Cuadrante Guardias</strong> para asignar zonas.</span>
-        </div>
-      ) : (
-        porHora.map(({ hora, items }) => (
-          <div key={hora} style={{ background:C.white, borderRadius:12, marginBottom:12, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", overflow:"hidden" }}>
-            <div style={{ background:hora==="Recreo"?C.blue:C.dark, color:"#fff", padding:"10px 16px", fontWeight:700, fontSize:14 }}>
-              {hora==="Recreo"?"🏃 "+hora:"⏰ "+hora}
-            </div>
-            <table style={{ width:"100%", borderCollapse:"collapse" }}>
-              <thead>
-                <tr style={{ background:C.light }}>
-                  <th style={{ padding:"7px 16px", textAlign:"left", fontSize:12, color:C.gray, fontWeight:600 }}>Zona</th>
-                  <th style={{ padding:"7px 16px", textAlign:"left", fontSize:12, color:C.gray, fontWeight:600 }}>Profesor asignado</th>
-                  <th style={{ padding:"7px 16px", textAlign:"center", fontSize:12, color:C.gray, fontWeight:600 }}>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr key={i} style={{ borderBottom:`1px solid ${C.cream}` }}>
-                    <td style={{ padding:"10px 16px", fontSize:13, color:C.dark }}>{item.zona}</td>
-                    <td style={{ padding:"10px 16px", fontSize:13, color:C.dark }}>{item.profesor}</td>
-                    <td style={{ padding:"10px 16px", textAlign:"center" }}>
-                      {item.ausente
-                        ? <span style={{ color:C.salmon, fontWeight:700, fontSize:13 }}>🔴 Descubierta</span>
-                        : <span style={{ color:C.teal,   fontWeight:700, fontSize:13 }}>🟢 Cubierto</span>
-                      }
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// GESTIÓN DE AUSENCIAS (Jefatura)
-// ═══════════════════════════════════════════════════════════════════════════
-function GestionAusencias({ ausencias, setAusencias, profesores, cuadrante, C, fmt }) {
-  const [filtFecha, setFiltFecha] = useState("");
-  const [filtProf,  setFiltProf]  = useState("");
-
-  const ausFiltradas = ausencias.filter(a => {
-    if (filtFecha && a.fecha !== filtFecha)           return false;
-    if (filtProf  && a.profesor !== filtProf)         return false;
-    return true;
-  });
-
-  return (
-    <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📢 Gestión de Ausencias</h2>
-
-      <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-          <div>
-            <label style={{ display:"block", fontWeight:600, fontSize:13, color:C.dark, marginBottom:6 }}>Filtrar por fecha</label>
-            <input type="date" value={filtFecha} onChange={e=>setFiltFecha(e.target.value)}
-              style={{ width:"100%", padding:"8px 12px", borderRadius:8, border:"1px solid #d1d5db", fontSize:13, boxSizing:"border-box" }}/>
-          </div>
-          <div>
-            <label style={{ display:"block", fontWeight:600, fontSize:13, color:C.dark, marginBottom:6 }}>Filtrar por profesor</label>
-            <select value={filtProf} onChange={e=>setFiltProf(e.target.value)}
-              style={{ width:"100%", padding:"8px 12px", borderRadius:8, border:"1px solid #d1d5db", fontSize:13 }}>
-              <option value="">Todos</option>
-              {profesores.map(p=><option key={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-        <button onClick={()=>{setFiltFecha("");setFiltProf("");}}
-          style={{ marginTop:10, background:"none", border:"1px solid #d1d5db", borderRadius:8, padding:"6px 14px", cursor:"pointer", fontSize:12, color:C.gray }}>
-          Limpiar filtros
-        </button>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:12, marginBottom:16 }}>
-        {[
-          { label:"Total notificadas", value:ausencias.length,                                    color:C.dark  },
-          { label:"Sin leer",          value:ausencias.filter(a=>!a.leida).length,                color:C.salmon},
-          { label:"Con tarea dejada",  value:ausencias.filter(a=>a.tarea&&a.tarea.trim()).length, color:C.teal  },
-        ].map(s=>(
-          <div key={s.label} style={{ background:C.white, borderRadius:10, padding:14, textAlign:"center", boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderTop:`4px solid ${s.color}` }}>
-            <div style={{ fontSize:24, fontWeight:800, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:11, color:C.gray, marginTop:2 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {ausFiltradas.length === 0 ? (
-        <div style={{ background:C.white, borderRadius:12, padding:30, textAlign:"center", color:C.gray, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
-          No hay ausencias notificadas
-        </div>
-      ) : ausFiltradas.map(a => (
-        <div key={a.id} onClick={()=>setAusencias(prev=>prev.map(x=>x.id===a.id?{...x,leida:true}:x))}
-          style={{ background:a.leida?C.white:"#FFF8E8", borderRadius:12, padding:16, marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${a.leida?"#e5e7eb":C.salmon}`, cursor:"pointer" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
-            <div>
-              <div style={{ fontWeight:700, color:C.dark, fontSize:15 }}>
-                👨‍🏫 {a.profesor}
-                {!a.leida && <span style={{ marginLeft:8, fontSize:11, background:C.salmon, color:"#fff", borderRadius:6, padding:"2px 8px" }}>Sin leer</span>}
-              </div>
-              <div style={{ fontSize:13, color:C.gray, marginTop:3 }}>
-                📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · Motivo: {a.motivo}
-              </div>
-              <div style={{ fontSize:13, color:C.dark, marginTop:3 }}>
-                ⏰ Horas afectadas: <strong>{a.horas.join(", ")}</strong>
-              </div>
-              {a.tarea && (
-                <div style={{ fontSize:13, color:C.dark, marginTop:6, background:C.light, borderRadius:6, padding:"6px 10px" }}>
-                  📝 Tarea dejada: {a.tarea}
-                </div>
-              )}
-            </div>
-            <div style={{ fontSize:11, color:C.gray, whiteSpace:"nowrap" }}>
-              Notificado: {fmt(a.ts)}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export default function App() {
   const [perfil, setPerfil]       = useState(null);
   const [tab, setTab]             = useState("partes");
@@ -1564,17 +994,6 @@ export default function App() {
   const [guardiaGenerada, setGuardiaGenerada]     = useState(null);
   const [nuevoProfesor, setNuevoProfesor]         = useState("");
 
-  // Guardias — nuevo sistema
-  const [cuadrante, setCuadrante]   = useState({});   // { "Lunes|1ª hora|profesorId": zonaId }
-  const [ausencias, setAusencias]   = useState([]);   // notificaciones de ausencia
-  const [quinceInicio, setQInicio]  = useState("");   // fecha inicio quincena
-  const [quinceProfesor, setQProf]  = useState("");   // profesor seleccionado en cuadrante
-  const [ausMotivo, setAusMotivo]   = useState("Enfermedad");
-  const [ausFecha, setAusFecha]     = useState("");
-  const [ausHoras, setAusHoras]     = useState([]);
-  const [ausTarea, setAusTarea]     = useState("");
-  const [ausProfesor, setAusProfesor] = useState("");
-
   // Carga
   useEffect(() => {
     async function load() {
@@ -1584,9 +1003,7 @@ export default function App() {
       const a  = await sGet("alertas");   if (a)  setAlertas(a);
       const al = await sGet("alumnos");   if (al) setAlumnos(al);
       const pr = await sGet("profesores");if (pr) setProfesores(pr);
-      const g  = await sGet("guardias");    if (g)  setGuardias(g);
-      const cq = await sGet("cuadrante");   if (cq) setCuadrante(cq);
-      const au = await sGet("ausencias");   if (au) setAusencias(au);
+      const g  = await sGet("guardias"); if (g)  setGuardias(g);
       setLoading(false);
     }
     load();
@@ -1597,9 +1014,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("alertas", alertas); },   [alertas, loading]);
   useEffect(() => { if (!loading) sSet("alumnos", alumnos); },   [alumnos, loading]);
   useEffect(() => { if (!loading) sSet("profesores", profesores); }, [profesores, loading]);
-  useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias, loading]);
-  useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
-  useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
+  useEffect(() => { if (!loading) sSet("guardias", guardias); }, [guardias, loading]);
 
   // Derivados
   const cursos        = [...new Set(alumnos.map(a => a.curso))].sort();
@@ -1709,51 +1124,77 @@ export default function App() {
   if (printParte)   return <PrintParte parte={printParte} onClose={() => setPrintParte(null)} />;
   if (printInforme) return <PrintInforme partes={partesFiltrados} filtros={{ filtCurso, filtAlumno, filtGravedad, filtFechaDesde, filtFechaHasta }} onClose={() => setPrintInforme(false)} />;
 
-  // ── Pantalla de selección de perfil con contraseña ──
+  // ── Pantalla de selección de perfil ──
   if (!perfil) return (
-    <LoginScreen
-      onLogin={(p) => { setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
-      C={C}
-    />
+    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
+      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <div style={{ background: C.white, borderRadius: 20, padding: "40px 36px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
+        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
+        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
+        <p style={{ color: C.gray, marginBottom: 32, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        {[
+          { id: "profesor",  label: "👨‍🏫 Profesor" },
+          { id: "jefatura",  label: "📊 Jefatura" },
+          { id: "admin",     label: "⚙️ Administración" },
+        ].map(p => (
+          <button key={p.id}
+            onClick={() => { setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
+            style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark, transition: "all .2s" }}
+            onMouseOver={e => { e.currentTarget.style.background = C.teal; e.currentTarget.style.color = "#fff"; }}
+            onMouseOut={e => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.dark; }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 
   const tabs = perfil.id === "profesor"
     ? [
-        { id: "partes",          label: "📋 Nuevo Parte" },
-        { id: "parte_grupo",     label: "👥 Parte de Grupo" },
-        { id: "bano",            label: "🚻 Baños" },
-        { id: "mi_guardia",      label: "🔄 Mi Guardia Hoy" },
-        { id: "notif_ausencia",  label: "📢 Notificar Ausencia" },
-        { id: "historial",       label: "🗂 Mis Partes" },
+        { id: "partes",            label: "📋 Nuevo Parte" },
+        { id: "parte_grupo",       label: "👥 Parte de Grupo" },
+        { id: "bano",              label: "🚻 Baños" },
+        { id: "planificador",      label: "🗓 Planificador Guardias" },
+        { id: "guardias_prof",     label: "🔄 Registrar Guardia" },
+        { id: "guardias_ver",      label: "📄 Ver Guardias" },
+        { id: "historial",         label: "🗂 Mis Partes" },
       ]
     : perfil.id === "jefatura"
     ? [
-        { id: "dashboard",       label: "📊 Dashboard" },
-        { id: "por_curso",       label: "🏫 Por Curso" },
-        { id: "por_alumno",      label: "👤 Por Alumno" },
-        { id: "partes_todos",    label: "📋 Partes" },
-        { id: "cuadrante",       label: "📅 Cuadrante Guardias" },
-        { id: "parte_dia",       label: "🔄 Parte del Día" },
-        { id: "ausencias_jef",   label: "📢 Ausencias" },
-        { id: "bano_live",       label: "🚻 Baños" },
-        { id: "alertas",         label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas` },
-        { id: "informe",         label: "📤 Informe" },
+        { id: "dashboard",    label: "📊 Dashboard" },
+        { id: "por_curso",    label: "🏫 Por Curso" },
+        { id: "por_alumno",   label: "👤 Por Alumno" },
+        { id: "partes_todos", label: "📋 Partes" },
+        { id: "planificador", label: "🗓 Planificador Guardias" },
+        { id: "guardias_jef", label: "🔄 Guardias" },
+        { id: "bano_live",    label: "🚻 Baños" },
+        { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas` },
+        { id: "informe",      label: "📤 Informe" },
       ]
     : [
-        { id: "admin_panel",      label: "👥 Alumnos" },
-        { id: "admin_profesores", label: "👨‍🏫 Profesores" },
-        { id: "admin_zonas",      label: "🏫 Zonas del Centro" },
+        { id: "admin_panel",       label: "👥 Alumnos" },
+        { id: "admin_profesores",  label: "👨‍🏫 Profesores" },
       ];
 
   return (
-    <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif", width: "100%" }}>
+    <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif" }}>
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; }
+        .galvan-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .galvan-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .galvan-tabs::-webkit-scrollbar { display: none; }
+        @media (max-width: 768px) {
+          .galvan-content { padding: 12px; }
+          .galvan-grid-3 { grid-template-columns: 1fr !important; }
+          .galvan-grid-2 { grid-template-columns: 1fr !important; }
+          .galvan-hide-mobile { display: none !important; }
+        }
         @media print { .no-print { display: none !important; } }
       `}</style>
-      {/* Header — ancho completo */}
-      <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+      {/* Header */}
+      <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 26 }}>🏫</span>
           <div>
@@ -1766,18 +1207,19 @@ export default function App() {
         </button>
       </div>
 
-      {/* Tabs — ancho completo */}
-      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, display: "flex", overflowX: "auto", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", width: "100%", WebkitOverflowScrolling: "touch" }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s", flexShrink: 0 }}>
-            {t.label}
-          </button>
-        ))}
+      {/* Tabs */}
+      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }} className="galvan-tabs">
+        <div className="galvan-tabs" style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s", flexShrink: 0 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Contenido — centrado con max-width */}
-      <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
+      <div className="galvan-content">
 
         {/* Alerta flotante */}
         {showAlerta && (
@@ -1967,86 +1409,307 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Mi Guardia Hoy (Profesor) ── */}
-        {tab === "mi_guardia" && (
-          <MiGuardiaHoy
+        {/* ── Planificador de Guardias ── */}
+        {tab === "planificador" && (
+          <PlanificadorGuardias
             profesores={profesores}
-            cuadrante={cuadrante}
-            fProfesor={fProfesor}
-            setFProfesor={setFProfesor}
-            C={C}
-            selStyle={selStyle}
-            labelStyle={labelStyle}
-          />
-        )}
-
-        {/* ── Notificar Ausencia (Profesor) ── */}
-        {tab === "notif_ausencia" && (
-          <NotificarAusencia
-            profesores={profesores}
-            ausencias={ausencias}
-            setAusencias={setAusencias}
-            ausProfesor={ausProfesor}
-            setAusProfesor={setAusProfesor}
-            ausMotivo={ausMotivo}
-            setAusMotivo={setAusMotivo}
-            ausFecha={ausFecha}
-            setAusFecha={setAusFecha}
-            ausHoras={ausHoras}
-            setAusHoras={setAusHoras}
-            ausTarea={ausTarea}
-            setAusTarea={setAusTarea}
-            fProfesor={fProfesor}
-            C={C}
-            inpStyle={inpStyle}
-            selStyle={selStyle}
-            labelStyle={labelStyle}
-            fmt={fmt}
-          />
-        )}
-
-        {/* ── Cuadrante de Guardias (Jefatura) ── */}
-        {tab === "cuadrante" && (
-          <CuadranteGuardias
-            profesores={profesores}
-            cuadrante={cuadrante}
-            setCuadrante={setCuadrante}
-            quinceInicio={quinceInicio}
-            setQInicio={setQInicio}
-            quinceProfesor={quinceProfesor}
-            setQProf={setQProf}
-            C={C}
+            cursos={cursos}
             inpStyle={inpStyle}
             selStyle={selStyle}
             labelStyle={labelStyle}
           />
         )}
 
-        {/* ── Parte del Día (Jefatura) ── */}
-        {tab === "parte_dia" && (
-          <ParteDia
-            profesores={profesores}
-            cuadrante={cuadrante}
-            ausencias={ausencias}
-            C={C}
-            fmt={fmt}
-          />
+        {/* ── Registrar Guardia ── */}
+        {tab === "guardias_prof" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Registrar Guardia</h2>
+            {guardiaGenerada && (
+              <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}>
+                <strong style={{ color: C.teal }}>✅ Guardia registrada · {fmt(guardiaGenerada.ts)}</strong>
+                <div style={{ fontSize: 13, marginTop: 4, color: C.dark }}>{guardiaGenerada.hora} · {guardiaGenerada.curso} · Guardia: {guardiaGenerada.profesorGuardia}</div>
+              </Card>
+            )}
+            <Card>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                <div><label style={labelStyle}>👤 Profesor ausente</label><select value={guProfesorAusente} onChange={e => setGuProfesorAusente(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{profesores.map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label style={labelStyle}>⏰ Hora de la guardia</label><select value={guHora} onChange={e => setGuHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h}>{h}</option>)}</select></div>
+                <div><label style={labelStyle}>🏢 Módulo</label><select value={guModulo} onChange={e => setGuModulo(e.target.value)} style={selStyle}>{MODULOS.map(m => <option key={m}>{m}</option>)}</select></div>
+                <div><label style={labelStyle}>🏫 Curso</label><select value={guCurso} onChange={e => setGuCurso(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{cursos.map(c => <option key={c}>{c}</option>)}</select></div>
+                <div><label style={labelStyle}>📚 Materia</label><input value={guMateria} onChange={e => setGuMateria(e.target.value)} placeholder="Ej: Matemáticas" style={inpStyle} /></div>
+                <div><label style={labelStyle}>🔄 Profesor de guardia</label><select value={guProfesorGuardia} onChange={e => setGuProfesorGuardia(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{profesores.filter(p => p !== guProfesorAusente).map(p => <option key={p}>{p}</option>)}</select></div>
+                <div><label style={labelStyle}>❓ Motivo de ausencia</label><select value={guMotivo} onChange={e => setGuMotivo(e.target.value)} style={selStyle}>{MOTIVOS.map(m => <option key={m}>{m}</option>)}</select></div>
+              </div>
+              <div style={{ marginBottom: 20 }}>
+                <label style={labelStyle}>📝 Material dejado para trabajar</label>
+                <textarea value={guMaterial} onChange={e => setGuMaterial(e.target.value)} rows={3} placeholder="Describe el material o tarea…" style={{ ...inpStyle, resize: "vertical" }} />
+              </div>
+              <Btn onClick={crearGuardia} disabled={!guProfesorAusente || !guCurso || !guProfesorGuardia} color={C.blue} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
+                🔄 Registrar Guardia
+              </Btn>
+            </Card>
+          </div>
         )}
 
-        {/* ── Ausencias (Jefatura) ── */}
-        {tab === "ausencias_jef" && (
-          <GestionAusencias
-            ausencias={ausencias}
-            setAusencias={setAusencias}
-            profesores={profesores}
-            cuadrante={cuadrante}
-            C={C}
-            fmt={fmt}
-          />
+        {/* ── Ver Guardias (profesor) ── */}
+        {tab === "guardias_ver" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>📄 Guardias del día</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 20 }}>
+              {[{ label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length, color: C.blue }, { label: "Esta Semana", value: guardias.filter(g => weekKey(g.fecha) === weekKey(new Date())).length, color: C.teal }, { label: "Total", value: guardias.length, color: C.dark }].map(s => (
+                <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {guardias.length === 0
+              ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No hay guardias registradas</Card>
+              : guardias.map(g => (
+                <Card key={g.id} style={{ borderLeft: `4px solid ${C.blue}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🔄 {g.hora} · {g.modulo} · {g.curso}{g.materia && ` · ${g.materia}`}</div>
+                      <div style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>📅 {fmt(g.ts)}</div>
+                      <div style={{ fontSize: 13, marginTop: 6 }}><span style={{ color: C.salmon, fontWeight: 600 }}>Ausente:</span> {g.profesorAusente} <span style={{ color: C.gray, marginLeft: 8 }}>({g.motivo})</span></div>
+                      <div style={{ fontSize: 13, marginTop: 2 }}><span style={{ color: C.teal, fontWeight: 600 }}>Guardia:</span> {g.profesorGuardia}</div>
+                      {g.material && <div style={{ fontSize: 13, marginTop: 6, background: C.cream, borderRadius: 6, padding: "6px 10px" }}>📝 Material: {g.material}</div>}
+                    </div>
+                    <span style={{ background: g.profesorGuardia === fProfesor ? "#E8F5F3" : "#EEF5F8", color: g.profesorGuardia === fProfesor ? C.teal : C.blue, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
+                      {g.profesorGuardia === fProfesor ? "✅ Tú la cubres" : "👤 " + g.profesorGuardia}
+                    </span>
+                  </div>
+                </Card>
+              ))}
+          </div>
+        )}
+
+        {/* ── Mis Partes ── */}
+        {tab === "historial" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>🗂 Mis Partes Enviados</h2>
+            {partes.filter(p => p.profesor === fProfesor).length === 0
+              ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No has generado ningún parte aún</Card>
+              : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+          </div>
+        )}
+
+        {/* ── Dashboard ── */}
+        {tab === "dashboard" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>📊 Dashboard General</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 24 }}>
+              {[
+                { label: "Total Partes", value: partes.length,                                              color: C.dark,   emoji: "📋" },
+                { label: "Leves",        value: partes.filter(p => p.gravedad === "leve").length,           color: C.teal,   emoji: "🟡" },
+                { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "⚠️" },
+                { label: "Muy Graves",   value: partes.filter(p => p.gravedad === "muy_grave").length,      color: C.salmon, emoji: "🔴" },
+                { label: "Fuera Ahora",  value: banoActivos.length,                                         color: C.blue,   emoji: "🚻" },
+                { label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length,        color: "#7c3aed",emoji: "🔄" },
+                { label: "Alertas",      value: alertasNoLeidas,                                             color: C.salmon, emoji: "🔔" },
+              ].map(s => (
+                <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
+                  <div style={{ fontSize: 22 }}>{s.emoji}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <h3 style={{ color: C.dark }}>Resumen por curso</h3>
+            <Card style={{ padding: 0, overflow: "hidden" }}>
+              {cursos.map(c => {
+                const pC = partes.filter(p => p.curso === c);
+                if (!pC.length) return null;
+                return (
+                  <div key={c} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.cream}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontWeight: 700, color: C.dark }}>🏫 {c} <span style={{ color: C.gray, fontWeight: 400, fontSize: 13 }}>— {pC.length} parte(s)</span></div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                    </div>
+                  </div>
+                );
+              })}
+              {partes.length === 0 && <div style={{ padding: 20, color: C.gray, textAlign: "center" }}>Sin incidencias registradas</div>}
+            </Card>
+            <h3 style={{ color: C.dark }}>Alumnos con más incidencias</h3>
+            <Card style={{ padding: 0, overflow: "hidden" }}>
+              {alumnos.filter(a => partesDeAlumno(a.id).length > 0).sort((a, b) => partesDeAlumno(b.id).length - partesDeAlumno(a.id).length).map(a => (
+                <div key={a.id} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.cream}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div>
+                    <strong style={{ color: C.dark }}>{a.nombre}</strong> <span style={{ color: C.gray, fontSize: 13 }}>— {a.curso}</span>
+                    {partesLeves(a.id) >= 3 && <span style={{ marginLeft: 8, background: "#FFF0CC", color: "#b45309", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>⚠️ Acumulación</span>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                    <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>Total: {partesDeAlumno(a.id).length}</span>
+                  </div>
+                </div>
+              ))}
+              {partes.length === 0 && <div style={{ padding: 20, color: C.gray, textAlign: "center" }}>Sin incidencias registradas</div>}
+            </Card>
+          </div>
+        )}
+
+        {/* ── Por Curso ── */}
+        {tab === "por_curso" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>🏫 Partes por Curso / Grupo</h2>
+            {cursos.map(curso => {
+              const pC = partes.filter(p => p.curso === curso);
+              const alC = alumnos.filter(a => a.curso === curso);
+              return (
+                <div key={curso} style={{ background: C.white, borderRadius: 14, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+                  <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{curso}</div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                      <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "2px 10px", fontSize: 13 }}>Total: {pC.length}</span>
+                    </div>
+                  </div>
+                  {pC.length === 0
+                    ? <div style={{ padding: "16px 20px", color: C.gray, fontSize: 13 }}>Sin partes en este curso</div>
+                    : alC.map(a => {
+                      const pA = partesDeAlumno(a.id);
+                      if (!pA.length) return null;
+                      return (
+                        <div key={a.id} style={{ borderBottom: `1px solid ${C.cream}` }}>
+                          <div style={{ padding: "10px 20px", background: C.cream, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontWeight: 600, fontSize: 14, color: C.dark }}>{a.nombre}</span>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              {["leve", "grave", "muy_grave"].map(g => { const n = pA.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                            </div>
+                          </div>
+                          {pA.map(p => (
+                            <div key={p.id} style={{ padding: "8px 20px 8px 36px", fontSize: 13, borderBottom: `1px solid ${C.cream}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <span style={{ color: "#374151" }}>📅 {fmt(p.ts)} · {p.hora} · {p.tipo}{p.esGrupal ? " · grupal" : ""}</span>
+                              <div style={{ display: "flex", gap: 6 }}>
+                                <Badge g={p.gravedad} />
+                                <button onClick={() => setShowParte(p)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Ver</button>
+                                <button onClick={() => setPrintParte(p)} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Por Alumno ── */}
+        {tab === "por_alumno" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>👤 Partes por Alumno</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+              <select value={filtCurso} onChange={e => { setFiltCurso(e.target.value); setFiltAlumno(""); }} style={selStyle}><option value="">Todos los cursos</option>{cursos.map(c => <option key={c}>{c}</option>)}</select>
+              <select value={filtAlumno} onChange={e => setFiltAlumno(e.target.value)} style={selStyle}><option value="">Seleccionar alumno</option>{alumnos.filter(a => !filtCurso || a.curso === filtCurso).map(a => <option key={a.id} value={a.id}>{a.nombre} — {a.curso}</option>)}</select>
+            </div>
+            {filtAlumno ? (() => {
+              const al = alumnos.find(a => a.id === parseInt(filtAlumno));
+              const pAl = partesDeAlumno(al.id);
+              return (
+                <div>
+                  <Card>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                      <div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>{al.nombre}</div>
+                        <div style={{ color: C.gray, fontSize: 14, marginTop: 4 }}>{al.curso} · Tutor: {al.tutor}</div>
+                        <div style={{ fontSize: 13, marginTop: 4 }}>✉️ {al.email} · 📱 {al.telefono}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 32, fontWeight: 800, color: C.dark }}>{pAl.length}</div>
+                        <div style={{ fontSize: 12, color: C.gray }}>partes totales</div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                      {["leve", "grave", "muy_grave"].map(g => { const n = pAl.filter(p => p.gravedad === g).length; const gv = gObj(g); return <div key={g} style={{ flex: 1, background: gv.bg, borderRadius: 10, padding: 12, textAlign: "center", border: `2px solid ${gv.color}` }}><div style={{ fontSize: 24, fontWeight: 800, color: gv.color }}>{n}</div><div style={{ fontSize: 12, color: gv.color, fontWeight: 600 }}>{gv.label}</div></div>; })}
+                    </div>
+                    {partesLeves(al.id) >= 3 && <div style={{ marginTop: 12, background: "#FFF0CC", border: "1px solid #fbbf24", borderRadius: 8, padding: "10px 14px", fontSize: 13, fontWeight: 600, color: "#92400e" }}>⚠️ Acumulación de {partesLeves(al.id)} partes leves — Considerar sanción</div>}
+                  </Card>
+                  {pAl.length === 0
+                    ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes registrados</Card>
+                    : pAl.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+                </div>
+              );
+            })() : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {alumnos.filter(a => (!filtCurso || a.curso === filtCurso) && partesDeAlumno(a.id).length > 0)
+                  .sort((a, b) => partesDeAlumno(b.id).length - partesDeAlumno(a.id).length)
+                  .map(a => (
+                    <div key={a.id} onClick={() => setFiltAlumno(a.id)}
+                      style={{ padding: "12px 20px", borderBottom: `1px solid ${C.cream}`, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                      onMouseOver={e => e.currentTarget.style.background = C.cream}
+                      onMouseOut={e => e.currentTarget.style.background = C.white}>
+                      <div>
+                        <strong style={{ color: C.dark }}>{a.nombre}</strong> <span style={{ color: C.gray, fontSize: 13 }}>— {a.curso}</span>
+                        {partesLeves(a.id) >= 3 && <span style={{ marginLeft: 8, background: "#FFF0CC", color: "#b45309", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>⚠️</span>}
+                      </div>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                        <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{partesDeAlumno(a.id).length}</span>
+                        <span style={{ color: C.gray, fontSize: 16 }}>›</span>
+                      </div>
+                    </div>
+                  ))}
+                {alumnos.filter(a => (!filtCurso || a.curso === filtCurso) && partesDeAlumno(a.id).length > 0).length === 0 && <div style={{ padding: 30, textAlign: "center", color: C.gray }}>Sin alumnos con partes</div>}
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ── Todos los Partes ── */}
+        {tab === "partes_todos" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>📋 Todos los Partes</h2>
+            <Card>
+              <div style={{ fontWeight: 600, color: C.dark, marginBottom: 10 }}>🔍 Filtros</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+                <select value={filtCurso} onChange={e => { setFiltCurso(e.target.value); setFiltAlumno(""); }} style={{ ...selStyle, padding: "8px 12px", fontSize: 13 }}><option value="">Todos los cursos</option>{cursos.map(c => <option key={c}>{c}</option>)}</select>
+                <select value={filtAlumno} onChange={e => setFiltAlumno(e.target.value)} style={{ ...selStyle, padding: "8px 12px", fontSize: 13 }}><option value="">Todos los alumnos</option>{alumnos.filter(a => !filtCurso || a.curso === filtCurso).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select>
+                <select value={filtGravedad} onChange={e => setFiltGravedad(e.target.value)} style={{ ...selStyle, padding: "8px 12px", fontSize: 13 }}><option value="">Toda gravedad</option>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select>
+                <input type="date" value={filtFechaDesde} onChange={e => setFiltFechaDesde(e.target.value)} style={{ ...inpStyle, padding: "8px 12px", fontSize: 13 }} />
+                <input type="date" value={filtFechaHasta} onChange={e => setFiltFechaHasta(e.target.value)} style={{ ...inpStyle, padding: "8px 12px", fontSize: 13 }} />
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+                <span style={{ fontSize: 13, color: C.gray }}>{partesFiltrados.length} parte(s)</span>
+                <button onClick={() => { setFiltCurso(""); setFiltAlumno(""); setFiltGravedad(""); setFiltFechaDesde(""); setFiltFechaHasta(""); }} style={{ background: "none", border: `1px solid #d1d5db`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, color: C.gray }}>Limpiar</button>
+              </div>
+            </Card>
+            {partesFiltrados.length === 0
+              ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes con los filtros actuales</Card>
+              : partesFiltrados.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+          </div>
+        )}
+
+        {/* ── Guardias (Jefatura) ── */}
+        {tab === "guardias_jef" && (
+          <div>
+            <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Registro de Guardias</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 20 }}>
+              {[{ label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length, color: C.blue }, { label: "Esta Semana", value: guardias.filter(g => weekKey(g.fecha) === weekKey(new Date())).length, color: C.teal }, { label: "Total", value: guardias.length, color: C.dark }].map(s => (
+                <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {guardias.length === 0
+              ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>Sin guardias registradas</Card>
+              : guardias.map(g => (
+                <Card key={g.id} style={{ borderLeft: `4px solid ${C.blue}` }}>
+                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🔄 {g.hora} · {g.modulo} · {g.curso}{g.materia && ` · ${g.materia}`}</div>
+                  <div style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>📅 {fmt(g.ts)}</div>
+                  <div style={{ fontSize: 13, marginTop: 6 }}><span style={{ color: C.salmon, fontWeight: 600 }}>Ausente:</span> {g.profesorAusente} <span style={{ color: C.gray, marginLeft: 8 }}>({g.motivo})</span></div>
+                  <div style={{ fontSize: 13, marginTop: 2 }}><span style={{ color: C.teal, fontWeight: 600 }}>Guardia:</span> {g.profesorGuardia}</div>
+                  {g.material && <div style={{ fontSize: 13, marginTop: 4, background: C.cream, borderRadius: 6, padding: "6px 10px" }}>📝 Material: {g.material}</div>}
+                </Card>
+              ))}
+          </div>
         )}
 
         {/* ── Baños live (Jefatura) ── */}
-
         {tab === "bano_live" && (
           <div>
             <h2 style={{ color: C.dark, marginTop: 0 }}>🚻 Baños — Tiempo Real</h2>
@@ -2160,31 +1823,6 @@ export default function App() {
                 </div>
               ))}
             </Card>
-          </div>
-        )}
-
-        {/* ── Zonas del Centro (Admin) ── */}
-        {tab === "admin_zonas" && (
-          <div>
-            <h2 style={{ color:C.dark, marginTop:0 }}>🏫 Zonas del Centro</h2>
-            <div style={{ background:"#EEF5F8", border:`1px solid ${C.blue}`, borderRadius:10, padding:14, marginBottom:16, fontSize:13, color:C.blue }}>
-              💡 Estas son las zonas predefinidas del IES Enrique Tierno Galván. Se usan en el cuadrante de guardias y en el parte del día.
-            </div>
-            {["pasillo","bano","especial","aula","recreo"].map(tipo => {
-              const zonas = ZONAS_CENTRO.filter(z => z.tipo === tipo);
-              const titulos = { pasillo:"🏃 Pasillos", bano:"🚻 Baños", especial:"⭐ Espacios especiales", aula:"📚 Aulas (sustitución)", recreo:"☀️ Zonas de recreo" };
-              const colores = { pasillo:C.dark, bano:C.blue, especial:C.teal, aula:C.salmon, recreo:"#d97706" };
-              return (
-                <div key={tipo} style={{ background:"#fff", borderRadius:10, marginBottom:12, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
-                  <div style={{ background:colores[tipo], color:"#fff", padding:"10px 16px", fontWeight:700, fontSize:14 }}>{titulos[tipo]}</div>
-                  {zonas.map(z => (
-                    <div key={z.id} style={{ padding:"10px 16px", borderBottom:`1px solid ${C.cream}`, fontSize:13, color:C.dark }}>
-                      📍 {z.label}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
           </div>
         )}
 
