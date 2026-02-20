@@ -27,9 +27,56 @@ const DEMO_PROFESORES = [
 
 const GRAVEDAD = [
   { id: "leve",      label: "🟡 Leve",      color: C.teal,   bg: "#E8F5F3", desc: "Reglamento de Centro" },
-  { id: "grave",     label: "🟠 Grave",     color: C.amber,  bg: C.amberBg, desc: "Normativa CAM" },
+  { id: "grave",     label: "⚠️ Grave",     color: C.amber,  bg: C.amberBg, desc: "Normativa CAM" },
   { id: "muy_grave", label: "🔴 Muy Grave", color: C.salmon, bg: "#FDF0EF", desc: "Normativa CAM (nivel superior)" },
 ];
+
+// ─── Tipificación normativa ───────────────────────────────────────────────────
+const TIPIFICACION = {
+  leve: [
+    { id: "1L",  label: "1. Perturbación del normal desarrollo de las actividades de la clase" },
+    { id: "2L",  label: "2L. Falta de colaboración sistemática en la realización de las actividades de clase o ausencia de material" },
+    { id: "3L",  label: "3L. Faltas injustificadas de puntualidad o faltas injustificadas de asistencia a clase" },
+    { id: "4L",  label: "4L. Permanecer fuera del aula sin permiso del profesorado o por el cambio de clase" },
+    { id: "5L",  label: "5L. Impedir o dificultar el estudio de sus compañeros" },
+    { id: "6L",  label: "6L. Actuaciones incorrectas hacia algún miembro de la comunidad educativa" },
+    { id: "7L",  label: "7L. Daños en instalaciones o documentos del centro o pertenencias de un miembro" },
+    { id: "8L",  label: "8. Uso del teléfono móvil o cualquier dispositivo electrónico sin permiso del profesorado" },
+    { id: "9L",  label: "9L. Incumplimiento de la sanción impuesta por una falta leve" },
+    { id: "10L", label: "10L. Otras (especificar)" },
+  ],
+  grave: [
+    { id: "aG", label: "a) Las faltas reiteradas de puntualidad o de asistencia a clase que, a juicio del tutor, no estén justificadas" },
+    { id: "bG", label: "b) Las conductas que impidan o dificulten a otros compañeros el ejercicio del derecho o el cumplimiento del deber del estudio" },
+    { id: "cG", label: "c) Los actos de incorrección o desconsideración con compañeros u otros miembros de la comunidad escolar" },
+    { id: "dG", label: "d) Los actos de indisciplina y los que perturben el desarrollo normal de las actividades del centro" },
+    { id: "eG", label: "e) Los daños causados en las instalaciones o el material del centro" },
+    { id: "fG", label: "f) La sustracción, daño u ocultación de los bienes o pertenencias de los miembros de la comunidad educativa" },
+    { id: "gG", label: "g) La incitación a la comisión de una falta grave contraria a las normas de convivencia" },
+    { id: "hG", label: "h) La participación en riñas mutuamente aceptadas" },
+    { id: "iG", label: "i) La alteración grave e intencionada del normal desarrollo de la actividad escolar que no constituya falta muy grave" },
+    { id: "jG", label: "j) La reiteración en el mismo trimestre de dos o más faltas leves" },
+    { id: "kG", label: "k) Los actos que impidan la correcta evaluación del aprendizaje o falseen los resultados académicos" },
+    { id: "lG", label: "l) La omisión del deber de comunicar al personal del centro situaciones de acoso o que puedan poner en riesgo grave la integridad física o moral de otros miembros" },
+    { id: "mG", label: "m) La difusión por cualquier medio de imágenes o informaciones de ámbito escolar o personal que menoscaben la imagen personal de miembros de la comunidad educativa" },
+    { id: "nG", label: "n) El incumplimiento de una medida correctora impuesta por la comisión de una falta leve, así como el incumplimiento de las medidas dirigidas a reparar los daños o asumir su coste" },
+  ],
+  muy_grave: [
+    { id: "aMG", label: "a) Los actos graves de indisciplina, desconsideración, insultos, amenazas, falta de respeto o actitudes desafiantes, cometidos hacia los profesores y demás personal del centro" },
+    { id: "bMG", label: "b) El acoso físico o moral a los compañeros" },
+    { id: "cMG", label: "c) El uso de la intimidación o la violencia, las agresiones, las ofensas graves y los actos que atenten gravemente contra el derecho a la intimidad, al honor o a la propia imagen o la salud" },
+    { id: "dMG", label: "d) La discriminación, las vejaciones o las humillaciones a cualquier miembro de la comunidad educativa, por razón de nacimiento, raza, sexo, religión, orientación sexual, opinión u otras circunstancias" },
+    { id: "eMG", label: "e) La grabación, publicidad o difusión, a través de cualquier medio o soporte, de agresiones o humillaciones cometidas o con contenido vejatorio para los miembros de la comunidad educativa" },
+    { id: "fMG", label: "f) Los daños graves causados intencionadamente o por uso indebido en las instalaciones, materiales y documentos del centro o en las pertenencias de otros miembros de la comunidad" },
+    { id: "gMG", label: "g) La suplantación de personalidad y la falsificación o sustracción de documentos académicos" },
+    { id: "hMG", label: "h) El uso, la incitación al mismo, la introducción en el centro o el comercio de objetos o sustancias perjudiciales para la salud o peligrosas para la integridad personal" },
+    { id: "iMG", label: "i) El acceso indebido o sin autorización a documentos, ficheros y servidores del centro" },
+    { id: "jMG", label: "j) La grave perturbación del normal desarrollo de las actividades del centro y en general cualquier incumplimiento grave de las normas de conducta" },
+    { id: "kMG", label: "k) La reiteración en el mismo trimestre de dos o más faltas graves" },
+    { id: "lMG", label: "l) La incitación o estímulo a la comisión de una falta muy grave contraria a las normas de convivencia" },
+    { id: "mMG", label: "m) El incumplimiento de una medida correctora impuesta por la comisión de una falta grave, así como el incumplimiento de las medidas dirigidas a reparar los daños o asumir su coste" },
+  ],
+};
 
 const TIPOS   = ["Comportamiento", "Ausencia", "Académico", "Otro"];
 const HORAS   = ["1ª hora", "2ª hora", "3ª hora", "4ª hora", "5ª hora", "6ª hora", "7ª hora", "Recreo"];
@@ -158,6 +205,18 @@ function PrintParte({ parte, onClose }) {
         {[["Alumno/a", parte.alumno], ["Curso / Aula", parte.curso], ["Tutor de grupo", parte.tutor], ["Tipo de parte", parte.tipo], ["Hora de clase", parte.hora || "No especificada"], ["Fecha y hora", fmt(parte.ts)], ["Profesor responsable", parte.profesor]].map(([k, v]) => (
           <InfoRow key={k} label={k} value={v} />
         ))}
+        {parte.tipificacion && (() => {
+          const grav = parte.gravedad;
+          const tipObj = TIPIFICACION[grav]?.find(t => t.id === parte.tipificacion);
+          const fuente = grav === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM";
+          return (
+            <div style={{ margin: "10px 0", padding: "10px 14px", background: "#EEF5F8", borderRadius: 8, border: `1px solid ${C.blue}`, fontSize: 13 }}>
+              <span style={{ fontWeight: 700, color: C.blue }}>⚖️ Tipificación normativa </span>
+              <span style={{ color: C.gray, fontSize: 11 }}>({fuente})</span>
+              <div style={{ marginTop: 4, color: C.dark }}>{tipObj?.label}</div>
+            </div>
+          );
+        })()}
         {parte.esGrupal && <div style={{ marginTop: 8, background: "#e8f5f3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600 }}>👥 Parte generado como parte de grupo</div>}
         <div style={{ marginTop: 20 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Descripción del incidente:</div>
@@ -214,7 +273,7 @@ function PrintInforme({ partes, filtros, onClose }) {
           {filtrosTexto && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Filtros: {filtrosTexto}</div>}
         </div>
         <div style={{ display: "flex", gap: 14, marginBottom: 24, justifyContent: "center", flexWrap: "wrap" }}>
-          {[{ label: "Total", value: partes.length, color: C.dark }, { label: "🟡 Leves", value: res.leve, color: C.teal }, { label: "🟠 Graves", value: res.grave, color: C.amber }, { label: "🔴 Muy Graves", value: res.muy_grave, color: C.salmon }].map(s => (
+          {[{ label: "Total", value: partes.length, color: C.dark }, { label: "🟡 Leves", value: res.leve, color: C.teal }, { label: "⚠️ Graves", value: res.grave, color: C.amber }, { label: "🔴 Muy Graves", value: res.muy_grave, color: C.salmon }].map(s => (
             <div key={s.label} style={{ textAlign: "center", padding: "12px 24px", borderRadius: 10, background: C.light, borderTop: `3px solid ${s.color}`, minWidth: 100 }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
               <div style={{ fontSize: 12, color: C.gray }}>{s.label}</div>
@@ -568,208 +627,6 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
 
   // Colores de paso
   const pasoColor = n => n < paso ? C.teal : n === paso ? C.blue : "#d1d5db";
-  const pasoActivo = n => n === paso;
-
-  // ── Indicador de pasos ──
-  const StepBar = () => (
-    <div style={{ display: "flex", alignItems: "center", marginBottom: 24, gap: 0 }}>
-      {[
-        { n: 1, icon: "📅", label: "Fecha" },
-        { n: 2, icon: "👤", label: "Ausente" },
-        { n: 3, icon: "🏫", label: "Aula / Tarea" },
-        { n: 4, icon: "🔄", label: "Guardia" },
-      ].map(({ n, icon, label }, i) => (
-        <div key={n} style={{ display: "flex", alignItems: "center", flex: 1 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, cursor: n < paso ? "pointer" : "default" }}
-            onClick={() => n < paso && setPaso(n)}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              background: n < paso ? C.teal : n === paso ? C.blue : "#e5e7eb",
-              color: n <= paso ? "#fff" : C.gray, fontSize: 18, fontWeight: 700,
-              boxShadow: n === paso ? `0 0 0 4px ${C.blue}22` : "none",
-              transition: "all .3s"
-            }}>{n < paso ? "✓" : icon}</div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: n === paso ? C.blue : n < paso ? C.teal : C.gray, marginTop: 4, whiteSpace: "nowrap" }}>{label}</div>
-          </div>
-          {i < 3 && <div style={{ height: 2, flex: 1, background: n < paso ? C.teal : "#e5e7eb", transition: "background .3s", marginBottom: 18 }} />}
-        </div>
-      ))}
-    </div>
-  );
-
-  // ── PASO 1: Fecha y periodo ──
-  const Paso1 = () => (
-    <Card>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 16, marginBottom: 16 }}>📅 Fecha de la ausencia</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 16 }}>
-        <div>
-          <label style={labelStyle}>Fecha de inicio</label>
-          <input type="date" value={pgFecha} onChange={e => setPgFecha(e.target.value)} style={inpStyle} />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-          <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <input type="checkbox" checked={pgMultidia} onChange={e => setPgMultidia(e.target.checked)}
-              style={{ width: 16, height: 16, accentColor: C.teal }} />
-            Ausencia de varios días
-          </label>
-        </div>
-      </div>
-      {pgMultidia && (
-        <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Fecha de fin</label>
-          <input type="date" value={pgFechaFin} min={pgFecha} onChange={e => setPgFechaFin(e.target.value)} style={inpStyle} />
-        </div>
-      )}
-      <div style={{ marginBottom: 4 }}>
-        <label style={labelStyle}>📝 Nota general (opcional)</label>
-        <textarea value={pgNota} onChange={e => setPgNota(e.target.value)} rows={2}
-          placeholder="Observaciones generales sobre la ausencia…"
-          style={{ ...inpStyle, resize: "vertical" }} />
-      </div>
-      <div style={{ background: "#EEF5F8", borderRadius: 8, padding: "10px 14px", fontSize: 12, color: C.blue, marginTop: 12 }}>
-        💡 Si la ausencia abarca varios días, el plan se aplicará a todas las fechas del periodo seleccionado.
-      </div>
-    </Card>
-  );
-
-  // ── PASO 2: Profesor ausente y horas ──
-  const Paso2 = () => (
-    <Card>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 16, marginBottom: 16 }}>👤 Profesor ausente y horas afectadas</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
-        <div>
-          <label style={labelStyle}>Profesor ausente *</label>
-          <select value={pgProfesor} onChange={e => setPgProfesor(e.target.value)} style={selStyle}>
-            <option value="">— Seleccionar —</option>
-            {profesores.map(p => <option key={p}>{p}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={labelStyle}>Motivo de la ausencia</label>
-          <select value={pgMotivo} onChange={e => setPgMotivo(e.target.value)} style={selStyle}>
-            {MOTIVOS.map(m => <option key={m}>{m}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ marginBottom: 8 }}>
-        <label style={{ ...labelStyle, marginBottom: 10 }}>⏰ Horas afectadas * <span style={{ color: C.gray, fontWeight: 400, fontSize: 12 }}>— Selecciona todas las que apliquen</span></label>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
-          {HORAS.map(h => {
-            const sel = pgHoras.includes(h);
-            return (
-              <button key={h} onClick={() => toggleHora(h)}
-                style={{ padding: "10px 8px", borderRadius: 10, border: `2px solid ${sel ? C.blue : "#e5e7eb"}`, background: sel ? "#EEF5F8" : C.white, color: sel ? C.blue : C.gray, fontWeight: sel ? 700 : 500, fontSize: 13, cursor: "pointer", transition: "all .15s", textAlign: "center" }}>
-                {sel ? "✓ " : ""}{h}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      {pgHoras.length > 0 && (
-        <div style={{ background: "#E8F5F3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600, marginTop: 12 }}>
-          ✅ {pgHoras.length} hora(s) seleccionada(s): {pgHoras.join(", ")}
-        </div>
-      )}
-    </Card>
-  );
-
-  // ── PASO 3: Aula y tarea por hora ──
-  const Paso3 = () => (
-    <div>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 16, marginBottom: 14 }}>🏫 Aula, módulo y tarea por hora</div>
-      {pgHoras.map(h => (
-        <Card key={h} style={{ borderLeft: `4px solid ${C.blue}`, marginBottom: 12 }}>
-          <div style={{ fontWeight: 700, color: C.blue, fontSize: 15, marginBottom: 12 }}>⏰ {h}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-            <div>
-              <label style={labelStyle}>Grupo / Clase *</label>
-              <select value={pgCursoHora[h] || ""} onChange={e => setCursoHora(h, e.target.value)} style={selStyle}>
-                <option value="">— Seleccionar —</option>
-                {cursos.map(c => <option key={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>Materia</label>
-              <input value={pgMateriaHora[h] || ""} onChange={e => setMateriaHora(h, e.target.value)}
-                placeholder="Ej: Matemáticas" style={inpStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>🏢 Módulo del edificio</label>
-              <select value={pgModuloEdificio[h] || ""} onChange={e => setModuloHora(h, e.target.value)} style={selStyle}>
-                <option value="">— Módulo —</option>
-                {MODULOS.map(m => <option key={m}>{m}</option>)}
-              </select>
-            </div>
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label style={labelStyle}>📋 Tarea / Actividad para los alumnos</label>
-            <textarea value={pgTareaHora[h] || ""} onChange={e => setTareaHora(h, e.target.value)}
-              rows={2} placeholder="Ej: Ejercicios pág. 45 del libro · Lectura silenciosa · Repaso tema 3…"
-              style={{ ...inpStyle, resize: "vertical" }} />
-          </div>
-          <div>
-            <label style={labelStyle}>📎 Material / Recursos disponibles</label>
-            <input value={pgMaterialHora[h] || ""} onChange={e => setMaterialDetalleHora(h, e.target.value)}
-              placeholder="Ej: Fotocopias en conserjería · Libro de texto · Presentación en Drive…"
-              style={inpStyle} />
-          </div>
-          {pgCursoHora[h] && (
-            <div style={{ marginTop: 10, background: C.cream, borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.gray }}>
-              📍 {pgCursoHora[h]}{pgModuloEdificio[h] ? ` · ${pgModuloEdificio[h]}` : ""}
-            </div>
-          )}
-        </Card>
-      ))}
-    </div>
-  );
-
-  // ── PASO 4: Profesor de guardia por hora ──
-  const Paso4 = () => (
-    <div>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 16, marginBottom: 14 }}>🔄 Asignación de profesores de guardia</div>
-      {pgHoras.map(h => (
-        <Card key={h} style={{ borderLeft: `4px solid ${C.teal}`, marginBottom: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-            <div style={{ fontWeight: 700, color: C.teal, fontSize: 15 }}>⏰ {h}</div>
-            {pgCursoHora[h] && (
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 6, padding: "3px 10px", fontSize: 12, fontWeight: 600 }}>🏫 {pgCursoHora[h]}</span>
-                {pgMateriaHora[h] && <span style={{ background: C.cream, color: C.dark, borderRadius: 6, padding: "3px 10px", fontSize: 12 }}>{pgMateriaHora[h]}</span>}
-                {pgModuloEdificio[h] && <span style={{ background: "#E8F5F3", color: C.teal, borderRadius: 6, padding: "3px 10px", fontSize: 12 }}>🏢 {pgModuloEdificio[h]}</span>}
-              </div>
-            )}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={labelStyle}>👤 Profesor de guardia *</label>
-              <select value={pgGuardiaHora[h] || ""}
-                onChange={e => setGuardiaHora(h, e.target.value)} style={selStyle}>
-                <option value="">— Seleccionar —</option>
-                {profesores.filter(p => p !== pgProfesor).map(p => <option key={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>📍 Zona de guardia</label>
-              <select value={pgZonaHora[h] || ""} onChange={e => setZonaHora(h, e.target.value)} style={selStyle}>
-                <option value="">— Seleccionar zona —</option>
-                {ZONAS_GUARDIA.map(z => <option key={z}>{z}</option>)}
-              </select>
-            </div>
-          </div>
-          {pgGuardiaHora[h] && pgZonaHora[h] && (
-            <div style={{ marginTop: 10, background: "#E8F5F3", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.teal, fontWeight: 600 }}>
-              ✅ {pgGuardiaHora[h]} — {pgZonaHora[h]}
-            </div>
-          )}
-          {pgTareaHora[h] && (
-            <div style={{ marginTop: 8, background: "#FFF8E8", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: "#92400e" }}>
-              📋 Tarea: {pgTareaHora[h]}
-            </div>
-          )}
-        </Card>
-      ))}
-    </div>
-  );
 
   // ── Vista detalle de un plan ──
   if (verPlan) return (
@@ -847,12 +704,183 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "start" }}>
         {/* Panel izquierdo — Wizard */}
         <div>
-          <StepBar />
+          {/* StepBar inline */}
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 24, gap: 0 }}>
+            {[{ n:1, icon:"📅", label:"Fecha" }, { n:2, icon:"👤", label:"Ausente" }, { n:3, icon:"🏫", label:"Aula / Tarea" }, { n:4, icon:"🔄", label:"Guardia" }].map(({ n, icon, label }, i) => (
+              <div key={n} style={{ display:"flex", alignItems:"center", flex:1 }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, cursor: n < paso ? "pointer" : "default" }} onClick={() => n < paso && setPaso(n)}>
+                  <div style={{ width:40, height:40, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", background: n < paso ? C.teal : n === paso ? C.blue : "#e5e7eb", color: n <= paso ? "#fff" : C.gray, fontSize:18, fontWeight:700, boxShadow: n === paso ? `0 0 0 4px ${C.blue}22` : "none", transition:"all .3s" }}>{n < paso ? "✓" : icon}</div>
+                  <div style={{ fontSize:11, fontWeight:600, color: n === paso ? C.blue : n < paso ? C.teal : C.gray, marginTop:4, whiteSpace:"nowrap" }}>{label}</div>
+                </div>
+                {i < 3 && <div style={{ height:2, flex:1, background: n < paso ? C.teal : "#e5e7eb", transition:"background .3s", marginBottom:18 }} />}
+              </div>
+            ))}
+          </div>
 
-          {paso === 1 && <Paso1 />}
-          {paso === 2 && <Paso2 />}
-          {paso === 3 && <Paso3 />}
-          {paso === 4 && <Paso4 />}
+          {/* PASO 1 inline */}
+          {paso === 1 && (
+            <Card>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}>📅 Fecha de la ausencia</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
+                <div>
+                  <label style={labelStyle}>Fecha de inicio</label>
+                  <input type="date" value={pgFecha} onChange={e => setPgFecha(e.target.value)} style={inpStyle} />
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", justifyContent:"flex-end" }}>
+                  <label style={{ ...labelStyle, display:"flex", alignItems:"center", gap:8, cursor:"pointer" }}>
+                    <input type="checkbox" checked={pgMultidia} onChange={e => setPgMultidia(e.target.checked)} style={{ width:16, height:16, accentColor:C.teal }} />
+                    Ausencia de varios días
+                  </label>
+                </div>
+              </div>
+              {pgMultidia && (
+                <div style={{ marginBottom:16 }}>
+                  <label style={labelStyle}>Fecha de fin</label>
+                  <input type="date" value={pgFechaFin} min={pgFecha} onChange={e => setPgFechaFin(e.target.value)} style={inpStyle} />
+                </div>
+              )}
+              <div style={{ marginBottom:4 }}>
+                <label style={labelStyle}>📝 Nota general (opcional)</label>
+                <textarea value={pgNota} onChange={e => setPgNota(e.target.value)} rows={2} placeholder="Observaciones generales sobre la ausencia…" style={{ ...inpStyle, resize:"vertical" }} />
+              </div>
+              <div style={{ background:"#EEF5F8", borderRadius:8, padding:"10px 14px", fontSize:12, color:C.blue, marginTop:12 }}>
+                💡 Si la ausencia abarca varios días, el plan se aplicará a todas las fechas del periodo seleccionado.
+              </div>
+            </Card>
+          )}
+
+          {/* PASO 2 inline */}
+          {paso === 2 && (
+            <Card>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}>👤 Profesor ausente y horas afectadas</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+                <div>
+                  <label style={labelStyle}>Profesor ausente *</label>
+                  <select value={pgProfesor} onChange={e => setPgProfesor(e.target.value)} style={selStyle}>
+                    <option value="">— Seleccionar —</option>
+                    {profesores.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={labelStyle}>Motivo de la ausencia</label>
+                  <select value={pgMotivo} onChange={e => setPgMotivo(e.target.value)} style={selStyle}>
+                    {MOTIVOS.map(m => <option key={m}>{m}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom:8 }}>
+                <label style={{ ...labelStyle, marginBottom:10 }}>⏰ Horas afectadas * <span style={{ color:C.gray, fontWeight:400, fontSize:12 }}>— Selecciona todas las que apliquen</span></label>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
+                  {HORAS.map(h => {
+                    const sel = pgHoras.includes(h);
+                    return (
+                      <button key={h} onClick={() => toggleHora(h)}
+                        style={{ padding:"10px 8px", borderRadius:10, border:`2px solid ${sel ? C.blue : "#e5e7eb"}`, background: sel ? "#EEF5F8" : C.white, color: sel ? C.blue : C.gray, fontWeight: sel ? 700 : 500, fontSize:13, cursor:"pointer", transition:"all .15s", textAlign:"center" }}>
+                        {sel ? "✓ " : ""}{h}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {pgHoras.length > 0 && (
+                <div style={{ background:"#E8F5F3", borderRadius:8, padding:"8px 14px", fontSize:13, color:C.teal, fontWeight:600, marginTop:12 }}>
+                  ✅ {pgHoras.length} hora(s) seleccionada(s): {pgHoras.join(", ")}
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* PASO 3 inline */}
+          {paso === 3 && (
+            <div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}>🏫 Aula, módulo y tarea por hora</div>
+              {pgHoras.map(h => (
+                <Card key={h} style={{ borderLeft:`4px solid ${C.blue}`, marginBottom:12 }}>
+                  <div style={{ fontWeight:700, color:C.blue, fontSize:15, marginBottom:12 }}>⏰ {h}</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
+                    <div>
+                      <label style={labelStyle}>Grupo / Clase *</label>
+                      <select value={pgCursoHora[h] || ""} onChange={e => setCursoHora(h, e.target.value)} style={selStyle}>
+                        <option value="">— Seleccionar —</option>
+                        {cursos.map(c => <option key={c}>{c}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Materia</label>
+                      <input value={pgMateriaHora[h] || ""} onChange={e => setMateriaHora(h, e.target.value)} placeholder="Ej: Matemáticas" style={inpStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>🏢 Módulo del edificio</label>
+                      <select value={pgModuloEdificio[h] || ""} onChange={e => setModuloHora(h, e.target.value)} style={selStyle}>
+                        <option value="">— Módulo —</option>
+                        {MODULOS.map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:10 }}>
+                    <label style={labelStyle}>📋 Tarea / Actividad para los alumnos</label>
+                    <textarea value={pgTareaHora[h] || ""} onChange={e => setTareaHora(h, e.target.value)} rows={2} placeholder="Ej: Ejercicios pág. 45 del libro · Lectura silenciosa · Repaso tema 3…" style={{ ...inpStyle, resize:"vertical" }} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>📎 Material / Recursos disponibles</label>
+                    <input value={pgMaterialHora[h] || ""} onChange={e => setMaterialDetalleHora(h, e.target.value)} placeholder="Ej: Fotocopias en conserjería · Libro de texto · Presentación en Drive…" style={inpStyle} />
+                  </div>
+                  {pgCursoHora[h] && (
+                    <div style={{ marginTop:10, background:C.cream, borderRadius:6, padding:"6px 12px", fontSize:12, color:C.gray }}>
+                      📍 {pgCursoHora[h]}{pgModuloEdificio[h] ? ` · ${pgModuloEdificio[h]}` : ""}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* PASO 4 inline */}
+          {paso === 4 && (
+            <div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}>🔄 Asignación de profesores de guardia</div>
+              {pgHoras.map(h => (
+                <Card key={h} style={{ borderLeft:`4px solid ${C.teal}`, marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12, flexWrap:"wrap", gap:8 }}>
+                    <div style={{ fontWeight:700, color:C.teal, fontSize:15 }}>⏰ {h}</div>
+                    {pgCursoHora[h] && (
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                        <span style={{ background:"#EEF5F8", color:C.blue, borderRadius:6, padding:"3px 10px", fontSize:12, fontWeight:600 }}>🏫 {pgCursoHora[h]}</span>
+                        {pgMateriaHora[h] && <span style={{ background:C.cream, color:C.dark, borderRadius:6, padding:"3px 10px", fontSize:12 }}>{pgMateriaHora[h]}</span>}
+                        {pgModuloEdificio[h] && <span style={{ background:"#E8F5F3", color:C.teal, borderRadius:6, padding:"3px 10px", fontSize:12 }}>🏢 {pgModuloEdificio[h]}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                    <div>
+                      <label style={labelStyle}>👤 Profesor de guardia *</label>
+                      <select value={pgGuardiaHora[h] || ""} onChange={e => setGuardiaHora(h, e.target.value)} style={selStyle}>
+                        <option value="">— Seleccionar —</option>
+                        {profesores.filter(p => p !== pgProfesor).map(p => <option key={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>📍 Zona de guardia</label>
+                      <select value={pgZonaHora[h] || ""} onChange={e => setZonaHora(h, e.target.value)} style={selStyle}>
+                        <option value="">— Seleccionar zona —</option>
+                        {ZONAS_GUARDIA.map(z => <option key={z}>{z}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  {pgGuardiaHora[h] && pgZonaHora[h] && (
+                    <div style={{ marginTop:10, background:"#E8F5F3", borderRadius:6, padding:"6px 12px", fontSize:12, color:C.teal, fontWeight:600 }}>
+                      ✅ {pgGuardiaHora[h]} — {pgZonaHora[h]}
+                    </div>
+                  )}
+                  {pgTareaHora[h] && (
+                    <div style={{ marginTop:8, background:"#FFF8E8", borderRadius:6, padding:"6px 12px", fontSize:12, color:"#92400e" }}>
+                      📋 Tarea: {pgTareaHora[h]}
+                    </div>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
 
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
             {paso > 1
@@ -933,11 +961,12 @@ export default function App() {
   // Formulario nuevo parte
   const [fAlumno, setFAlumno]     = useState("");
   const [fBusqueda, setFBusqueda] = useState("");
-  const [fTipo, setFTipo]         = useState("Comportamiento");
-  const [fGravedad, setFGravedad] = useState("leve");
-  const [fDesc, setFDesc]         = useState("");
-  const [fHora, setFHora]         = useState("1ª hora");
-  const [fProfesor, setFProfesor] = useState(DEMO_PROFESORES[4]);
+  const [fTipo, setFTipo]                 = useState("Comportamiento");
+  const [fGravedad, setFGravedad]         = useState("leve");
+  const [fTipificacion, setFTipificacion] = useState("");
+  const [fDesc, setFDesc]                 = useState("");
+  const [fHora, setFHora]                 = useState("1ª hora");
+  const [fProfesor, setFProfesor]         = useState(DEMO_PROFESORES[4]);
   const [parteGenerado, setParteGenerado] = useState(null);
 
   // Parte de grupo
@@ -1028,11 +1057,11 @@ export default function App() {
   function crearParte() {
     if (!fAlumno || !fDesc.trim()) return;
     const al = alumnos.find(a => a.id === parseInt(fAlumno));
-    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
+    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, tipificacion: fTipificacion, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
     generarAlertasParte(p, partes);
     setPartes(prev => [p, ...prev]);
     setParteGenerado(p);
-    setFAlumno(""); setFBusqueda(""); setFDesc(""); setFTipo("Comportamiento"); setFGravedad("leve");
+    setFAlumno(""); setFBusqueda(""); setFDesc(""); setFTipo("Comportamiento"); setFGravedad("leve"); setFTipificacion("");
   }
 
   function crearParteGrupo() {
@@ -1097,8 +1126,9 @@ export default function App() {
 
   // ── Pantalla de selección de perfil ──
   if (!perfil) return (
-    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif" }}>
-      <div style={{ background: C.white, borderRadius: 20, padding: 40, maxWidth: 420, width: "90%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
+      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <div style={{ background: C.white, borderRadius: 20, padding: "40px 36px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
         <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
         <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
@@ -1149,6 +1179,20 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif" }}>
+      <style>{`
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; }
+        .galvan-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .galvan-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .galvan-tabs::-webkit-scrollbar { display: none; }
+        @media (max-width: 768px) {
+          .galvan-content { padding: 12px; }
+          .galvan-grid-3 { grid-template-columns: 1fr !important; }
+          .galvan-grid-2 { grid-template-columns: 1fr !important; }
+          .galvan-hide-mobile { display: none !important; }
+        }
+        @media print { .no-print { display: none !important; } }
+      `}</style>
       {/* Header */}
       <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -1164,16 +1208,18 @@ export default function App() {
       </div>
 
       {/* Tabs */}
-      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, display: "flex", overflowX: "auto", boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }}>
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s" }}>
-            {t.label}
-          </button>
-        ))}
+      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }} className="galvan-tabs">
+        <div className="galvan-tabs" style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s", flexShrink: 0 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: "0 auto", padding: 20 }}>
+      <div className="galvan-content">
 
         {/* Alerta flotante */}
         {showAlerta && (
@@ -1225,7 +1271,19 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16, marginTop: 8 }}>
                 <div><label style={labelStyle}>⏰ Hora de clase</label><select value={fHora} onChange={e => setFHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h}>{h}</option>)}</select></div>
                 <div><label style={labelStyle}>📂 Tipo de parte</label><select value={fTipo} onChange={e => setFTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
-                <div><label style={labelStyle}>🎯 Gravedad</label><select value={fGravedad} onChange={e => setFGravedad(e.target.value)} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+                <div><label style={labelStyle}>🎯 Gravedad</label><select value={fGravedad} onChange={e => { setFGravedad(e.target.value); setFTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={labelStyle}>⚖️ Tipificación normativa <span style={{ fontWeight: 400, color: C.gray, fontSize: 11 }}>({fGravedad === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM"})</span></label>
+                <select value={fTipificacion} onChange={e => setFTipificacion(e.target.value)} style={{ ...selStyle, borderColor: fTipificacion ? C.teal : "#d1d5db" }}>
+                  <option value="">— Seleccionar tipificación (opcional) —</option>
+                  {(TIPIFICACION[fGravedad] || []).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                </select>
+                {fTipificacion && (
+                  <div style={{ marginTop: 6, background: "#E8F5F3", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.teal, fontWeight: 600 }}>
+                    ✓ {TIPIFICACION[fGravedad]?.find(t => t.id === fTipificacion)?.label}
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}>📝 Descripción del incidente</label>
@@ -1444,7 +1502,7 @@ export default function App() {
               {[
                 { label: "Total Partes", value: partes.length,                                              color: C.dark,   emoji: "📋" },
                 { label: "Leves",        value: partes.filter(p => p.gravedad === "leve").length,           color: C.teal,   emoji: "🟡" },
-                { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "🟠" },
+                { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "⚠️" },
                 { label: "Muy Graves",   value: partes.filter(p => p.gravedad === "muy_grave").length,      color: C.salmon, emoji: "🔴" },
                 { label: "Fuera Ahora",  value: banoActivos.length,                                         color: C.blue,   emoji: "🚻" },
                 { label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length,        color: "#7c3aed",emoji: "🔄" },
@@ -1787,6 +1845,17 @@ export default function App() {
               {[["Alumno", showParte.alumno], ["Curso", showParte.curso], ["Tutor", showParte.tutor], ["Tipo", showParte.tipo], ["Hora", showParte.hora || "No especificada"], ["Fecha y hora", fmt(showParte.ts)], ["Profesor", showParte.profesor]].map(([k, v]) => (
                 <InfoRow key={k} label={k} value={v} />
               ))}
+              {showParte.tipificacion && (() => {
+                const tipObj = TIPIFICACION[showParte.gravedad]?.find(t => t.id === showParte.tipificacion);
+                const fuente = showParte.gravedad === "leve" ? "Plan de Convivencia" : "Decreto 32/2019";
+                return (
+                  <div style={{ margin: "8px 0", padding: "8px 12px", background: "#EEF5F8", borderRadius: 8, border: `1px solid ${C.blue}`, fontSize: 12 }}>
+                    <span style={{ fontWeight: 700, color: C.blue }}>⚖️ Tipificación </span>
+                    <span style={{ color: C.gray }}>({fuente})</span>
+                    <div style={{ marginTop: 3, color: C.dark }}>{tipObj?.label}</div>
+                  </div>
+                );
+              })()}
               <div style={{ marginTop: 16, background: C.cream, borderRadius: 8, padding: 14, fontSize: 14, lineHeight: 1.6, color: C.dark }}>{showParte.descripcion}</div>
               <div style={{ marginTop: 12, background: "#EEF5F8", borderRadius: 8, padding: 12, fontSize: 13 }}>
                 <strong style={{ color: C.blue }}>📬 Familia:</strong> ✉️ {showParte.email} · 📱 {showParte.telefono}
