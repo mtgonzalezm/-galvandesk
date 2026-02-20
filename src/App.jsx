@@ -972,7 +972,8 @@ export default function App() {
   // Parte de grupo
   const [gCurso, setGCurso]         = useState("");
   const [gTipo, setGTipo]           = useState("Comportamiento");
-  const [gGravedad, setGGravedad]   = useState("leve");
+  const [gGravedad, setGGravedad]       = useState("leve");
+  const [gTipificacion, setGTipificacion] = useState("");
   const [gDesc, setGDesc]           = useState("");
   const [gHora, setGHora]           = useState("1ª hora");
   const [gExcluidos, setGExcluidos] = useState([]);
@@ -1068,11 +1069,11 @@ export default function App() {
     if (!gCurso || !gDesc.trim()) return;
     const grupo = alumnos.filter(a => a.curso === gCurso && !gExcluidos.includes(a.id));
     const ts = new Date().toISOString();
-    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
+    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, tipificacion: gTipificacion, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
     const partesTemp = [...partes]; nuevos.forEach(p => generarAlertasParte(p, partesTemp));
     setPartes(prev => [...nuevos, ...prev]);
     setGrupoGenerado({ curso: gCurso, total: nuevos.length, ts });
-    setGDesc(""); setGExcluidos([]); setGTipo("Comportamiento"); setGGravedad("leve");
+    setGDesc(""); setGExcluidos([]); setGTipo("Comportamiento"); setGGravedad("leve"); setGTipificacion("");
   }
 
   function crearGuardia() {
@@ -1178,23 +1179,14 @@ export default function App() {
       ];
 
   return (
-    <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif", width: "100%" }}>
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; }
-        .galvan-content { max-width: 1100px; margin: 0 auto; padding: 20px; }
-        .galvan-tabs { display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-        .galvan-tabs::-webkit-scrollbar { display: none; }
-        @media (max-width: 768px) {
-          .galvan-content { padding: 12px; }
-          .galvan-grid-3 { grid-template-columns: 1fr !important; }
-          .galvan-grid-2 { grid-template-columns: 1fr !important; }
-          .galvan-hide-mobile { display: none !important; }
-        }
         @media print { .no-print { display: none !important; } }
       `}</style>
-      {/* Header */}
-      <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {/* Header — ancho completo */}
+      <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 26 }}>🏫</span>
           <div>
@@ -1207,19 +1199,18 @@ export default function App() {
         </button>
       </div>
 
-      {/* Tabs */}
-      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, boxShadow: "0 2px 6px rgba(0,0,0,0.05)" }} className="galvan-tabs">
-        <div className="galvan-tabs" style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s", flexShrink: 0 }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
+      {/* Tabs — ancho completo */}
+      <div style={{ background: C.white, borderBottom: `2px solid ${C.cream}`, display: "flex", overflowX: "auto", boxShadow: "0 2px 6px rgba(0,0,0,0.05)", width: "100%", WebkitOverflowScrolling: "touch" }}>
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{ padding: "13px 16px", border: "none", background: "none", cursor: "pointer", fontSize: 13, fontWeight: 600, color: tab === t.id ? C.teal : C.gray, borderBottom: tab === t.id ? `3px solid ${C.teal}` : "3px solid transparent", whiteSpace: "nowrap", transition: "color .2s", flexShrink: 0 }}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="galvan-content">
+      {/* Contenido — centrado con max-width */}
+      <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
 
         {/* Alerta flotante */}
         {showAlerta && (
@@ -1346,7 +1337,18 @@ export default function App() {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
                 <div><label style={labelStyle}>⏰ Hora</label><select value={gHora} onChange={e => setGHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h}>{h}</option>)}</select></div>
                 <div><label style={labelStyle}>📂 Tipo</label><select value={gTipo} onChange={e => setGTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
-                <div><label style={labelStyle}>🎯 Gravedad</label><select value={gGravedad} onChange={e => setGGravedad(e.target.value)} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+                <div><label style={labelStyle}>🎯 Gravedad</label><select value={gGravedad} onChange={e => { setGGravedad(e.target.value); setGTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+                {gGravedad && TIPIFICACION[gGravedad]?.length > 0 && (
+                  <div style={{ gridColumn: "1/-1" }}>
+                    <label style={labelStyle}>⚖️ Tipificación de la falta</label>
+                    <select value={gTipificacion} onChange={e => setGTipificacion(e.target.value)} style={selStyle}>
+                      <option value="">— Seleccionar tipificación —</option>
+                      {TIPIFICACION[gGravedad].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                    {gGravedad !== "leve" && <div style={{ fontSize: 11, color: C.gray, marginTop: 4 }}>Decreto 32/2019 de la CAM</div>}
+                    {gGravedad === "leve" && <div style={{ fontSize: 11, color: C.gray, marginTop: 4 }}>Plan de Convivencia del Centro</div>}
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>📝 Descripción</label>
