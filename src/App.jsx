@@ -1359,7 +1359,8 @@ export default function App() {
   const [fDesc, setFDesc]                 = useState("");
   const [fHora, setFHora]                 = useState("1ª hora");
   const [fProfesor, setFProfesor]         = useState(DEMO_PROFESORES[4]);
-  const [moduloProfesor, setModuloProfesor] = useState("alumnos"); // "alumnos" | "guardias"
+  const [moduloProfesor, setModuloProfesor] = useState("alumnos");   // "alumnos" | "guardias"
+  const [moduloJefatura, setModuloJefatura] = useState("alumnos");   // "alumnos" | "guardias"
   const [parteGenerado, setParteGenerado] = useState(null);
 
   // Parte de grupo
@@ -1573,18 +1574,21 @@ export default function App() {
           { id: "guardias_ver",   label: "📄 Ver Guardias" },
         ]
     : perfil.id === "jefatura"
-    ? [
-        { id: "dashboard",    label: "📊 Dashboard"     },
-        { id: "por_curso",    label: "🏫 Por Curso"     },
-        { id: "por_alumno",   label: "👤 Por Alumno"    },
-        { id: "partes_todos", label: "📋 Partes"        },
-        { id: "cuadrante",    label: "📅 Cuadrante"     },
-        { id: "parte_dia",    label: "🔄 Parte del Día" },
-        { id: "ausencias_jef",label: "📢 Ausencias"     },
-        { id: "bano_live",    label: "🚻 Baños"         },
-        { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas` },
-        { id: "informe",      label: "📤 Informe"       },
-      ]
+    ? moduloJefatura === "alumnos"
+      ? [
+          { id: "dashboard",    label: "📊 Dashboard" },
+          { id: "por_curso",    label: "🏫 Por Curso" },
+          { id: "por_alumno",   label: "👤 Por Alumno" },
+          { id: "partes_todos", label: "📋 Partes" },
+          { id: "bano_live",    label: "🚻 Baños" },
+          { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas` },
+          { id: "informe",      label: "📤 Informe" },
+        ]
+      : [
+          { id: "cuadrante",     label: "📅 Cuadrante" },
+          { id: "parte_dia",     label: "🔄 Parte del Día" },
+          { id: "ausencias_jef", label: "📢 Ausencias de Profesores" },
+        ]
     : [
         { id: "admin_panel",       label: "👥 Alumnos" },
         { id: "admin_profesores",  label: "👨‍🏫 Profesores" },
@@ -1615,12 +1619,28 @@ export default function App() {
       {perfil.id === "profesor" && (
         <div style={{ background: C.dark, display: "flex", justifyContent: "center", gap: 0, padding: "0 24px" }}>
           {[
-            { id: "alumnos",  label: "👨‍🎓 Alumnos",  color: C.teal  },
-            { id: "guardias", label: "🔄 Guardias", color: C.blue  },
+            { id: "alumnos",  label: "👨‍🎓 Alumnos",  color: C.teal },
+            { id: "guardias", label: "🔄 Guardias",  color: C.blue },
           ].map(m => (
             <button key={m.id}
               onClick={() => { setModuloProfesor(m.id); setTab(m.id === "alumnos" ? "partes" : "mi_guardia"); }}
               style={{ padding: "10px 32px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "none", color: moduloProfesor === m.id ? m.color : "rgba(255,255,255,0.5)", borderBottom: moduloProfesor === m.id ? `3px solid ${m.color}` : "3px solid transparent", transition: "all .2s" }}>
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Selector módulo Jefatura */}
+      {perfil.id === "jefatura" && (
+        <div style={{ background: C.dark, display: "flex", justifyContent: "center", gap: 0, padding: "0 24px" }}>
+          {[
+            { id: "alumnos",  label: "📋 Partes y Alumnos",                      color: C.teal  },
+            { id: "guardias", label: "🔄 Parte de Guardias y Ausencias de Profesores", color: C.blue  },
+          ].map(m => (
+            <button key={m.id}
+              onClick={() => { setModuloJefatura(m.id); setTab(m.id === "alumnos" ? "dashboard" : "cuadrante"); }}
+              style={{ padding: "10px 32px", border: "none", cursor: "pointer", fontWeight: 700, fontSize: 14, background: "none", color: moduloJefatura === m.id ? m.color : "rgba(255,255,255,0.5)", borderBottom: moduloJefatura === m.id ? `3px solid ${m.color}` : "3px solid transparent", transition: "all .2s" }}>
               {m.label}
             </button>
           ))}
