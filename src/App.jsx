@@ -1127,6 +1127,23 @@ function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selSt
                 </div>
               ))}
             </div>
+            <div style={{ marginTop: 16, textAlign: "center" }}>
+              <button onClick={() => alert("Para ver el cuadrante completo, debes ir a Jefatura → Cuadrante de Guardias")} style={{
+                padding: "10px 20px",
+                background: C.blue,
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 600,
+                transition: "all .3s ease"
+              }}
+              onMouseOver={e => { e.currentTarget.style.background = "#00a399"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseOut={e => { e.currentTarget.style.background = C.blue; e.currentTarget.style.transform = "translateY(0)"; }}>
+                📅 Ver Cuadrante Completo
+              </button>
+            </div>
           </div>
         );
       })()}
