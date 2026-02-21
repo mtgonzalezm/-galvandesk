@@ -1088,6 +1088,48 @@ function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selSt
           {profesores.map(p => <option key={p}>{p}</option>)}
         </select>
       </div>
+
+      {/* CALENDARIO PRÓXIMOS 7 DÍAS */}
+      {(() => {
+        const proximosDias = [];
+        for (let i = 0; i < 7; i++) {
+          const fecha = new Date(hoy);
+          fecha.setDate(fecha.getDate() + i);
+          const dia = diasES[fecha.getDay()];
+          
+          // Verificar si tiene guardias ese día
+          const tieneGuardia = HORAS_GUARDIA.some(hora => {
+            const key = `${dia}|${hora}|${fProfesor}`;
+            return cuadrante[key];
+          });
+          
+          proximosDias.push({ dia, fecha, tieneGuardia });
+        }
+        
+        return (
+          <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize:13, fontWeight:600, color:C.gray, marginBottom:12 }}>📅 Próximos 7 días</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:8 }}>
+              {proximosDias.map((p, idx) => (
+                <div key={idx} style={{ 
+                  textAlign:"center", 
+                  padding:12, 
+                  borderRadius:10, 
+                  background: p.tieneGuardia ? "#E8F5F3" : "#f3f4f6",
+                  border: idx === 0 ? `2px solid ${C.teal}` : "2px solid transparent"
+                }}>
+                  <div style={{ fontSize:11, fontWeight:600, color:C.gray, marginBottom:4 }}>{p.dia.substring(0,3)}</div>
+                  <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:6 }}>{p.fecha.getDate()}</div>
+                  <div style={{ fontSize:20 }}>{p.tieneGuardia ? "✅" : "⭕"}</div>
+                  <div style={{ fontSize:10, color: p.tieneGuardia ? C.teal : C.gray, fontWeight:600, marginTop:4 }}>
+                    {p.tieneGuardia ? "Guardia" : "Libre"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       {esFinde ? (
         <div style={{ background:"#E8F5F3", borderRadius:12, padding:30, textAlign:"center", color:C.teal, fontWeight:600, fontSize:16 }}>
           🎉 ¡Hoy es {diaHoy}! No hay guardias.
