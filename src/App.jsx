@@ -2728,46 +2728,38 @@ export default function App() {
       {/* ── Modal Ver Cuadrante Completo ── */}
       {showCuadrante && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
-          <div style={{ background: C.white, borderRadius: 16, maxWidth: "90vw", width: "100%", maxHeight: "85vh", overflowY: "auto" }}>
+          <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias - Semana Completa</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias</div>
               <button onClick={() => setShowCuadrante(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
-            <div style={{ padding: 24 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <div style={{ padding: 20, overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, minWidth: 800 }}>
                 <thead>
                   <tr style={{ background: C.dark }}>
-                    <th style={{ padding: "8px 12px", color: "#fff", textAlign: "left" }}>Hora</th>
-                    {DIAS_SEMANA.map(d => <th key={d} style={{ padding: "8px 12px", color: "#fff", textAlign: "left" }}>{d}</th>)}
+                    <th style={{ padding: "10px 8px", color: "#fff", textAlign: "left", fontWeight: 600 }}>Hora</th>
+                    {DIAS_SEMANA.map(d => <th key={d} style={{ padding: "10px 8px", color: "#fff", textAlign: "center", fontWeight: 600 }}>{d.substring(0,3)}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {HORAS_GUARDIA.map((hora, i) => (
-                    <tr key={hora} style={{ background: i % 2 === 0 ? "#fff" : C.light }}>
-                      <td style={{ padding: "8px 12px", fontWeight: 700, color: C.dark }}>{hora}</td>
+                  {HORAS_GUARDIA.map((hora, idx) => (
+                    <tr key={hora} style={{ background: idx % 2 === 0 ? "#fff" : "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
+                      <td style={{ padding: "10px 8px", fontWeight: 700, color: C.dark, width: 80 }}>{hora}</td>
                       {DIAS_SEMANA.map(dia => {
-                        const profesoresEnHora = [];
+                        const asignados = [];
                         profesores.forEach(prof => {
                           const key = `${dia}|${hora}|${prof}`;
                           if (cuadrante[key]) {
-                            const zona = ZONAS_CENTRO.find(z => z.id === cuadrante[key]);
-                            profesoresEnHora.push({ prof, zona: zona ? zona.label : cuadrante[key] });
+                            asignados.push(prof);
                           }
                         });
                         
                         return (
-                          <td key={dia} style={{ padding: "8px 12px", borderRight: "1px solid #e5e7eb" }}>
-                            {profesoresEnHora.length > 0 ? (
-                              <div style={{ fontSize: 11 }}>
-                                {profesoresEnHora.map((p, idx) => (
-                                  <div key={idx} style={{ marginBottom: 4, padding: 4, background: "#E8F5F3", borderRadius: 4 }}>
-                                    <strong>{p.prof}</strong><br/>
-                                    <span style={{ fontSize: 10, color: C.gray }}>{p.zona}</span>
-                                  </div>
-                                ))}
-                              </div>
+                          <td key={dia} style={{ padding: "8px", textAlign: "center", fontSize: 10, background: asignados.length > 0 ? "#E8F5F3" : "transparent" }}>
+                            {asignados.length > 0 ? (
+                              <div style={{ color: C.teal, fontWeight: 600 }}>✅ {asignados.join(", ")}</div>
                             ) : (
-                              <span style={{ color: C.gray, fontSize: 10 }}>—</span>
+                              <span style={{ color: C.gray }}>—</span>
                             )}
                           </td>
                         );
@@ -2776,6 +2768,9 @@ export default function App() {
                   ))}
                 </tbody>
               </table>
+              <div style={{ marginTop: 16, fontSize: 12, color: C.gray, padding: "16px", background: "#f9fafb", borderRadius: 8 }}>
+                <strong>✅ =</strong> Profesor asignado | <strong>—</strong> = Sin asignar
+              </div>
             </div>
           </div>
         </div>
