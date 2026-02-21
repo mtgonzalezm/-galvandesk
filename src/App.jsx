@@ -2730,11 +2730,11 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
           <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias Completo</div>
               <button onClick={() => setShowCuadrante(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: 20, overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, minWidth: 800 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: C.dark }}>
                     <th style={{ padding: "10px 8px", color: "#fff", textAlign: "left", fontWeight: 600 }}>Hora</th>
@@ -2746,18 +2746,32 @@ export default function App() {
                     <tr key={hora} style={{ background: idx % 2 === 0 ? "#fff" : "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                       <td style={{ padding: "10px 8px", fontWeight: 700, color: C.dark, width: 80 }}>{hora}</td>
                       {DIAS_SEMANA.map(dia => {
-                        const asignados = [];
+                        const asignaciones = [];
                         profesores.forEach(prof => {
                           const key = `${dia}|${hora}|${prof}`;
                           if (cuadrante[key]) {
-                            asignados.push(prof);
+                            const zona = ZONAS_CENTRO.find(z => z.id === cuadrante[key]);
+                            const apoyo = apoyosGuardia[`${dia}|${hora}|${cuadrante[key]}`];
+                            asignaciones.push({
+                              profesor: prof,
+                              zona: zona ? zona.label : "Zona desconocida",
+                              apoyo: apoyo || null
+                            });
                           }
                         });
                         
                         return (
-                          <td key={dia} style={{ padding: "8px", textAlign: "center", fontSize: 10, background: asignados.length > 0 ? "#E8F5F3" : "transparent" }}>
-                            {asignados.length > 0 ? (
-                              <div style={{ color: C.teal, fontWeight: 600 }}>✅ {asignados.join(", ")}</div>
+                          <td key={dia} style={{ padding: "8px", textAlign: "left", fontSize: 10, background: asignaciones.length > 0 ? "#E8F5F3" : "transparent", borderRight: "1px solid #e5e7eb" }}>
+                            {asignaciones.length > 0 ? (
+                              <div style={{ color: C.teal }}>
+                                {asignaciones.map((a, idx) => (
+                                  <div key={idx} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: idx < asignaciones.length - 1 ? "1px solid #d0e8e6" : "none" }}>
+                                    <strong style={{ color: C.dark }}>👤 {a.profesor}</strong><br/>
+                                    <span style={{ color: C.teal, fontSize: 9 }}>📍 {a.zona}</span><br/>
+                                    {a.apoyo && <span style={{ color: C.blue, fontSize: 9 }}>👥 Apoyo: {a.apoyo}</span>}
+                                  </div>
+                                ))}
+                              </div>
                             ) : (
                               <span style={{ color: C.gray }}>—</span>
                             )}
@@ -2768,8 +2782,8 @@ export default function App() {
                   ))}
                 </tbody>
               </table>
-              <div style={{ marginTop: 16, fontSize: 12, color: C.gray, padding: "16px", background: "#f9fafb", borderRadius: 8 }}>
-                <strong>✅ =</strong> Profesor asignado | <strong>—</strong> = Sin asignar
+              <div style={{ marginTop: 16, fontSize: 11, color: C.gray, padding: "12px", background: "#f9fafb", borderRadius: 8 }}>
+                <strong>👤</strong> = Profesor | <strong>📍</strong> = Lugar/Zona | <strong>👥</strong> = Profesor de Apoyo
               </div>
             </div>
           </div>
