@@ -1704,31 +1704,31 @@ export default function App() {
   const tabs = perfil.id === "profesor"
     ? moduloProfesor === "alumnos"
       ? [
-          { id: "partes",      label: "📋 Nuevo Parte" },
-          { id: "parte_grupo", label: "👥 Parte de Grupo" },
-          { id: "bano",        label: "🚻 Baños" },
-          { id: "historial",   label: "🗂 Mis Partes" },
+          { id: "partes",      label: "📋 Nuevo Parte", color: "#06b6d4" },
+          { id: "parte_grupo", label: "👥 Parte de Grupo", color: "#ec4899" },
+          { id: "bano",        label: "🚻 Baños", color: "#10b981" },
+          { id: "historial",   label: "🗂 Mis Partes", color: "#8b5cf6" },
         ]
       : [
-          { id: "mi_guardia",     label: "🔄 Mi Guardia Hoy" },
-          { id: "notif_ausencia", label: "📢 Notificar Ausencia" },
-          { id: "guardias_ver",   label: "📄 Ver Guardias" },
+          { id: "mi_guardia",     label: "🔄 Mi Guardia Hoy", color: "#06b6d4" },
+          { id: "notif_ausencia", label: "📢 Notificar Ausencia", color: "#ec4899" },
+          { id: "guardias_ver",   label: "📄 Ver Guardias", color: "#10b981" },
         ]
     : perfil.id === "jefatura"
     ? moduloJefatura === "alumnos"
       ? [
-          { id: "dashboard",    label: "📊 Dashboard" },
-          { id: "por_curso",    label: "🏫 Por Curso" },
-          { id: "por_alumno",   label: "👤 Por Alumno" },
-          { id: "partes_todos", label: "📋 Partes" },
-          { id: "bano_live",    label: "🚻 Baños" },
-          { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas` },
-          { id: "informe",      label: "📤 Informe" },
+          { id: "dashboard",    label: "📊 Dashboard", color: "#06b6d4" },
+          { id: "por_curso",    label: "🏫 Por Curso", color: "#ec4899" },
+          { id: "por_alumno",   label: "👤 Por Alumno", color: "#10b981" },
+          { id: "partes_todos", label: "📋 Partes", color: "#8b5cf6" },
+          { id: "bano_live",    label: "🚻 Baños", color: "#06b6d4" },
+          { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas`, color: "#ec4899" },
+          { id: "informe",      label: "📤 Informe", color: "#10b981" },
         ]
       : [
-          { id: "cuadrante",     label: "📅 Cuadrante" },
-          { id: "parte_dia",     label: "🔄 Parte del Día" },
-          { id: "ausencias_jef", label: "📢 Ausencias de Profesores" },
+          { id: "cuadrante",     label: "📅 Cuadrante", color: "#06b6d4" },
+          { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
+          { id: "ausencias_jef", label: "📢 Ausencias de Profesores", color: "#10b981" },
         ]
     : [
         // Admin no necesita tabs adicionales, solo usa los módulos
@@ -1866,12 +1866,12 @@ export default function App() {
               fontWeight: tab === t.id ? 700 : 500,
               minHeight: 40,
               borderRadius: 8,
-              background: tab === t.id ? "#FFE52A" : "#FF7F11",
-              color: tab === t.id ? "#2C4A52" : "#ffffff",
+              background: tab === t.id ? t.color : "#FF7F11",
+              color: tab === t.id ? "#ffffff" : "#ffffff",
               whiteSpace: "nowrap", 
               transition: "all .3s ease",
               flexShrink: 0,
-              boxShadow: tab === t.id ? "0 4px 12px rgba(255, 229, 42, 0.3)" : "0 1px 3px rgba(0,0,0,0.05)",
+              boxShadow: tab === t.id ? `0 4px 12px ${t.color}44` : "0 1px 3px rgba(0,0,0,0.05)",
               transform: tab === t.id ? "translateY(-1px)" : "translateY(0)"
             }}>
             {t.label}
