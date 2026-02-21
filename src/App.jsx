@@ -1034,7 +1034,7 @@ const DIAS_SEMANA   = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario }) {
+function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante }) {
   const hoy     = new Date();
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
@@ -2522,7 +2522,7 @@ export default function App() {
         {/* ── Baños live (Jefatura) ── */}
         {/* ── Mi Guardia Hoy (Profesor) ── */}
         {tab === "mi_guardia" && (
-          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} />
+          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} />
         )}
 
         {/* ── Notificar Ausencia (Profesor) ── */}
