@@ -1496,14 +1496,19 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 // ═══════════════════════════════════════════════════════════════════════════
 // CUADRANTE DE GUARDIAS (Jefatura)
 // ═══════════════════════════════════════════════════════════════════════════
-function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia, setApoyosGuardia, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
-  function setAsignacion(dia, hora, profesor, zonaId) {
-    const key = `${dia}|${hora}|${profesor}`;
+function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia, setApoyosGuardia, profesoresGuardia, setProfesoresGuardia, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
+  function setProfesoreGuardia(dia, hora, profesorGuardia) {
+    const key = `${dia}|${hora}|${profesorGuardia}`;
+    setProfesoresGuardia(prev => { const next={...prev}; if(profesorGuardia==="") delete next[key]; else next[key]=profesorGuardia; return next; });
+  }
+  
+  function setZona(dia, hora, profesorGuardia, zonaId) {
+    const key = `${dia}|${hora}|${profesorGuardia}`;
     setCuadrante(prev => { const next={...prev}; if(zonaId==="") delete next[key]; else next[key]=zonaId; return next; });
   }
   
-  function setApoyo(dia, hora, zona, profesorApoyo) {
-    const key = `${dia}|${hora}|${zona}`;
+  function setApoyo(dia, hora, zonaId, profesorApoyo) {
+    const key = `${dia}|${hora}|${zonaId}`;
     setApoyosGuardia(prev => { const next={...prev}; if(profesorApoyo==="") delete next[key]; else next[key]=profesorApoyo; return next; });
   }
   
@@ -1526,8 +1531,8 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
         </div>
       </div>
       <div style={{ background:C.white, borderRadius:12, padding:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", overflowX:"auto" }}>
-        <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>Asignación de {profesorSel}</div>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:700 }}>
+        <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>📅 Asignación de profesores de guardia</div>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:900 }}>
           <thead>
             <tr style={{ background:C.dark }}>
               <th style={{ padding:"8px 12px", color:"#fff", textAlign:"left", width:100 }}>Hora</th>
@@ -1539,28 +1544,37 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
               <tr key={hora} style={{ background:i%2===0?"#fff":C.light }}>
                 <td style={{ padding:"6px 12px", fontWeight:700, color:C.dark, fontSize:13, whiteSpace:"nowrap" }}>{hora}</td>
                 {DIAS_SEMANA.map(dia => {
-                  const val = cuadrante[`${dia}|${hora}|${profesorSel}`] || "";
-                  const zonaObj = ZONAS_CENTRO.find(z => z.id === val);
-                  const apoyo = val ? apoyosGuardia[`${dia}|${hora}|${val}`] : "";
+                  const keyProf = `${dia}|${hora}`;
+                  const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(`${dia}|${hora}|`))?.[1] || "";
+                  const zona = profesorGuardia ? cuadrante[`${dia}|${hora}|${profesorGuardia}`] || "" : "";
+                  const apoyo = zona ? apoyosGuardia[`${dia}|${hora}|${zona}`] || "" : "";
+                  
                   return (
                     <td key={dia} style={{ padding:"4px 8px" }}>
                       <div style={{ display:"flex", flexDirection:"column", gap:"4px" }}>
-                        <select value={val} onChange={e => setAsignacion(dia, hora, profesorSel, e.target.value)}
-                          style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${val?"#00B7B5":"#d1d5db"}`, fontSize:11, background:val?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: val ? 600 : 400 }}>
-                          <option value="">— Libre —</option>
-                          <optgroup label="── Edificio A">{ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                          <optgroup label="── Edificio B">{ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                          <optgroup label="── Edificio C">{ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                          <optgroup label="── Aula / Recreo">{ZONAS_CENTRO.filter(z=>z.edificio==="-").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                        <select value={profesorGuardia} onChange={e => setProfesoreGuardia(dia, hora, e.target.value)}
+                          style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${profesorGuardia?"#00B7B5":"#d1d5db"}`, fontSize:11, background:profesorGuardia?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: profesorGuardia ? 600 : 400 }}>
+                          <option value="">👤 Profesor de Guardia</option>
+                          {profesores.map(p => <option key={p} value={p}>{p}</option>)}
                         </select>
-                        {val && (
-                          <div style={{ marginTop: "2px" }}>
-                            <select value={apoyo} onChange={e => setApoyo(dia, hora, val, e.target.value)}
-                              style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`2px solid #00B7B5`, fontSize:11, background:"#e0f7f6", color:C.dark, cursor:"pointer", fontWeight: apoyo ? 600 : 400 }}>
-                              <option value="">👥 Profesor de Apoyo a la Guardia</option>
-                              {profesores.filter(p => p !== profesorSel).map(p => <option key={p} value={p}>{p}</option>)}
+                        {profesorGuardia && (
+                          <>
+                            <select value={zona} onChange={e => setZona(dia, hora, profesorGuardia, e.target.value)}
+                              style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${zona?"#00B7B5":"#d1d5db"}`, fontSize:11, background:zona?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: zona ? 600 : 400 }}>
+                              <option value="">📍 Zona</option>
+                              <optgroup label="── Edificio A">{ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                              <optgroup label="── Edificio B">{ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                              <optgroup label="── Edificio C">{ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                              <optgroup label="── Aula / Recreo">{ZONAS_CENTRO.filter(z=>z.edificio==="-").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
                             </select>
-                          </div>
+                            {zona && (
+                              <select value={apoyo} onChange={e => setApoyo(dia, hora, zona, e.target.value)}
+                                style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`2px solid #00B7B5`, fontSize:11, background:"#e0f7f6", color:C.dark, cursor:"pointer", fontWeight: apoyo ? 600 : 400 }}>
+                                <option value="">👥 Profesor de Apoyo a la Guardia</option>
+                                {profesores.filter(p => p !== profesorGuardia).map(p => <option key={p} value={p}>{p}</option>)}
+                              </select>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>
@@ -1570,7 +1584,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. El Profesor de Apoyo a la Guardia es opcional y se asigna por zona.</div>
+        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. Selecciona profesor, zona y apoyo.</div>
         <div style={{ marginTop:8, padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600, display: "inline-block" }}>✅ Cambios guardados correctamente</div>
       </div>
     </div>
@@ -1788,6 +1802,7 @@ export default function App() {
   // Guardias — nuevo sistema
   const [cuadrante, setCuadrante]     = useState({});
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // Nuevo: {dia|hora|zona: profesor}
+  const [profesoresGuardia, setProfesoresGuardia] = useState({}); // Nuevo: {dia|hora|zona: profesor}
   const [ausencias, setAusencias]     = useState([]);
   const [quinceInicio, setQInicio]    = useState("");
   const [quinceProfesor, setQProf]    = useState("");
@@ -2767,6 +2782,7 @@ export default function App() {
           <CuadranteGuardias
             profesores={profesores} cuadrante={cuadrante} setCuadrante={setCuadrante}
             apoyosGuardia={apoyosGuardia} setApoyosGuardia={setApoyosGuardia}
+            profesoresGuardia={profesoresGuardia} setProfesoresGuardia={setProfesoresGuardia}
             quinceInicio={quinceInicio} setQInicio={setQInicio}
             quinceProfesor={quinceProfesor} setQProf={setQProf}
             C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle}
