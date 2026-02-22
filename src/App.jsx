@@ -1637,6 +1637,176 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
 // ═══════════════════════════════════════════════════════════════════════════
 // PARTE DEL DÍA (Jefatura)
 // ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════
+// COORDINACIÓN DIARIA DE AUSENCIAS
+// ═══════════════════════════════════════════════════════════════════════════
+function CoordinacionAusencias({ ausencias, cuadrante, apoyosGuardia, profesoresGuardia, HORAS_GUARDIA, ZONAS_CENTRO, DIAS_SEMANA, C, inpStyle, selStyle, labelStyle, fechaCoordinacion, setFechaCoordinacion }) {
+  
+  const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+  
+  // Obtener ausencias del día seleccionado
+  const ausenciasDelDia = ausencias.filter(a => {
+    if (!fechaCoordinacion) return false;
+    const fechaAus = typeof a.fecha === 'string' ? a.fecha.split("T")[0] : new Date(a.fecha).toISOString().split("T")[0];
+    const fechaSel = new Date(fechaCoordinacion).toISOString().split("T")[0];
+    return fechaAus === fechaSel;
+  });
+  
+  // Obtener guardias del día seleccionado
+  const guardiasDia = [];
+  if (fechaCoordinacion) {
+    const fecha = new Date(fechaCoordinacion);
+    const diaStr = diasES[fecha.getDay()];
+    
+    HORAS_GUARDIA.forEach(hora => {
+      ZONAS_CENTRO.forEach(zona => {
+        // Buscar profesor de guardia para esa zona/hora/día
+        const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(`${diaStr}|${hora}|`))?.[1] || "";
+        const zonaAsignada = profesorGuardia ? cuadrante[`${diaStr}|${hora}|${profesorGuardia}`] : "";
+        
+        if (zonaAsignada === zona.id) {
+          const apoyo = apoyosGuardia[`${diaStr}|${hora}|${zona.id}`] || "";
+          guardiasDia.push({
+            hora,
+            zona: zona.label,
+            zonaId: zona.id,
+            edificio: zona.edificio,
+            profesor: profesorGuardia,
+            apoyo: apoyo
+          });
+        }
+      });
+    });
+  }
+  
+  // Agrupar guardias por edificio
+  const guardiasEdificios = {};
+  guardiasDia.forEach(g => {
+    if (!guardiasEdificios[g.edificio]) {
+      guardiasEdificios[g.edificio] = [];
+    }
+    guardiasEdificios[g.edificio].push(g);
+  });
+  
+  return (
+    <div>
+      <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Coordinación Diaria de Ausencias</h2>
+      
+      {/* SELECTOR DE FECHA */}
+      <div style={{ background: C.white, borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+        <label style={{ ...labelStyle, fontSize: 14 }}>Selecciona una fecha</label>
+        <input type="date" value={fechaCoordinacion} onChange={e => setFechaCoordinacion(e.target.value)} style={inpStyle} />
+        {fechaCoordinacion && (
+          <div style={{ marginTop: 10, fontSize: 13, color: C.gray }}>
+            📅 {new Date(fechaCoordinacion).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </div>
+        )}
+      </div>
+      
+      {!fechaCoordinacion ? (
+        <div style={{ background: C.white, borderRadius: 12, padding: 40, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: C.dark }}>Selecciona una fecha</div>
+          <div style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>Para ver el cuadrante de guardias y ausencias de ese día</div>
+        </div>
+      ) : (
+        <>
+          {/* CUADRANTE DE GUARDIAS */}
+          <div style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}>🛡️ Cuadrante de Guardias - {new Date(fechaCoordinacion).toLocaleDateString("es-ES")}</div>
+            
+            {Object.keys(guardiasEdificios).length === 0 ? (
+              <div style={{ color: C.gray, fontSize: 13, padding: 20, textAlign: "center" }}>
+                No hay guardias configuradas para este día
+              </div>
+            ) : (
+              Object.entries(guardiasEdificios).map(([edificio, guardias]) => (
+                <div key={edificio} style={{ marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid #e5e7eb" }}>
+                  <div style={{ fontWeight: 600, color: C.teal, marginBottom: 10, fontSize: 13 }}>
+                    🏢 Edificio {edificio} {edificio === "-" ? "- Otros" : ""}
+                  </div>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ background: "#f3f4f6" }}>
+                        <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #d1d5db" }}>Hora</th>
+                        <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #d1d5db" }}>Zona</th>
+                        <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #d1d5db" }}>Profesor de Guardia</th>
+                        <th style={{ padding: "8px", textAlign: "left", borderBottom: "1px solid #d1d5db" }}>Profesor de Apoyo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {guardias.map((g, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                          <td style={{ padding: "8px", fontWeight: 600, color: C.dark }}>{g.hora}</td>
+                          <td style={{ padding: "8px", color: "#555" }}>{g.zona}</td>
+                          <td style={{ padding: "8px", fontWeight: 600, color: C.teal }}>{g.profesor || "—"}</td>
+                          <td style={{ padding: "8px", color: "#666" }}>{g.apoyo || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ))
+            )}
+          </div>
+          
+          {/* AUSENCIAS Y ASIGNACIONES */}
+          <div style={{ background: C.white, borderRadius: 12, padding: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}>⚠️ Profesores Ausentes y Sustituciones</div>
+            
+            {ausenciasDelDia.length === 0 ? (
+              <div style={{ color: C.gray, fontSize: 13, padding: 20, textAlign: "center" }}>
+                ✅ Sin ausencias registradas para este día
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                {ausenciasDelDia.map((a, idx) => {
+                  // Buscar guardia del edificio de la ausencia
+                  const guardiaEdificio = guardiasDia.filter(g => g.edificio === a.edificio && a.horas.includes(g.hora))[0];
+                  
+                  return (
+                    <div key={idx} style={{ background: "#FFF8E8", borderRadius: 8, padding: 12, borderLeft: "4px solid #fbbf24" }}>
+                      <div style={{ fontWeight: 600, color: "#d97706", marginBottom: 8 }}>👤 {a.profesor} <span style={{ fontSize: 11, color: "#666" }}>({a.motivo})</span></div>
+                      
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10, fontSize: 12 }}>
+                        <div>
+                          <div style={{ color: "#555", marginBottom: 4 }}>🕐 <strong>Horas:</strong> {a.horas.join(", ")}</div>
+                          {a.aula && <div style={{ color: "#555", marginBottom: 4 }}>🏫 <strong>Aula:</strong> {a.aula}</div>}
+                          {a.asignatura && <div style={{ color: "#555", marginBottom: 4 }}>📚 <strong>Asignatura:</strong> {a.asignatura}</div>}
+                        </div>
+                        <div>
+                          {a.edificio && <div style={{ color: "#555", marginBottom: 4 }}>🏢 <strong>Edificio:</strong> {a.edificio}</div>}
+                          {a.tarea && <div style={{ color: "#555", marginBottom: 4 }}>✏️ <strong>Tarea:</strong> {a.tarea}</div>}
+                          {a.ubicacion && <div style={{ color: "#555", marginBottom: 4 }}>📍 <strong>Material:</strong> {a.ubicacion}</div>}
+                        </div>
+                      </div>
+                      
+                      {/* ASIGNACIÓN */}
+                      <div style={{ background: "#E8F5F3", borderRadius: 6, padding: 10, marginTop: 10 }}>
+                        {guardiaEdificio ? (
+                          <div style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>
+                            ✅ <strong>CUBRE:</strong> {guardiaEdificio.profesor} (Guardia {guardiaEdificio.zona})
+                            {guardiaEdificio.apoyo && <div style={{ fontSize: 11, marginTop: 4, color: C.blue }}>👥 Apoyo disponible: {guardiaEdificio.apoyo}</div>}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>
+                            ⚠️ No hay guardia asignada en el Edificio {a.edificio} para esta hora
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+
 function ParteDia({ profesores, cuadrante, ausencias, C }) {
   const hoy      = new Date();
   const diasES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -1789,6 +1959,8 @@ export default function App() {
   const [guardias, setGuardias]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
+  const [showCoordinacion, setShowCoordinacion] = useState(false);
+  const [fechaCoordinacion, setFechaCoordinacion] = useState("");
   const [showAlerta, setShowAlerta] = useState(null);
   const [printParte, setPrintParte] = useState(null);
   const [printInforme, setPrintInforme] = useState(false);
@@ -2065,6 +2237,7 @@ export default function App() {
         ]
       : [
           { id: "cuadrante",     label: "📅 Cuadrante", color: "#06b6d4" },
+          { id: "coordinacion",  label: "🔄 Coordinación Diaria", color: "#8b5cf6" },
           { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
           { id: "ausencias_jef", label: "📢 Ausencias de Profesores", color: "#10b981" },
         ]
@@ -2838,6 +3011,25 @@ export default function App() {
           <ParteDia profesores={profesores} cuadrante={cuadrante} ausencias={ausencias} C={C} />
         )}
 
+        {/* ── Coordinación Diaria de Ausencias (Jefatura) ── */}
+        {tab === "coordinacion" && (
+          <CoordinacionAusencias
+            ausencias={ausencias}
+            cuadrante={cuadrante}
+            apoyosGuardia={apoyosGuardia}
+            profesoresGuardia={profesoresGuardia}
+            HORAS_GUARDIA={HORAS_GUARDIA}
+            ZONAS_CENTRO={ZONAS_CENTRO}
+            DIAS_SEMANA={DIAS_SEMANA}
+            C={C}
+            inpStyle={inpStyle}
+            selStyle={selStyle}
+            labelStyle={labelStyle}
+            fechaCoordinacion={fechaCoordinacion}
+            setFechaCoordinacion={setFechaCoordinacion}
+          />
+        )}
+
         {/* ── Gestión Ausencias (Jefatura) ── */}
         {tab === "ausencias_jef" && (
           <GestionAusencias ausencias={ausencias} setAusencias={setAusencias} profesores={profesores} C={C} fmt={fmt} />
@@ -3110,6 +3302,35 @@ export default function App() {
                 style={{ marginTop: 16, width: "100%", background: C.salmon, color: "#fff", border: "none", borderRadius: 10, padding: "12px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
                 🖨 Imprimir / Guardar como PDF (Ctrl+P)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Coordinación Diaria de Ausencias ── */}
+      {showCoordinacion && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20, overflowY: "auto" }}>
+          <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "90vh", overflowY: "auto", marginY: 20 }}>
+            <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>🔄 Coordinación Diaria de Ausencias</div>
+              <button onClick={() => setShowCoordinacion(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
+            </div>
+            <div style={{ padding: 24 }}>
+              <CoordinacionAusencias 
+                ausencias={ausencias} 
+                cuadrante={cuadrante} 
+                apoyosGuardia={apoyosGuardia} 
+                profesoresGuardia={profesoresGuardia}
+                HORAS_GUARDIA={HORAS_GUARDIA}
+                ZONAS_CENTRO={ZONAS_CENTRO}
+                DIAS_SEMANA={DIAS_SEMANA}
+                C={C} 
+                inpStyle={inpStyle} 
+                selStyle={selStyle} 
+                labelStyle={labelStyle}
+                fechaCoordinacion={fechaCoordinacion}
+                setFechaCoordinacion={setFechaCoordinacion}
+              />
             </div>
           </div>
         </div>
