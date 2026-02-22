@@ -1518,13 +1518,8 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 // CUADRANTE DE GUARDIAS (Jefatura)
 // ═══════════════════════════════════════════════════════════════════════════
 function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia, setApoyosGuardia, profesoresGuardia, setProfesoresGuardia, ausencias, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
-  function setProfesoreGuardia(dia, hora, profesorGuardia) {
-    const key = `${dia}|${hora}|${profesorGuardia}`;
-    setProfesoresGuardia(prev => { const next={...prev}; if(profesorGuardia==="") delete next[key]; else next[key]=profesorGuardia; return next; });
-  }
-  
-  function setZona(dia, hora, profesorGuardia, zonaId) {
-    const key = `${dia}|${hora}|${profesorGuardia}`;
+  function setZona(dia, hora, profesorSel, zonaId) {
+    const key = `${dia}|${hora}|${profesorSel}`;
     setCuadrante(prev => { const next={...prev}; if(zonaId==="") delete next[key]; else next[key]=zonaId; return next; });
   }
   
@@ -1533,204 +1528,111 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
     setApoyosGuardia(prev => { const next={...prev}; if(profesorApoyo==="") delete next[key]; else next[key]=profesorApoyo; return next; });
   }
   
-  const profesorSel = quinceProfesor || (profesores[0] || "");
+  const profesorSel = quinceProfesor || "";
+  
+  // Generar 15 días a partir de quinceInicio
+  const generarDias = () => {
+    const dias = [];
+    if (!quinceInicio) return dias;
+    
+    const fecha = new Date(quinceInicio);
+    const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+    
+    for (let i = 0; i < 15; i++) {
+      const d = new Date(fecha);
+      d.setDate(d.getDate() + i);
+      const diaNum = d.getDate();
+      const diaStr = diasES[d.getDay()];
+      dias.push({ dia: `${diaStr.substring(0,3)} ${diaNum}`, fecha: d, key: diaStr });
+    }
+    return dias;
+  };
+  
+  const dias = generarDias();
+  
   return (
     <div>
       <h2 style={{ color:C.dark, marginTop:0 }}>📅 Cuadrante de Guardias</h2>
-      <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
-          <div>
+      
+      {/* SELECTOR DE PROFESOR */}
+      <div style={{ background:C.white, borderRadius:12, padding:20, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
+        <label style={{ ...labelStyle, fontSize: 16, fontWeight: 700, marginBottom: 10, display: "block" }}>👤 Seleccionar Profesor para Configurar su Cuadrante</label>
+        <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={{ ...selStyle, fontSize: 14, padding: "10px 12px" }}>
+          <option value="">— Elige un profesor —</option>
+          {profesores.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+      
+      {/* SI NO HAY PROFESOR: MENSAJE */}
+      {!profesorSel && (
+        <div style={{ background:C.white, borderRadius:12, padding:40, textAlign:"center", boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>👤</div>
+          <div style={{ fontSize: 18, fontWeight: 600, color: C.dark, marginBottom: 8 }}>Por favor, selecciona un profesor</div>
+          <div style={{ fontSize: 14, color: C.gray }}>Para configurar su cuadrante de guardias de 15 días</div>
+        </div>
+      )}
+      
+      {/* SI HAY PROFESOR: CUADRANTE DE 15 DÍAS */}
+      {profesorSel && (
+        <div style={{ background:C.white, borderRadius:12, padding:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", overflowX:"auto" }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Inicio de quincena</label>
             <input type="date" value={quinceInicio} onChange={e => setQInicio(e.target.value)} style={inpStyle} />
           </div>
-          <div>
-            <label style={labelStyle}>👥 Profesores Ausentes durante ese día</label>
-            {(() => {
-              // Obtener profesores ausentes en la fecha de inicio de quincena
-              const ausenciasEnQuincena = ausencias.filter(a => {
-                if (!quinceInicio) return false;
-                const fechaAus = new Date(a.fecha);
-                const fechaInicio = new Date(quinceInicio);
-                return fechaAus.toDateString() === fechaInicio.toDateString();
-              });
-              
-              const profesoresAusentes = [...new Set(ausenciasEnQuincena.map(a => a.profesor))];
-              
-              return (
-                <div>
-                  <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={selStyle}>
-                    <option value="">— Seleccionar profesor —</option>
-                    {profesoresAusentes.length > 0 ? (
-                      profesoresAusentes.map(p => <option key={p} value={p}>{p}</option>)
-                    ) : (
-                      <option disabled>Sin ausencias registradas</option>
-                    )}
-                  </select>
-                  
-                  {/* Mostrar detalles de ausencia seleccionada */}
-                  {profesorSel && ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length > 0 && (
-                    <div style={{ marginTop: 10, padding: 10, background: "#FFF8E8", borderRadius: 8, borderLeft: "4px solid #fbbf24", fontSize: 12 }}>
-                      {ausenciasEnQuincena.filter(a => a.profesor === profesorSel).map((a, idx) => (
-                        <div key={idx} style={{ marginBottom: idx < ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length - 1 ? 10 : 0, paddingBottom: 10, borderBottom: idx < ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length - 1 ? "1px solid #fbbf24" : "none" }}>
-                          <div style={{ fontWeight: 600, color: "#d97706", marginBottom: 6 }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
-                          <div style={{ color: "#555", marginBottom: 4 }}>🕐 Horas: {a.horas.join(", ")}</div>
-                          {a.aula && <div style={{ color: "#555", marginBottom: 4 }}>🏫 Aula: {a.aula}</div>}
-                          {a.asignatura && <div style={{ color: "#555", marginBottom: 4 }}>📚 Asignatura: {a.asignatura}</div>}
-                          {a.tarea && <div style={{ color: "#555", marginBottom: 4 }}>✏️ Tarea: {a.tarea}</div>}
-                          {a.enlace && <div style={{ marginBottom: 4 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: "#0369a1", textDecoration: "underline", fontSize: 11 }}>🔗 Ver recursos</a></div>}
-                          {a.ubicacion && <div style={{ color: "#555" }}>📍 Ubicación: {a.ubicacion}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-      <div style={{ background:C.white, borderRadius:12, padding:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", overflowX:"auto" }}>
-        <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>📅 Asignación de profesores de guardia</div>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:900 }}>
-          <thead>
-            <tr style={{ background:C.dark }}>
-              <th style={{ padding:"8px 12px", color:"#fff", textAlign:"left", width:100 }}>Hora</th>
-              {DIAS_SEMANA.map(d => <th key={d} style={{ padding:"8px 12px", color:"#fff", textAlign:"left" }}>{d}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {HORAS_GUARDIA.map((hora, i) => (
-              <tr key={hora} style={{ background:i%2===0?"#fff":C.light }}>
-                <td style={{ padding:"6px 12px", fontWeight:700, color:C.dark, fontSize:13, whiteSpace:"nowrap" }}>{hora}</td>
-                {DIAS_SEMANA.map(dia => {
-                  const keyProf = `${dia}|${hora}`;
-                  const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(`${dia}|${hora}|`))?.[1] || "";
-                  const zona = profesorGuardia ? cuadrante[`${dia}|${hora}|${profesorGuardia}`] || "" : "";
-                  const apoyo = zona ? apoyosGuardia[`${dia}|${hora}|${zona}`] || "" : "";
-                  
-                  return (
-                    <td key={dia} style={{ padding:"4px 8px" }}>
-                      <div style={{ display:"flex", flexDirection:"column", gap:"4px" }}>
-                        <select value={profesorGuardia} onChange={e => setProfesoreGuardia(dia, hora, e.target.value)}
-                          style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${profesorGuardia?"#00B7B5":"#d1d5db"}`, fontSize:11, background:profesorGuardia?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: profesorGuardia ? 600 : 400 }}>
-                          <option value="">👤 Profesor de Guardia</option>
-                          {profesores.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                        {profesorGuardia && (
-                          <>
-                            <select value={zona} onChange={e => setZona(dia, hora, profesorGuardia, e.target.value)}
-                              style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`1px solid ${zona?"#00B7B5":"#d1d5db"}`, fontSize:11, background:zona?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: zona ? 600 : 400 }}>
-                              <option value="">📍 Zona</option>
-                              <optgroup label="── Edificio A">{ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                              <optgroup label="── Edificio B">{ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                              <optgroup label="── Edificio C">{ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                              <optgroup label="── Aula / Recreo">{ZONAS_CENTRO.filter(z=>z.edificio==="-").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
-                            </select>
-                            {zona && (
-                              <select value={apoyo} onChange={e => setApoyo(dia, hora, zona, e.target.value)}
-                                style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`2px solid #00B7B5`, fontSize:11, background:"#e0f7f6", color:C.dark, cursor:"pointer", fontWeight: apoyo ? 600 : 400 }}>
-                                <option value="">👥 Profesor de Apoyo a la Guardia</option>
-                                {profesores.filter(p => p !== profesorGuardia).map(p => <option key={p} value={p}>{p}</option>)}
-                              </select>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
+          
+          <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>📅 Cuadrante: <strong>{profesorSel}</strong></div>
+          
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11, minWidth:1200 }}>
+            <thead>
+              <tr style={{ background:C.dark }}>
+                <th style={{ padding:"8px 8px", color:"#fff", textAlign:"left", width:80 }}>Hora</th>
+                {dias.map((d, idx) => <th key={idx} style={{ padding:"8px 8px", color:"#fff", textAlign:"center", whiteSpace:"nowrap" }}>{d.dia}</th>)}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. Selecciona profesor, zona y apoyo.</div>
-        <div style={{ marginTop:8, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600 }}>✅ Cambios guardados correctamente</div>
-          <button onClick={() => {
-            // Generar tabla HTML del cuadrante
-            let tablaHTML = '<table style="width: 100%; border-collapse: collapse; font-size: 12px;"><thead><tr style="background: #2c3e50; color: white;">';
-            tablaHTML += '<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Hora</th>';
-            DIAS_SEMANA.forEach(d => { tablaHTML += `<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">${d}</th>`; });
-            tablaHTML += '</tr></thead><tbody>';
-            
-            HORAS_GUARDIA.forEach((hora, i) => {
-              tablaHTML += `<tr style="background: ${i%2===0?'#fff':'#f5f5f5'};"><td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">${hora}</td>`;
-              DIAS_SEMANA.forEach(dia => {
-                const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(`${dia}|${hora}|`))?.[1] || '';
-                const zona = profesorGuardia ? cuadrante[`${dia}|${hora}|${profesorGuardia}`] || '' : '';
-                const zonaObj = ZONAS_CENTRO.find(z => z.id === zona);
-                const apoyo = zona ? apoyosGuardia[`${dia}|${hora}|${zona}`] || '' : '';
-                tablaHTML += `<td style="border: 1px solid #ddd; padding: 8px;">`;
-                if (profesorGuardia) {
-                  tablaHTML += `<strong>${profesorGuardia}</strong><br/><small>${zonaObj ? zonaObj.label : 'Desconocida'}${apoyo ? '<br/>Apoyo: ' + apoyo : ''}</small>`;
-                } else {
-                  tablaHTML += '—';
-                }
-                tablaHTML += '</td>';
-              });
-              tablaHTML += '</tr>';
-            });
-            tablaHTML += '</tbody></table>';
-            
-            // Generar lista de ausencias
-            let ausenciasHTML = '';
-            const ausenciasDelDia = ausencias.filter(a => {
-              if (!quinceInicio) return false;
-              const fechaAus = new Date(a.fecha);
-              const fechaInicio = new Date(quinceInicio);
-              return fechaAus.toDateString() === fechaInicio.toDateString();
-            });
-            
-            if (ausenciasDelDia.length > 0) {
-              ausenciasHTML = '<h2 style="color: #00695c; margin-top: 20px; margin-bottom: 10px;">⚠️ AUSENCIAS DEL DÍA</h2>';
-              ausenciasDelDia.forEach(a => {
-                ausenciasHTML += `<div style="margin-bottom: 15px; padding: 10px; border: 1px solid #fbbf24; border-radius: 5px; background: #fffbf0;">
-                  <strong style="color: #d97706;">👤 ${a.profesor}</strong> - <span style="color: #f59e0b;">${a.motivo}</span><br/>
-                  <small>📅 ${new Date(a.fecha).toLocaleDateString('es-ES')} | 🕐 ${a.horas.join(', ')}</small><br/>
-                  ${a.aula ? `<small>🏫 Aula: ${a.aula}</small><br/>` : ''}
-                  ${a.asignatura ? `<small>📚 Asignatura: ${a.asignatura}</small><br/>` : ''}
-                  ${a.tarea ? `<small>✏️ Tarea: ${a.tarea}</small><br/>` : ''}
-                  ${a.ubicacion ? `<small>📍 Ubicación: ${a.ubicacion}</small>` : ''}
-                </div>`;
-              });
-            } else {
-              ausenciasHTML = '<h2 style="color: #00695c; margin-top: 20px;">⚠️ AUSENCIAS DEL DÍA</h2><p style="color: #666;">Sin ausencias registradas</p>';
-            }
-            
-            // Crear documento
-            const doc = document.createElement('div');
-            doc.innerHTML = `
-              <div style="font-family: Arial; padding: 20px;">
-                <h1 style="text-align: center; color: #00695c; margin-bottom: 10px;">📅 CUADRANTE DE GUARDIAS</h1>
-                <div style="text-align: center; color: #666; font-size: 14px; margin-bottom: 20px;">
-                  Fecha: ${quinceInicio ? new Date(quinceInicio).toLocaleDateString('es-ES') : 'Sin fecha'}
-                </div>
-                <h2 style="color: #00695c; margin-bottom: 10px;">📅 Asignación de Profesores de Guardia</h2>
-                ${tablaHTML}
-                ${ausenciasHTML}
-              </div>
-            `;
-            
-            // Generar PDF
-            if (html2pdf) {
-              html2pdf().set({ 
-                margin: 10, 
-                filename: `cuadrante-guardias-${quinceInicio || 'sin-fecha'}.pdf`, 
-                image: { type: 'jpeg', quality: 0.98 }, 
-                html2canvas: { scale: 2 }, 
-                jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' } 
-              }).from(doc).save();
-            } else {
-              alert('Error: No se puede cargar la librería PDF. Intenta de nuevo.');
-            }
-          }} style={{ padding: "10px 16px", background: C.blue, color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-            📥 Descargar PDF del Cuadrante
-          </button>
+            </thead>
+            <tbody>
+              {HORAS_GUARDIA.map((hora, i) => (
+                <tr key={hora} style={{ background:i%2===0?"#fff":C.light }}>
+                  <td style={{ padding:"6px 8px", fontWeight:700, color:C.dark, fontSize:12, whiteSpace:"nowrap" }}>{hora}</td>
+                  {dias.map((d, idx) => {
+                    const zona = cuadrante[`${d.key}|${hora}|${profesorSel}`] || "";
+                    const zonaObj = ZONAS_CENTRO.find(z => z.id === zona);
+                    const apoyo = zona ? apoyosGuardia[`${d.key}|${hora}|${zona}`] || "" : "";
+                    
+                    return (
+                      <td key={idx} style={{ padding:"4px 6px", minWidth: 140 }}>
+                        <div style={{ display:"flex", flexDirection:"column", gap:"3px" }}>
+                          <select value={zona} onChange={e => setZona(d.key, hora, profesorSel, e.target.value)}
+                            style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid ${zona?"#00B7B5":"#d1d5db"}`, fontSize:10, background:zona?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: zona ? 600 : 400 }}>
+                            <option value="">📍 Zona</option>
+                            <optgroup label="── Edificio A">{ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                            <optgroup label="── Edificio B">{ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                            <optgroup label="── Edificio C">{ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                            <optgroup label="── Aula / Recreo">{ZONAS_CENTRO.filter(z=>z.edificio==="-").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
+                          </select>
+                          {zona && (
+                            <select value={apoyo} onChange={e => setApoyo(d.key, hora, zona, e.target.value)}
+                              style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid #00B7B5`, fontSize:10, background:"#e0f7f6", color:C.dark, cursor:"pointer", fontWeight: apoyo ? 600 : 400 }}>
+                              <option value="">👥 Apoyo</option>
+                              {profesores.filter(p => p !== profesorSel).map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente.</div>
+          <div style={{ marginTop:8, padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600, display: "inline-block" }}>✅ Cambios guardados correctamente</div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PARTE DEL DÍA (Jefatura)
