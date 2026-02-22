@@ -1861,6 +1861,206 @@ function CoordinacionAusencias({ ausencias, cuadrante, apoyosGuardia, profesores
 }
 
 
+// ═══════════════════════════════════════════════════════════════════════════
+// GALVÁNGRAM - MENSAJERÍA RÁPIDA
+// ═══════════════════════════════════════════════════════════════════════════
+function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C, inpStyle, selStyle, labelStyle }) {
+  const [destinatario, setDestinatario] = useState("");
+  const [tipoMensaje, setTipoMensaje] = useState("");
+  const [mensajePersonalizado, setMensajePersonalizado] = useState("");
+  const [tab, setTab] = useState("enviar"); // "enviar" o "historial"
+  
+  const mensajesPredefinidos = esJefatura ? [
+    { id: 1, label: "Cambio de guardia", texto: "Necesito que cambies tu turno de guardia" },
+    { id: 2, label: "Falta un profesor", texto: "Falta un profesor, necesito cobertura" },
+    { id: 3, label: "Urgencia en aula", texto: "Hay una urgencia en el aula, ven rápido" },
+    { id: 4, label: "Reunión importante", texto: "Necesito verte en despacho urgentemente" },
+  ] : [
+    { id: 1, label: "Alumno enfermo", texto: "Tengo un alumno enfermo en clase" },
+    { id: 2, label: "Emergencia", texto: "Hay una emergencia en el aula" },
+    { id: 3, label: "Falta material", texto: "Necesito material urgente" },
+    { id: 4, label: "Alumno derivado", texto: "Envío alumno a jefatura" },
+  ];
+  
+  const handleEnviar = () => {
+    if (!destinatario) {
+      alert("Selecciona destinatario");
+      return;
+    }
+    
+    const textoFinal = tipoMensaje === "predefinido" ? 
+      (mensajesPredefinidos.find(m => m.id == tipoMensaje)?.texto || "") :
+      mensajePersonalizado;
+    
+    if (!textoFinal.trim()) {
+      alert("Escribe un mensaje");
+      return;
+    }
+    
+    const nuevoMensaje = {
+      id: Date.now(),
+      remitente: usuario,
+      destinatario: destinatario,
+      texto: textoFinal,
+      ts: new Date().toISOString(),
+      leido: false
+    };
+    
+    setMensajes(prev => [nuevoMensaje, ...prev]);
+    setDestinatario("");
+    setTipoMensaje("");
+    setMensajePersonalizado("");
+    alert("✅ Mensaje enviado");
+  };
+  
+  const mensajesNoLeidos = mensajes.filter(m => !m.leido && m.destinatario === usuario).length;
+  
+  return (
+    <div>
+      <h2 style={{ color: C.dark, marginTop: 0 }}>💬 Galvángram</h2>
+      
+      {/* TABS */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: `2px solid ${C.light}` }}>
+        <button 
+          onClick={() => setTab("enviar")}
+          style={{ 
+            padding: "10px 16px", 
+            background: "none", 
+            border: "none", 
+            borderBottom: tab === "enviar" ? `3px solid ${C.blue}` : "none",
+            color: tab === "enviar" ? C.blue : C.gray,
+            fontWeight: tab === "enviar" ? 700 : 500,
+            cursor: "pointer",
+            fontSize: 14
+          }}>
+          ✉️ Enviar Mensaje
+        </button>
+        <button 
+          onClick={() => setTab("historial")}
+          style={{ 
+            padding: "10px 16px", 
+            background: "none", 
+            border: "none", 
+            borderBottom: tab === "historial" ? `3px solid ${C.blue}` : "none",
+            color: tab === "historial" ? C.blue : C.gray,
+            fontWeight: tab === "historial" ? 700 : 500,
+            cursor: "pointer",
+            fontSize: 14,
+            position: "relative"
+          }}>
+          📜 Historial
+          {mensajesNoLeidos > 0 && (
+            <div style={{ position: "absolute", top: 0, right: 0, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
+              {mensajesNoLeidos}
+            </div>
+          )}
+        </button>
+      </div>
+      
+      {/* ENVIAR MENSAJE */}
+      {tab === "enviar" && (
+        <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Destinatario</label>
+            <select value={destinatario} onChange={e => setDestinatario(e.target.value)} style={selStyle}>
+              <option value="">— Selecciona profesor —</option>
+              {profesores.filter(p => p !== usuario).map(p => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Tipo de Mensaje</label>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {mensajesPredefinidos.map(m => (
+                <button
+                  key={m.id}
+                  onClick={() => setTipoMensaje(m.id)}
+                  style={{
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    border: `2px solid ${tipoMensaje === m.id ? C.blue : C.light}`,
+                    background: tipoMensaje === m.id ? "#E8F5F3" : "#fff",
+                    color: C.dark,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: tipoMensaje === m.id ? 600 : 400,
+                    textAlign: "left"
+                  }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: 16 }}>
+            <label style={labelStyle}>Mensaje Personalizado</label>
+            <textarea 
+              value={mensajePersonalizado}
+              onChange={e => setMensajePersonalizado(e.target.value)}
+              placeholder="O escribe tu propio mensaje..."
+              style={{ ...inpStyle, minHeight: 80, fontFamily: "inherit" }}
+            />
+          </div>
+          
+          <button
+            onClick={handleEnviar}
+            style={{
+              width: "100%",
+              padding: "12px",
+              background: C.blue,
+              color: "#fff",
+              border: "none",
+              borderRadius: 8,
+              fontWeight: 700,
+              fontSize: 14,
+              cursor: "pointer"
+            }}>
+            📤 Enviar Mensaje
+          </button>
+        </div>
+      )}
+      
+      {/* HISTORIAL */}
+      {tab === "historial" && (
+        <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+          {mensajes.length === 0 ? (
+            <div style={{ textAlign: "center", color: C.gray, padding: 40 }}>
+              <div style={{ fontSize: 48, marginBottom: 10 }}>💬</div>
+              <div>Sin mensajes</div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {mensajes.map(m => (
+                <div key={m.id} style={{ background: m.destinatario === usuario ? "#E8F5F3" : "#FEF3C7", borderRadius: 10, padding: 12, borderLeft: `4px solid ${m.destinatario === usuario ? C.teal : C.blue}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <div style={{ fontWeight: 600, color: C.dark, fontSize: 13 }}>
+                      {m.remitente === usuario ? "📤 A: " : "📥 De: "}{m.remitente === usuario ? m.destinatario : m.remitente}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.gray }}>
+                      {new Date(m.ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, color: "#333", lineHeight: 1.5 }}>
+                    {m.texto}
+                  </div>
+                  {m.destinatario === usuario && !m.leido && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: C.teal, fontWeight: 600 }}>
+                      ✉️ Sin leer
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 function ParteDia({ profesores, cuadrante, ausencias, C }) {
   const hoy      = new Date();
   const diasES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -2010,6 +2210,7 @@ export default function App() {
   const [partes, setPartes]       = useState([]);
   const [banos, setBanos]         = useState([]);
   const [alertas, setAlertas]     = useState([]);
+  const [mensajes, setMensajes]   = useState([]);
   const [guardias, setGuardias]   = useState([]);
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
@@ -2093,6 +2294,7 @@ export default function App() {
       const p  = await sGet("partes");    if (p)  setPartes(p);
       const b  = await sGet("banos");     if (b)  setBanos(b);
       const a  = await sGet("alertas");   if (a)  setAlertas(a);
+      const m  = await sGet("mensajes");  if (m)  setMensajes(m);
       const al = await sGet("alumnos");   if (al) setAlumnos(al);
       const pr = await sGet("profesores");if (pr) setProfesores(pr);
       const g  = await sGet("guardias");    if (g)  setGuardias(g);
@@ -2106,6 +2308,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("partes", partes); },     [partes, loading]);
   useEffect(() => { if (!loading) sSet("banos", banos); },       [banos, loading]);
   useEffect(() => { if (!loading) sSet("alertas", alertas); },   [alertas, loading]);
+  useEffect(() => { if (!loading) sSet("mensajes", mensajes); }, [mensajes, loading]);
   useEffect(() => { if (!loading) sSet("alumnos", alumnos); },   [alumnos, loading]);
   useEffect(() => { if (!loading) sSet("profesores", profesores); }, [profesores, loading]);
   useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias,   loading]);
@@ -2289,12 +2492,14 @@ export default function App() {
           { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas`, color: "#ec4899" },
           { id: "informe",      label: "📤 Informe", color: "#10b981" },
         ]
-      : [
+      : moduloJefatura === "guardias"
+      ? [
           { id: "cuadrante",     label: "📅 Cuadrante", color: "#06b6d4" },
           { id: "coordinacion",  label: "🔄 Coordinación Diaria", color: "#8b5cf6" },
           { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
           { id: "ausencias_jef", label: "📢 Ausencias de Profesores", color: "#10b981" },
         ]
+      : [] // Galvángram no tiene tabs adicionales
     : [
         // Admin no necesita tabs adicionales, solo usa los módulos
       ];
@@ -2369,9 +2574,10 @@ export default function App() {
           {[
             { id: "alumnos",  label: "📋 Partes & Alumnos" },
             { id: "guardias", label: "🔄 Guardias & Ausencias" },
+            { id: "galvangramm", label: "💬 Galvángram" },
           ].map(m => (
             <button key={m.id}
-              onClick={() => { setModuloJefatura(m.id); setTab(m.id === "alumnos" ? "dashboard" : "cuadrante"); }}
+              onClick={() => { setModuloJefatura(m.id); setTab(m.id === "alumnos" ? "dashboard" : (m.id === "guardias" ? "cuadrante" : "mensajeria")); }}
               style={{ 
                 padding: "12px 28px", 
                 border: "2px solid transparent",
@@ -3087,6 +3293,21 @@ export default function App() {
         {/* ── Gestión Ausencias (Jefatura) ── */}
         {tab === "ausencias_jef" && (
           <GestionAusencias ausencias={ausencias} setAusencias={setAusencias} profesores={profesores} C={C} fmt={fmt} />
+        )}
+
+        {/* ── Galvángram (Jefatura & Profesor) ── */}
+        {tab === "mensajeria" && (
+          <Galvangramm 
+            mensajes={mensajes} 
+            setMensajes={setMensajes}
+            usuario={usuario}
+            esJefatura={perfil.id === "jefatura"}
+            profesores={profesores}
+            C={C}
+            inpStyle={inpStyle}
+            selStyle={selStyle}
+            labelStyle={labelStyle}
+          />
         )}
 
         {tab === "bano_live" && (
