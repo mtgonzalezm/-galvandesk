@@ -1159,6 +1159,60 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
         </select>
       </div>
 
+      {/* AVISO DE AUSENCIAS A CUBRIR */}
+      {(() => {
+        // Obtener la zona del profesor hoy
+        let zonaProfesor = null;
+        let edificioProfesor = null;
+        
+        for (let hora of HORAS_GUARDIA) {
+          const key = `${diaHoy}|${hora}|${fProfesor}`;
+          const zona = cuadrante[key];
+          if (zona) {
+            zonaProfesor = zona;
+            const zonaObj = ZONAS_CENTRO.find(z => z.id === zona);
+            edificioProfesor = zonaObj?.edificio;
+            break;
+          }
+        }
+        
+        // Buscar ausencias de hoy que el profesor debe cubrir
+        const ausenciasACubrir = ausencias.filter(a => {
+          const fechaAusencia = a.fecha;
+          const hoysStr = hoy.toISOString().split("T")[0];
+          return fechaAusencia === hoysStr && a.edificio === edificioProfesor;
+        });
+        
+        if (ausenciasACubrir.length > 0 && zonaProfesor) {
+          return (
+            <div style={{ background: "#FEF3C7", borderRadius: 12, padding: 16, marginBottom: 16, borderLeft: "4px solid #F59E0B", boxShadow: "0 2px 10px rgba(245, 158, 11, 0.15)" }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+                <div style={{ fontSize: 24 }}>⚠️</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, color: "#92400E", marginBottom: 10, fontSize: 15 }}>
+                    Tienes {ausenciasACubrir.length} {ausenciasACubrir.length === 1 ? "clase" : "clases"} sin profesor hoy
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {ausenciasACubrir.map((a, idx) => (
+                      <div key={idx} style={{ background: "#FFFBEB", borderRadius: 6, padding: 10, fontSize: 13, color: "#78350F" }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                          {a.horas.join(", ")} - {a.asignatura || "Clase"}
+                        </div>
+                        <div style={{ fontSize: 12 }}>
+                          👤 {a.profesor} · 🏫 Aula {a.aula || "?"} {a.asignatura ? `· 📚 ${a.asignatura}` : ""}
+                        </div>
+                        {a.tarea && <div style={{ fontSize: 12, marginTop: 4 }}>✏️ Tarea: {a.tarea}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* CALENDARIO PRÓXIMOS 7 DÍAS */}
       {(() => {
         const proximosDias = [];
