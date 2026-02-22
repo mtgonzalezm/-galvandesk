@@ -1496,7 +1496,7 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 // ═══════════════════════════════════════════════════════════════════════════
 // CUADRANTE DE GUARDIAS (Jefatura)
 // ═══════════════════════════════════════════════════════════════════════════
-function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia, setApoyosGuardia, profesoresGuardia, setProfesoresGuardia, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
+function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia, setApoyosGuardia, profesoresGuardia, setProfesoresGuardia, ausencias, quinceInicio, setQInicio, quinceProfesor, setQProf, C, inpStyle, selStyle, labelStyle }) {
   function setProfesoreGuardia(dia, hora, profesorGuardia) {
     const key = `${dia}|${hora}|${profesorGuardia}`;
     setProfesoresGuardia(prev => { const next={...prev}; if(profesorGuardia==="") delete next[key]; else next[key]=profesorGuardia; return next; });
@@ -1523,10 +1523,48 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
             <input type="date" value={quinceInicio} onChange={e => setQInicio(e.target.value)} style={inpStyle} />
           </div>
           <div>
-            <label style={labelStyle}>Profesor a configurar</label>
-            <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={selStyle}>
-              {profesores.map(p => <option key={p}>{p}</option>)}
-            </select>
+            <label style={labelStyle}>👥 Profesores Ausentes durante ese día</label>
+            {(() => {
+              // Obtener profesores ausentes en la fecha de inicio de quincena
+              const ausenciasEnQuincena = ausencias.filter(a => {
+                if (!quinceInicio) return false;
+                const fechaAus = new Date(a.fecha);
+                const fechaInicio = new Date(quinceInicio);
+                return fechaAus.toDateString() === fechaInicio.toDateString();
+              });
+              
+              const profesoresAusentes = [...new Set(ausenciasEnQuincena.map(a => a.profesor))];
+              
+              return (
+                <div>
+                  <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={selStyle}>
+                    <option value="">— Seleccionar profesor —</option>
+                    {profesoresAusentes.length > 0 ? (
+                      profesoresAusentes.map(p => <option key={p} value={p}>{p}</option>)
+                    ) : (
+                      <option disabled>Sin ausencias registradas</option>
+                    )}
+                  </select>
+                  
+                  {/* Mostrar detalles de ausencia seleccionada */}
+                  {profesorSel && ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length > 0 && (
+                    <div style={{ marginTop: 10, padding: 10, background: "#FFF8E8", borderRadius: 8, borderLeft: "4px solid #fbbf24", fontSize: 12 }}>
+                      {ausenciasEnQuincena.filter(a => a.profesor === profesorSel).map((a, idx) => (
+                        <div key={idx} style={{ marginBottom: idx < ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length - 1 ? 10 : 0, paddingBottom: 10, borderBottom: idx < ausenciasEnQuincena.filter(a => a.profesor === profesorSel).length - 1 ? "1px solid #fbbf24" : "none" }}>
+                          <div style={{ fontWeight: 600, color: "#d97706", marginBottom: 6 }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
+                          <div style={{ color: "#555", marginBottom: 4 }}>🕐 Horas: {a.horas.join(", ")}</div>
+                          {a.aula && <div style={{ color: "#555", marginBottom: 4 }}>🏫 Aula: {a.aula}</div>}
+                          {a.asignatura && <div style={{ color: "#555", marginBottom: 4 }}>📚 Asignatura: {a.asignatura}</div>}
+                          {a.tarea && <div style={{ color: "#555", marginBottom: 4 }}>✏️ Tarea: {a.tarea}</div>}
+                          {a.enlace && <div style={{ marginBottom: 4 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: "#0369a1", textDecoration: "underline", fontSize: 11 }}>🔗 Ver recursos</a></div>}
+                          {a.ubicacion && <div style={{ color: "#555" }}>📍 Ubicación: {a.ubicacion}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -2783,6 +2821,7 @@ export default function App() {
             profesores={profesores} cuadrante={cuadrante} setCuadrante={setCuadrante}
             apoyosGuardia={apoyosGuardia} setApoyosGuardia={setApoyosGuardia}
             profesoresGuardia={profesoresGuardia} setProfesoresGuardia={setProfesoresGuardia}
+            ausencias={ausencias}
             quinceInicio={quinceInicio} setQInicio={setQInicio}
             quinceProfesor={quinceProfesor} setQProf={setQProf}
             C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle}
