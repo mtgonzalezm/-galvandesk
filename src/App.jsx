@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-
+import html2pdf from 'html2pdf.js';
 // ─── Paleta de colores ───────────────────────────────────────────────────────
 const C = {
   cream: "#F4F0E4", teal: "#44A194", blue: "#00B7B5", salmon: "#EC8F8D",
@@ -258,16 +258,31 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
     const textoPlano = `GALVÁNDESK — INFORME DE PARTES\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
+    
+    const descargarPDF = () => {
+      const elemento = document.querySelector('[data-print-informe]');
+      const nombreArchivo = "informe-partes.pdf";
+      const opt = {
+        margin: 10,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+      html2pdf().set(opt).from(elemento).save();
+    };
+    
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Partes · Ctrl+P para PDF</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
+            <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
             <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>✕ Cerrar</button>
           </div>
         </div>
-        <div style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
+        <div data-print-informe style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
           <div style={{ textAlign: "center", borderBottom: `3px solid ${C.teal}`, paddingBottom: 16, marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>GalvánDesk — Informe de Partes</div>
@@ -322,16 +337,31 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
     const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
+    
+    const descargarPDF = () => {
+      const elemento = document.querySelector('[data-print-informe]');
+      const nombreArchivo = "informe-banos.pdf";
+      const opt = {
+        margin: 10,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
+      };
+      html2pdf().set(opt).from(elemento).save();
+    };
+    
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
           <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Baños · Ctrl+P para PDF</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
+            <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
             <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>✕ Cerrar</button>
           </div>
         </div>
-        <div style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
+        <div data-print-informe style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
           <div style={{ textAlign: "center", borderBottom: `3px solid ${C.blue}`, paddingBottom: 16, marginBottom: 20 }}>
             <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>GalvánDesk — Informe de Salidas al Baño</div>
