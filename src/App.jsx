@@ -1064,7 +1064,7 @@ const DIAS_SEMANA   = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante }) {
+function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante, diaSeleccionadoGuardias, setDiaSeleccionadoGuardias }) {
   const hoy     = new Date();
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
@@ -1181,13 +1181,20 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
             <div style={{ fontSize:13, fontWeight:600, color:C.gray, marginBottom:12 }}>📅 Próximos 7 días</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:8 }}>
               {proximosDias.map((p, idx) => (
-                <div key={idx} style={{ 
-                  textAlign:"center", 
-                  padding:12, 
-                  borderRadius:10, 
-                  background: p.tieneGuardia ? "#E8F5F3" : "#f3f4f6",
-                  border: idx === 0 ? `2px solid ${C.teal}` : "2px solid transparent"
-                }}>
+                <div key={idx} 
+                  onClick={() => p.tieneGuardia && setDiaSeleccionadoGuardias(p.dia)}
+                  style={{ 
+                    textAlign:"center", 
+                    padding:12, 
+                    borderRadius:10, 
+                    background: p.tieneGuardia ? "#E8F5F3" : "#f3f4f6",
+                    border: idx === 0 ? `2px solid ${C.teal}` : "2px solid transparent",
+                    cursor: p.tieneGuardia ? "pointer" : "default",
+                    transition: "all .2s ease",
+                    transform: p.tieneGuardia ? "scale(1)" : "scale(1)"
+                  }}
+                  onMouseOver={e => { if (p.tieneGuardia) { e.currentTarget.style.transform = "scale(1.05)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)"; } }}
+                  onMouseOut={e => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "none"; }}>
                   <div style={{ fontSize:11, fontWeight:600, color:C.gray, marginBottom:4 }}>{p.dia.substring(0,3)}</div>
                   <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:6 }}>{p.fecha.getDate()}</div>
                   <div style={{ fontSize:20 }}>{p.tieneGuardia ? "✅" : "⭕"}</div>
@@ -1279,6 +1286,78 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
           </div>
         </div>
       )}
+      
+      {/* PANEL LATERAL: Guardias del día seleccionado */}
+      {diaSeleccionadoGuardias && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }} onClick={() => setDiaSeleccionadoGuardias(null)}>
+          <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 400, background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.blue})`, color: "#fff", padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias}</div>
+                <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Guardias asignadas</div>
+              </div>
+              <button onClick={() => setDiaSeleccionadoGuardias(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 18, fontWeight: 700 }}>✕</button>
+            </div>
+            
+            <div style={{ padding: 20 }}>
+              {(() => {
+                const guardiasDelDia = [];
+                
+                HORAS_GUARDIA.forEach(hora => {
+                  const key = `${diaSeleccionadoGuardias}|${hora}|${fProfesor}`;
+                  const zona = cuadrante[key];
+                  
+                  if (zona) {
+                    const z = ZONAS_CENTRO.find(z => z.id === zona);
+                    const keyApoyo = `${diaSeleccionadoGuardias}|${hora}|${zona}`;
+                    const profesorApoyo = apoyosGuardia[keyApoyo];
+                    
+                    // Buscar ausencias de ese día
+                    const ausenciasDelDia = ausencias.filter(a => {
+                      return a.fecha.split("T")[0] === `2026-02-${String(new Date(diaSeleccionadoGuardias).getDate()).padStart(2, '0')}` && a.horas.includes(hora);
+                    });
+                    
+                    guardiasDelDia.push({ hora, zona: z ? z.label : "Desconocida", zonaId: zona, profesorApoyo, ausencias: ausenciasDelDia });
+                  }
+                });
+                
+                return guardiasDelDia.length === 0 ? (
+                  <div style={{ textAlign: "center", color: C.gray, padding: 20 }}>
+                    <div style={{ fontSize: 40, marginBottom: 10 }}>✅</div>
+                    <div>No tienes guardias asignadas este día</div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    {guardiasDelDia.map((g, idx) => (
+                      <div key={idx} style={{ background: "#f9fafb", borderRadius: 10, padding: 14, borderLeft: `4px solid ${C.teal}` }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: C.dark, marginBottom: 8 }}>🕐 {g.hora}</div>
+                        <div style={{ fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 10 }}>📍 {g.zona}</div>
+                        
+                        {g.profesorApoyo && (
+                          <div style={{ background: "#EEF5F8", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: C.blue, fontWeight: 600, marginBottom: 8 }}>
+                            👥 Apoyo: {g.profesorApoyo}
+                          </div>
+                        )}
+                        
+                        {g.ausencias.length > 0 && g.ausencias.map((a, i) => (
+                          <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginTop: 8, borderLeft: `3px solid #fbbf24` }}>
+                            <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>📚 Sustituyes a: {a.profesor}</div>
+                            {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 4 }}><strong>Tarea:</strong> {a.tarea}</div>}
+                            {a.enlace && <div style={{ fontSize: 11, marginBottom: 4 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
+                            {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong>📍 Ubicación:</strong> {a.ubicacion}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+            
+            <style>{`@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1286,7 +1365,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
 // ═══════════════════════════════════════════════════════════════════════════
 // NOTIFICAR AUSENCIA (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
+function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
   const [enviado, setEnviado] = useState(false);
 
   function toggleHora(h) {
@@ -1295,10 +1374,10 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 
   function enviar() {
     if (!ausProfesor || !ausFecha || ausHoras.length === 0) return;
-    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, ts:new Date().toISOString(), leida:false };
+    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, ts:new Date().toISOString(), leida:false };
     setAusencias(prev => [nueva, ...prev]);
     setEnviado(true);
-    setAusFecha(""); setAusHoras([]); setAusTarea("");
+    setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion("");
     setTimeout(() => setEnviado(false), 4000);
   }
 
@@ -1352,6 +1431,20 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
             placeholder="Describe qué deben hacer los alumnos, qué material hay preparado..."
             style={{ ...inpStyle, resize:"vertical" }} />
         </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+          <div>
+            <label style={labelStyle}>Enlace a recursos (opcional)</label>
+            <input type="url" value={ausEnlace} onChange={e => setAusEnlace(e.target.value)}
+              placeholder="https://drive.google.com/..."
+              style={inpStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Ubicación del material (opcional)</label>
+            <input type="text" value={ausUbicacion} onChange={e => setAusUbicacion(e.target.value)}
+              placeholder="Conserjería, Mi despacho, Fotocopias..."
+              style={inpStyle} />
+          </div>
+        </div>
         <button onClick={enviar} disabled={!ausProfesor || !ausFecha || ausHoras.length === 0}
           style={{ width:"100%", padding:14, borderRadius:10, border:"none", background:(!ausProfesor||!ausFecha||ausHoras.length===0)?"#94a3b8":C.salmon, color:"#fff", fontWeight:700, fontSize:15, cursor:(!ausProfesor||!ausFecha||ausHoras.length===0)?"not-allowed":"pointer" }}>
           📢 Notificar Ausencia a Jefatura
@@ -1364,7 +1457,9 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
             <div key={a.id} style={{ background:C.white, borderRadius:10, padding:14, marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${C.salmon}` }}>
               <div style={{ fontWeight:700, color:C.dark }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
               <div style={{ fontSize:13, color:C.gray, marginTop:4 }}>Horas: {a.horas.join(", ")}</div>
-              {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 {a.tarea}</div>}
+              {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 Tarea: {a.tarea}</div>}
+              {a.enlace && <div style={{ fontSize:13, color:C.blue, marginTop:4, background:"#EEF5F8", borderRadius:6, padding:"6px 10px" }}>🔗 <a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color:C.blue, textDecoration:"underline" }}>Ver recursos</a></div>}
+              {a.ubicacion && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📍 Ubicación: {a.ubicacion}</div>}
               <div style={{ fontSize:11, color:C.gray, marginTop:4 }}>Notificado el {fmt(a.ts)}</div>
             </div>
           ))}
@@ -1675,7 +1770,10 @@ export default function App() {
   const [ausFecha, setAusFecha]       = useState("");
   const [ausHoras, setAusHoras]       = useState([]);
   const [ausTarea, setAusTarea]       = useState("");
+  const [ausEnlace, setAusEnlace]     = useState("");
+  const [ausUbicacion, setAusUbicacion] = useState("");
   const [ausProfesor, setAusProfesor] = useState("");
+  const [diaSeleccionadoGuardias, setDiaSeleccionadoGuardias] = useState(null);
 
   // Carga
   useEffect(() => {
@@ -2617,7 +2715,7 @@ export default function App() {
         {/* ── Baños live (Jefatura) ── */}
         {/* ── Mi Guardia Hoy (Profesor) ── */}
         {tab === "mi_guardia" && (
-          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} />
+          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} diaSeleccionadoGuardias={diaSeleccionadoGuardias} setDiaSeleccionadoGuardias={setDiaSeleccionadoGuardias} />
         )}
 
         {/* ── Notificar Ausencia (Profesor) ── */}
@@ -2629,6 +2727,8 @@ export default function App() {
             ausFecha={ausFecha} setAusFecha={setAusFecha}
             ausHoras={ausHoras} setAusHoras={setAusHoras}
             ausTarea={ausTarea} setAusTarea={setAusTarea}
+            ausEnlace={ausEnlace} setAusEnlace={setAusEnlace}
+            ausUbicacion={ausUbicacion} setAusUbicacion={setAusUbicacion}
             fProfesor={fProfesor} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} fmt={fmt}
           />
         )}
