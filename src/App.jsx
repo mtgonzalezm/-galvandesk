@@ -1292,10 +1292,26 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }} onClick={() => setDiaSeleccionadoGuardias(null)}>
           <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 400, background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
             <div style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.blue})`, color: "#fff", padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}</div>
                 <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Guardias asignadas</div>
               </div>
+              {(() => {
+                const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+                const diaHoy = diasES[diaSeleccionadoGuardias.getDay()];
+                const fechaISO = diaSeleccionadoGuardias.toISOString().split("T")[0];
+                const ausenciasDelDia = ausencias.filter(a => {
+                  const fechaAus = a.fecha.split("T")[0];
+                  return fechaAus === fechaISO;
+                });
+                const totalAusencias = ausenciasDelDia.length;
+                
+                return totalAusencias > 0 ? (
+                  <div style={{ background: "rgba(239, 68, 68, 0.9)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 14, marginRight: 10 }}>
+                    {totalAusencias}
+                  </div>
+                ) : null;
+              })()}
               <button onClick={() => setDiaSeleccionadoGuardias(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 18, fontWeight: 700 }}>✕</button>
             </div>
             
@@ -1345,16 +1361,21 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
                           </div>
                         )}
                         
-                        {g.ausencias.length > 0 && g.ausencias.map((a, i) => (
-                          <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginTop: 8, borderLeft: `3px solid #fbbf24` }}>
-                            <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>📚 Sustituyes a: {a.profesor}</div>
-                            {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>📖 Asignatura:</strong> {a.asignatura}</div>}
-                            {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>🏫 Aula:</strong> {a.aula}</div>}
-                            {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>✏️ Tarea:</strong> {a.tarea}</div>}
-                            {a.enlace && <div style={{ fontSize: 11, marginBottom: 3 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
-                            {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong>📍 Ubicación:</strong> {a.ubicacion}</div>}
+                        {g.ausencias.length > 0 && (
+                          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #e5e7eb" }}>
+                            <div style={{ fontWeight: 600, color: "#d97706", fontSize: 12, marginBottom: 8 }}>⚠️ AUSENCIAS A CUBRIR:</div>
+                            {g.ausencias.map((a, i) => (
+                              <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginBottom: 8, borderLeft: `3px solid #fbbf24` }}>
+                                <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>👤 {a.profesor}</div>
+                                {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>📚 Asignatura:</strong> {a.asignatura}</div>}
+                                {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>🏫 Aula:</strong> {a.aula}</div>}
+                                {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>✏️ Tarea:</strong> {a.tarea}</div>}
+                                {a.enlace && <div style={{ fontSize: 11, marginBottom: 3 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
+                                {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong>📍 Ubicación:</strong> {a.ubicacion}</div>}
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1623,7 +1644,78 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
           </tbody>
         </table>
         <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. Selecciona profesor, zona y apoyo.</div>
-        <div style={{ marginTop:8, padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600, display: "inline-block" }}>✅ Cambios guardados correctamente</div>
+        <div style={{ marginTop:8, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600, display: "inline-block" }}>✅ Cambios guardados correctamente</div>
+          <button onClick={() => {
+            const doc = document.createElement('div');
+            doc.innerHTML = `
+              <div style="font-family: Arial; padding: 20px;">
+                <h1 style="text-align: center; color: #00695c; margin-bottom: 10px;">📅 CUADRANTE DE GUARDIAS</h1>
+                <div style="text-align: center; color: #666; font-size: 14px; margin-bottom: 20px;">
+                  Fecha: ${quinceInicio ? new Date(quinceInicio).toLocaleDateString('es-ES') : 'Sin fecha'}
+                </div>
+                
+                <h2 style="color: #00695c; margin-top: 20px; margin-bottom: 10px;">📅 Asignación de Profesores de Guardia</h2>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                  <thead>
+                    <tr style="background: #2c3e50; color: white;">
+                      <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">Hora</th>
+                      ${DIAS_SEMANA.map(d => `<th style="border: 1px solid #ddd; padding: 8px; text-align: left;">${d}</th>`).join('')}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${HORAS_GUARDIA.map((hora, i) => `
+                      <tr style="background: ${i%2===0?'#fff':'#f5f5f5'};">
+                        <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold;">${hora}</td>
+                        ${DIAS_SEMANA.map(dia => {
+                          const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(\`\${dia}|\${hora}|\`))?.[1] || '';
+                          const zona = profesorGuardia ? cuadrante[\`\${dia}|\${hora}|\${profesorGuardia}\`] || '' : '';
+                          const zonaObj = ZONAS_CENTRO.find(z => z.id === zona);
+                          const apoyo = zona ? apoyosGuardia[\`\${dia}|\${hora}|\${zona}\`] || '' : '';
+                          return `<td style="border: 1px solid #ddd; padding: 8px;">
+                            ${profesorGuardia ? \`<strong>\${profesorGuardia}</strong><br/><small>\${zonaObj ? zonaObj.label : 'Desconocida'}\${apoyo ? '<br/>Apoyo: ' + apoyo : ''}</small>\` : '—'}
+                          </td>\`;
+                        }).join('')}
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+                
+                <h2 style="color: #00695c; margin-top: 20px; margin-bottom: 10px;">⚠️ AUSENCIAS DEL DÍA</h2>
+                ${(() => {
+                  const ausenciasDelDia = ausencias.filter(a => {
+                    if (!quinceInicio) return false;
+                    const fechaAus = new Date(a.fecha);
+                    const fechaInicio = new Date(quinceInicio);
+                    return fechaAus.toDateString() === fechaInicio.toDateString();
+                  });
+                  
+                  if (ausenciasDelDia.length === 0) {
+                    return '<p style="color: #666;">Sin ausencias registradas</p>';
+                  }
+                  
+                  return ausenciasDelDia.map(a => \`
+                    <div style="margin-bottom: 15px; padding: 10px; border: 1px solid #fbbf24; border-radius: 5px; background: #fffbf0;">
+                      <strong style="color: #d97706;">👤 \${a.profesor}</strong> - <span style="color: #f59e0b;">\${a.motivo}</span><br/>
+                      <small>📅 \${new Date(a.fecha).toLocaleDateString('es-ES')} | 🕐 \${a.horas.join(', ')}</small><br/>
+                      \${a.aula ? \`<small>🏫 Aula: \${a.aula}</small><br/>\` : ''}
+                      \${a.asignatura ? \`<small>📚 Asignatura: \${a.asignatura}</small><br/>\` : ''}
+                      \${a.tarea ? \`<small>✏️ Tarea: \${a.tarea}</small><br/>\` : ''}
+                      \${a.ubicacion ? \`<small>📍 Ubicación: \${a.ubicacion}</small>\` : ''}
+                    </div>
+                  \`).join('');
+                })()}
+              </div>
+            `;
+            
+            const html2pdf = window.html2pdf || (typeof require !== 'undefined' ? require('html2pdf.js') : null);
+            if (html2pdf) {
+              html2pdf().set({ margin: 10, filename: \`cuadrante-guardias-\${quinceInicio || 'sin-fecha'}.pdf\`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' } }).from(doc).save();
+            }
+          }} style={{ padding: "10px 16px", background: C.blue, color: "#fff", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", display: "inline-block" }}>
+            📥 Descargar PDF
+          </button>
+        </div>
       </div>
     </div>
   );
