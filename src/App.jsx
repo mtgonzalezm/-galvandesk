@@ -1182,7 +1182,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:8 }}>
               {proximosDias.map((p, idx) => (
                 <div key={idx} 
-                  onClick={() => p.tieneGuardia && setDiaSeleccionadoGuardias(p.dia)}
+                  onClick={() => p.tieneGuardia && setDiaSeleccionadoGuardias(p.fecha)}
                   style={{ 
                     textAlign:"center", 
                     padding:12, 
@@ -1293,7 +1293,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
           <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 400, background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
             <div style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.blue})`, color: "#fff", padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias}</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}</div>
                 <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Guardias asignadas</div>
               </div>
               <button onClick={() => setDiaSeleccionadoGuardias(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 18, fontWeight: 700 }}>✕</button>
@@ -1303,18 +1303,24 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
               {(() => {
                 const guardiasDelDia = [];
                 
+                // Convertir la fecha a nombre del día y a formato ISO
+                const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+                const diaHoy = diasES[diaSeleccionadoGuardias.getDay()];
+                const fechaISO = diaSeleccionadoGuardias.toISOString().split("T")[0];
+                
                 HORAS_GUARDIA.forEach(hora => {
-                  const key = `${diaSeleccionadoGuardias}|${hora}|${fProfesor}`;
+                  const key = `${diaHoy}|${hora}|${fProfesor}`;
                   const zona = cuadrante[key];
                   
                   if (zona) {
                     const z = ZONAS_CENTRO.find(z => z.id === zona);
-                    const keyApoyo = `${diaSeleccionadoGuardias}|${hora}|${zona}`;
+                    const keyApoyo = `${diaHoy}|${hora}|${zona}`;
                     const profesorApoyo = apoyosGuardia[keyApoyo];
                     
-                    // Buscar ausencias de ese día
+                    // Buscar ausencias de esa fecha y hora
                     const ausenciasDelDia = ausencias.filter(a => {
-                      return a.fecha.split("T")[0] === `2026-02-${String(new Date(diaSeleccionadoGuardias).getDate()).padStart(2, '0')}` && a.horas.includes(hora);
+                      const fechaAusencia = a.fecha.split("T")[0];
+                      return fechaAusencia === fechaISO && a.horas.includes(hora);
                     });
                     
                     guardiasDelDia.push({ hora, zona: z ? z.label : "Desconocida", zonaId: zona, profesorApoyo, ausencias: ausenciasDelDia });
