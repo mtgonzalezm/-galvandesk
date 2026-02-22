@@ -1064,7 +1064,7 @@ const DIAS_SEMANA   = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante }) {
+function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante }) {
   const hoy     = new Date();
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
@@ -1073,9 +1073,49 @@ function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selSt
   const guardiasDia = HORAS_GUARDIA.map(hora => {
     const key  = `${diaHoy}|${hora}|${fProfesor}`;
     const zona = cuadrante[key];
-    const z    = ZONAS_CENTRO.find(z => z.id === zona);
-    return { hora, zona: z ? z.label : null };
-  }).filter(g => g.zona);
+    
+    if (!zona) return null;
+    
+    const z = ZONAS_CENTRO.find(z => z.id === zona);
+    
+    // Determinar si es Profesor de Guardia o Profesor de Apoyo
+    let rol = "PROFESOR DE GUARDIA"; // Por defecto
+    let profesorDeGuardia = fProfesor;
+    let profesorApoyo = null;
+    
+    // Buscar si es el profesor de apoyo de esta zona
+    const keyApoyo = `${diaHoy}|${hora}|${zona}`;
+    if (apoyosGuardia[keyApoyo] === fProfesor) {
+      rol = "APOYO A LA GUARDIA";
+      // Encontrar quién es el profesor de guardia
+      for (let prof of profesores) {
+        if (cuadrante[`${diaHoy}|${hora}|${prof}`] === zona) {
+          profesorDeGuardia = prof;
+          break;
+        }
+      }
+    } else {
+      // Es profesor de guardia, buscar su apoyo
+      profesorApoyo = apoyosGuardia[keyApoyo] || null;
+    }
+    
+    // Buscar si hay ausencias para esa hora (profesores que no vinieron)
+    const ausenciasHora = ausencias.filter(a => {
+      const fechaAusencia = a.fecha;
+      const hoysStr = hoy.toISOString().split("T")[0];
+      return fechaAusencia === hoysStr && a.horas.includes(hora);
+    });
+    
+    return { 
+      hora, 
+      zona: z ? z.label : null, 
+      zonaId: zona,
+      rol,
+      profesorDeGuardia,
+      profesorApoyo,
+      ausencias: ausenciasHora
+    };
+  }).filter(g => g !== null);
 
   return (
     <div>
@@ -1194,16 +1234,41 @@ function MiGuardiaHoy({ profesores, cuadrante, fProfesor, setFProfesor, C, selSt
           </div>
           {guardiasDia.map((g, i) => {
             const esRecreo = g.hora === "Recreo";
-            const color    = esRecreo ? C.blue : C.teal;
+            const esApoyo = g.rol === "APOYO A LA GUARDIA";
+            const color = esApoyo ? C.blue : C.teal;
+            
             return (
               <div key={i} style={{ background:C.white, borderRadius:12, padding:18, marginBottom:12, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", borderLeft:`5px solid ${color}` }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                  <div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontWeight:800, fontSize:18, color:C.dark }}>{g.hora}</div>
                     <div style={{ fontSize:15, color, fontWeight:600, marginTop:4 }}>📍 {g.zona}</div>
-                  </div>
-                  <div style={{ background:esRecreo?"#EEF5F8":"#E8F5F3", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:700, color }}>
-                    {esRecreo ? "RECREO" : "GUARDIA"}
+                    
+                    {/* Mostrar rol */}
+                    <div style={{ marginTop: 12, padding: "8px 12px", background: esApoyo ? "#EEF5F8" : "#E8F5F3", borderRadius: 8, fontSize: 12, fontWeight: 700, color, display: "inline-block" }}>
+                      {esApoyo ? "🔄 APOYO A LA GUARDIA" : "🛡️ PROFESOR DE GUARDIA"}
+                    </div>
+                    
+                    {/* Mostrar profesor de guardia si es apoyo */}
+                    {esApoyo && (
+                      <div style={{ marginTop: 10, padding: "8px 12px", background: "#FDF0EF", borderRadius: 8, fontSize: 12, color: C.salmon, fontWeight: 600 }}>
+                        👤 Profesor: {g.profesorDeGuardia}
+                      </div>
+                    )}
+                    
+                    {/* Mostrar profesor de apoyo si es titular */}
+                    {!esApoyo && g.profesorApoyo && (
+                      <div style={{ marginTop: 10, padding: "8px 12px", background: "#EEF5F8", borderRadius: 8, fontSize: 12, color: C.blue, fontWeight: 600 }}>
+                        👥 Apoyo: {g.profesorApoyo}
+                      </div>
+                    )}
+                    
+                    {/* Mostrar ausencias (docentes que no fueron) */}
+                    {g.ausencias.length > 0 && (
+                      <div style={{ marginTop: 10, padding: "8px 12px", background: "#FFF8E8", borderRadius: 8, fontSize: 12, color: C.dark, fontWeight: 600, border: "1px solid #fbbf24" }}>
+                        📚 Sustituyes a: {g.ausencias.map(a => a.profesor).join(", ")}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2552,7 +2617,7 @@ export default function App() {
         {/* ── Baños live (Jefatura) ── */}
         {/* ── Mi Guardia Hoy (Profesor) ── */}
         {tab === "mi_guardia" && (
-          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} />
+          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} />
         )}
 
         {/* ── Notificar Ausencia (Profesor) ── */}
