@@ -2476,11 +2476,13 @@ export default function App() {
           { id: "bano",        label: "🚻 Baños", color: "#10b981" },
           { id: "historial",   label: "🗂 Mis Partes", color: "#8b5cf6" },
         ]
-      : [
+      : moduloProfesor === "guardias"
+      ? [
           { id: "mi_guardia",     label: "🔄 Mi Guardia Hoy", color: "#06b6d4" },
           { id: "notif_ausencia", label: "📢 Notificar Ausencia", color: "#ec4899" },
           { id: "guardias_ver",   label: "📄 Ver Guardias", color: "#10b981" },
         ]
+      : [] // Galvángram no tiene tabs adicionales
     : perfil.id === "jefatura"
     ? moduloJefatura === "alumnos"
       ? [
@@ -2546,9 +2548,10 @@ export default function App() {
           {[
             { id: "alumnos",  label: "👨‍🎓 Partes",  icon: "📋" },
             { id: "guardias", label: "🔄 Guardias",  icon: "⏰" },
+            { id: "galvangramm", label: "💬 Galvángram", icon: "💬" },
           ].map(m => (
             <button key={m.id}
-              onClick={() => { setModuloProfesor(m.id); setTab(m.id === "alumnos" ? "partes" : "mi_guardia"); }}
+              onClick={() => { setModuloProfesor(m.id); setTab(m.id === "alumnos" ? "partes" : (m.id === "guardias" ? "mi_guardia" : "mensajeria")); }}
               style={{ 
                 padding: "12px 28px", 
                 border: "2px solid transparent",
