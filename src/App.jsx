@@ -1335,15 +1335,17 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
                         
                         {g.profesorApoyo && (
                           <div style={{ background: "#EEF5F8", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: C.blue, fontWeight: 600, marginBottom: 8 }}>
-                            👥 Apoyo: {g.profesorApoyo}
+                            👥 Profesor de Apoyo a la Guardia: {g.profesorApoyo}
                           </div>
                         )}
                         
                         {g.ausencias.length > 0 && g.ausencias.map((a, i) => (
                           <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginTop: 8, borderLeft: `3px solid #fbbf24` }}>
                             <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>📚 Sustituyes a: {a.profesor}</div>
-                            {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 4 }}><strong>Tarea:</strong> {a.tarea}</div>}
-                            {a.enlace && <div style={{ fontSize: 11, marginBottom: 4 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
+                            {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>📖 Asignatura:</strong> {a.asignatura}</div>}
+                            {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>🏫 Aula:</strong> {a.aula}</div>}
+                            {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>✏️ Tarea:</strong> {a.tarea}</div>}
+                            {a.enlace && <div style={{ fontSize: 11, marginBottom: 3 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
                             {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong>📍 Ubicación:</strong> {a.ubicacion}</div>}
                           </div>
                         ))}
@@ -1365,7 +1367,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
 // ═══════════════════════════════════════════════════════════════════════════
 // NOTIFICAR AUSENCIA (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
+function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
   const [enviado, setEnviado] = useState(false);
 
   function toggleHora(h) {
@@ -1374,10 +1376,10 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 
   function enviar() {
     if (!ausProfesor || !ausFecha || ausHoras.length === 0) return;
-    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, ts:new Date().toISOString(), leida:false };
+    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, aula:ausAula, asignatura:ausAsignatura, ts:new Date().toISOString(), leida:false };
     setAusencias(prev => [nueva, ...prev]);
     setEnviado(true);
-    setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion("");
+    setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion(""); setAusAula(""); setAusAsignatura("");
     setTimeout(() => setEnviado(false), 4000);
   }
 
@@ -1433,6 +1435,20 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
           <div>
+            <label style={labelStyle}>Aula donde imparto clase (importante para el profesor de guardia)</label>
+            <input type="text" value={ausAula} onChange={e => setAusAula(e.target.value)}
+              placeholder="3ºB, Sala 5, Taller 2..."
+              style={inpStyle} />
+          </div>
+          <div>
+            <label style={labelStyle}>Asignatura o función</label>
+            <input type="text" value={ausAsignatura} onChange={e => setAusAsignatura(e.target.value)}
+              placeholder="Matemáticas, Inglés, Tutoría..."
+              style={inpStyle} />
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+          <div>
             <label style={labelStyle}>Enlace a recursos (opcional)</label>
             <input type="url" value={ausEnlace} onChange={e => setAusEnlace(e.target.value)}
               placeholder="https://drive.google.com/..."
@@ -1457,6 +1473,8 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
             <div key={a.id} style={{ background:C.white, borderRadius:10, padding:14, marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${C.salmon}` }}>
               <div style={{ fontWeight:700, color:C.dark }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
               <div style={{ fontSize:13, color:C.gray, marginTop:4 }}>Horas: {a.horas.join(", ")}</div>
+              {a.aula && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>🏫 Aula: {a.aula}</div>}
+              {a.asignatura && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📚 Asignatura: {a.asignatura}</div>}
               {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 Tarea: {a.tarea}</div>}
               {a.enlace && <div style={{ fontSize:13, color:C.blue, marginTop:4, background:"#EEF5F8", borderRadius:6, padding:"6px 10px" }}>🔗 <a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color:C.blue, textDecoration:"underline" }}>Ver recursos</a></div>}
               {a.ubicacion && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📍 Ubicación: {a.ubicacion}</div>}
@@ -1533,7 +1551,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
                           <div style={{ marginTop: "2px" }}>
                             <select value={apoyo} onChange={e => setApoyo(dia, hora, val, e.target.value)}
                               style={{ width:"100%", padding:"5px 6px", borderRadius:6, border:`2px solid #00B7B5`, fontSize:11, background:"#e0f7f6", color:C.dark, cursor:"pointer", fontWeight: apoyo ? 600 : 400 }}>
-                              <option value="">👥 Apoyo</option>
+                              <option value="">👥 Profesor de Apoyo a la Guardia</option>
                               {profesores.filter(p => p !== profesorSel).map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
                           </div>
@@ -1546,7 +1564,8 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
             ))}
           </tbody>
         </table>
-        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. El apoyo es opcional y se asigna por zona.</div>
+        <div style={{ marginTop:14, fontSize:12, color:C.gray }}>💾 Los cambios se guardan automáticamente. El Profesor de Apoyo a la Guardia es opcional y se asigna por zona.</div>
+        <div style={{ marginTop:8, padding: "10px 12px", background: "#E8F5F3", borderRadius: 8, fontSize: 12, color: C.teal, fontWeight: 600, display: "inline-block" }}>✅ Cambios guardados correctamente</div>
       </div>
     </div>
   );
@@ -1772,6 +1791,8 @@ export default function App() {
   const [ausTarea, setAusTarea]       = useState("");
   const [ausEnlace, setAusEnlace]     = useState("");
   const [ausUbicacion, setAusUbicacion] = useState("");
+  const [ausAula, setAusAula]         = useState("");
+  const [ausAsignatura, setAusAsignatura] = useState("");
   const [ausProfesor, setAusProfesor] = useState("");
   const [diaSeleccionadoGuardias, setDiaSeleccionadoGuardias] = useState(null);
 
@@ -2729,6 +2750,8 @@ export default function App() {
             ausTarea={ausTarea} setAusTarea={setAusTarea}
             ausEnlace={ausEnlace} setAusEnlace={setAusEnlace}
             ausUbicacion={ausUbicacion} setAusUbicacion={setAusUbicacion}
+            ausAula={ausAula} setAusAula={setAusAula}
+            ausAsignatura={ausAsignatura} setAusAsignatura={setAusAsignatura}
             fProfesor={fProfesor} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} fmt={fmt}
           />
         )}
@@ -2963,7 +2986,7 @@ export default function App() {
                                   <div key={idx} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: idx < asignaciones.length - 1 ? "1px solid #d0e8e6" : "none" }}>
                                     <strong style={{ color: C.dark }}>👤 {a.profesor}</strong><br/>
                                     <span style={{ color: C.teal, fontSize: 9 }}>📍 {a.zona}</span><br/>
-                                    {a.apoyo && <span style={{ color: C.blue, fontSize: 9 }}>👥 Apoyo: {a.apoyo}</span>}
+                                    {a.apoyo && <span style={{ color: C.blue, fontSize: 9 }}>👥 Prof. Apoyo: {a.apoyo}</span>}
                                   </div>
                                 ))}
                               </div>
