@@ -134,6 +134,17 @@ const weekKey  = d => { const dt = new Date(d), day = dt.getDay(), diff = dt.get
 const gObj     = g => GRAVEDAD.find(x => x.id === g);
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
+// Mientras la app no esté autorizada y en el servidor del centro, se muestra
+// un aviso para no introducir datos reales. Poner a false cuando se autorice.
+const MODO_DEMO = true;
+const AvisoDemo = ({ compacto }) => MODO_DEMO ? (
+  <div role="note" style={compacto
+    ? { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, textAlign: "center", padding: "6px 12px", borderBottom: "1px solid #fbbf24" }
+    : { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, borderRadius: 10, padding: "10px 12px", marginBottom: 20, border: "1px solid #fbbf24", lineHeight: 1.4 }}>
+    ⚠️ Versión de demostración: no introducir datos reales de alumnos ni familias.
+  </div>
+) : null;
+
 // Guardado en el navegador (localStorage). Los datos se conservan al recargar,
 // pero cada navegador/dispositivo guarda los suyos. Paso previo al servidor del centro.
 const PREFIJO = "galvandesk:";
@@ -2471,7 +2482,8 @@ export default function App() {
         <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
         <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
         <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
-        <p style={{ color: C.gray, marginBottom: 32, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        <AvisoDemo />
         
         <div style={{ marginBottom: 24, textAlign: "left" }}>
           <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>¿Quién eres?</label>
@@ -2549,6 +2561,7 @@ export default function App() {
         body { margin: 0; padding: 0; }
         @media print { .no-print { display: none !important; } }
       `}</style>
+      <AvisoDemo compacto />
       {/* Header — ancho completo CON BOTÓN HOME */}
       <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
