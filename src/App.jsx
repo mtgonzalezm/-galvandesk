@@ -134,8 +134,28 @@ const weekKey  = d => { const dt = new Date(d), day = dt.getDay(), diff = dt.get
 const gObj     = g => GRAVEDAD.find(x => x.id === g);
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
-async function sGet(k) { try { const r = await window.storage.get(k); return r ? JSON.parse(r.value) : null; } catch { return null; } }
-async function sSet(k, v) { try { await window.storage.set(k, JSON.stringify(v)); } catch (e) { console.error(e); } }
+// Guardado en el navegador (localStorage). Los datos se conservan al recargar,
+// pero cada navegador/dispositivo guarda los suyos. Paso previo al servidor del centro.
+const PREFIJO = "galvandesk:";
+async function sGet(k) {
+  try { const v = localStorage.getItem(PREFIJO + k); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+async function sSet(k, v) {
+  try { localStorage.setItem(PREFIJO + k, JSON.stringify(v)); }
+  catch (e) { console.error("No se pudo guardar", k, e); }
+}
+// Sesión: recuerda quién ha entrado y con qué perfil
+function leerSesion() {
+  try { const v = localStorage.getItem(PREFIJO + "sesion"); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+function guardarSesion(sesion) {
+  try {
+    if (sesion) localStorage.setItem(PREFIJO + "sesion", JSON.stringify(sesion));
+    else localStorage.removeItem(PREFIJO + "sesion");
+  } catch { /* navegador sin almacenamiento: se sigue sin recordar */ }
+}
 
 // ─── Componentes base ─────────────────────────────────────────────────────────
 const Btn = ({ onClick, disabled, children, color = C.dark, style = {} }) => (
@@ -660,17 +680,19 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
   const [planesGuardia, setPlanesGuardia]   = useState([]);
   const [verPlan, setVerPlan]               = useState(null);
 
+  const [planesCargados, setPlanesCargados] = useState(false);
   useEffect(() => {
     async function load() {
       const pg = await sGet("planes_guardia");
       if (pg) setPlanesGuardia(pg);
+      setPlanesCargados(true);
     }
     load();
   }, []);
 
   useEffect(() => {
-    sSet("planes_guardia", planesGuardia);
-  }, [planesGuardia]);
+    if (planesCargados) sSet("planes_guardia", planesGuardia);
+  }, [planesGuardia, planesCargados]);
 
   function toggleHora(h) {
     setPgHoras(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
@@ -2300,6 +2322,14 @@ export default function App() {
       const g  = await sGet("guardias");    if (g)  setGuardias(g);
       const cq = await sGet("cuadrante");   if (cq) setCuadrante(cq);
       const au = await sGet("ausencias");   if (au) setAusencias(au);
+      const ap = await sGet("apoyos_guardia");     if (ap) setApoyosGuardia(ap);
+      const pg = await sGet("profesores_guardia"); if (pg) setProfesoresGuardia(pg);
+      const ses = leerSesion();
+      if (ses?.usuario && ses?.perfil) {
+        setUsuario(ses.usuario); setPerfil(ses.perfil);
+        if ((pr || DEMO_PROFESORES).includes(ses.usuario)) setFProfesor(ses.usuario);
+        setTab(ses.perfil.id === "jefatura" ? "dashboard" : ses.perfil.id === "admin" ? "admin_panel" : "partes");
+      }
       setLoading(false);
     }
     load();
@@ -2314,6 +2344,8 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias,   loading]);
   useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
   useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
+  useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
+  useEffect(() => { if (!loading) sSet("profesores_guardia", profesoresGuardia); }, [profesoresGuardia, loading]);
 
   // Derivados
   const cursos        = [...new Set(alumnos.map(a => a.curso))].sort();
@@ -2339,6 +2371,7 @@ export default function App() {
   });
 
   function salir() {
+    guardarSesion(null);
     setPerfil(null); setUsuario(null); setTab("partes"); setShowParte(null); setPrintParte(null);
     setPrintInforme(false); setShowAlerta(null);
     setFAlumno(""); setFBusqueda(""); setFDesc(""); setParteGenerado(null);
@@ -2445,10 +2478,13 @@ export default function App() {
           <input 
             type="text" 
             placeholder="Tu nombre" 
+            list="lista-profesores"
+            value={usuario || ""}
             onChange={e => setUsuario(e.target.value)}
             style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `2px solid ${C.cream}`, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 12 }}
           />
-          <small style={{ color: C.gray, display: "block" }}>Por ejemplo: Teresa García o Juan López</small>
+          <datalist id="lista-profesores">{profesores.map(p => <option key={p} value={p} />)}</datalist>
+          <small style={{ color: C.gray, display: "block" }}>Escribe y elige tu nombre de la lista. Se recordará en este dispositivo.</small>
         </div>
 
         {[
@@ -2457,7 +2493,7 @@ export default function App() {
           { id: "admin",     label: "⚙️ Administración" },
         ].map(p => (
           <button key={p.id}
-            onClick={() => { if (!usuario?.trim()) { alert("Por favor, ingresa tu nombre"); return; } setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
+            onClick={() => { if (!usuario?.trim()) { alert("Por favor, ingresa tu nombre"); return; } const nombre = usuario.trim(); setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre); guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
             style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark, transition: "all .2s" }}
             onMouseOver={e => { e.currentTarget.style.background = C.teal; e.currentTarget.style.color = "#fff"; }}
             onMouseOut={e => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.dark; }}>
