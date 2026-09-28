@@ -137,6 +137,13 @@ const gObj     = g => GRAVEDAD.find(x => x.id === g);
 // Mientras la app no esté autorizada y en el servidor del centro, se muestra
 // un aviso para no introducir datos reales. Poner a false cuando se autorice.
 const MODO_DEMO = true;
+
+const PERFILES = [
+  { id: "profesor", label: "👨‍🏫 Profesor" },
+  { id: "jefatura", label: "📊 Jefatura" },
+  { id: "admin",    label: "⚙️ Administración" },
+];
+const tabInicial = id => id === "jefatura" ? "dashboard" : id === "admin" ? "admin_panel" : "partes";
 const AvisoDemo = ({ compacto }) => MODO_DEMO ? (
   <div role="note" style={compacto
     ? { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, textAlign: "center", padding: "6px 12px", borderBottom: "1px solid #fbbf24" }
@@ -2381,6 +2388,16 @@ export default function App() {
     return true;
   });
 
+  function cambiarPerfil(id) {
+    const p = PERFILES.find(x => x.id === id);
+    if (!p || p.id === perfil?.id) return;
+    guardarSesion({ usuario, perfil: p });
+    setPerfil(p); setTab(tabInicial(p.id));
+    setModuloProfesor("alumnos"); setModuloJefatura("alumnos");
+    setShowParte(null); setShowAlerta(null);
+    window.scrollTo(0, 0);
+  }
+
   function salir() {
     guardarSesion(null);
     setPerfil(null); setUsuario(null); setTab("partes"); setShowParte(null); setPrintParte(null);
@@ -2499,11 +2516,7 @@ export default function App() {
           <small style={{ color: C.gray, display: "block" }}>Escribe y elige tu nombre de la lista. Se recordará en este dispositivo.</small>
         </div>
 
-        {[
-          { id: "profesor",  label: "👨‍🏫 Profesor" },
-          { id: "jefatura",  label: "📊 Jefatura" },
-          { id: "admin",     label: "⚙️ Administración" },
-        ].map(p => (
+        {PERFILES.map(p => (
           <button key={p.id}
             onClick={() => { if (!usuario?.trim()) { alert("Por favor, ingresa tu nombre"); return; } const nombre = usuario.trim(); setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre); guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
             style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark, transition: "all .2s" }}
@@ -2583,12 +2596,18 @@ export default function App() {
             </div>
           </div>
         </div>
-        <button onClick={salir} 
-          onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
-          onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
-          style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background .2s" }}>
-          Salir
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <select value={perfil.id} onChange={e => cambiarPerfil(e.target.value)} aria-label="Cambiar de perfil" title="Cambiar de perfil"
+            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 13, fontWeight: 600, maxWidth: 160 }}>
+            {PERFILES.map(p => <option key={p.id} value={p.id} style={{ color: C.dark }}>{p.label}</option>)}
+          </select>
+          <button onClick={salir} 
+            onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
+            onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
+            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background .2s" }}>
+            Salir
+          </button>
+        </div>
       </div>
 
       {/* Selector módulo Profesor */}
