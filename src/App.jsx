@@ -1100,6 +1100,22 @@ const ZONAS_CENTRO = [
 ];
 const HORAS_GUARDIA = ["1ª hora","2ª hora","3ª hora","4ª hora","Recreo","5ª hora","6ª hora","7ª hora"];
 const DIAS_SEMANA   = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+const DIAS_ES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+// ─── Fechas del cuadrante ────────────────────────────────────────────────────
+// El cuadrante cambia cada quincena, así que se guarda por fecha concreta:
+// clave "AAAA-MM-DD|hora|profesor" (y "AAAA-MM-DD|hora|zona" para los apoyos).
+const pad2 = n => String(n).padStart(2, "0");
+function parseISO(s) {
+  if (s instanceof Date) return new Date(s.getFullYear(), s.getMonth(), s.getDate());
+  const [y, m, d] = String(s).split("T")[0].split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+// Fecha local AAAA-MM-DD (sin el desfase de toISOString, que usa hora UTC)
+const isoLocal = (d = new Date()) => { const x = parseISO(d); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; };
+const sumarDias = (d, n) => { const x = parseISO(d); x.setDate(x.getDate() + n); return x; };
+const lunesDe = (d = new Date()) => { const x = parseISO(d); const dow = x.getDay(); return sumarDias(x, dow === 0 ? 1 : 1 - dow); };
+const esLectivo = d => { const w = parseISO(d).getDay(); return w !== 0 && w !== 6; };
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
@@ -1109,9 +1125,10 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
   const esFinde = hoy.getDay() === 0 || hoy.getDay() === 6;
+  const hoyISO  = isoLocal(hoy);
 
   const guardiasDia = HORAS_GUARDIA.map(hora => {
-    const key  = `${diaHoy}|${hora}|${fProfesor}`;
+    const key  = `${hoyISO}|${hora}|${fProfesor}`;
     const zona = cuadrante[key];
     
     if (!zona) return null;
@@ -1124,12 +1141,12 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
     let profesorApoyo = null;
     
     // Buscar si es el profesor de apoyo de esta zona
-    const keyApoyo = `${diaHoy}|${hora}|${zona}`;
+    const keyApoyo = `${hoyISO}|${hora}|${zona}`;
     if (apoyosGuardia[keyApoyo] === fProfesor) {
       rol = "APOYO A LA GUARDIA";
       // Encontrar quién es el profesor de guardia
       for (let prof of profesores) {
-        if (cuadrante[`${diaHoy}|${hora}|${prof}`] === zona) {
+        if (cuadrante[`${hoyISO}|${hora}|${prof}`] === zona) {
           profesorDeGuardia = prof;
           break;
         }
@@ -1142,7 +1159,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
     // Buscar si hay ausencias para esa hora (profesores que no vinieron)
     const ausenciasHora = ausencias.filter(a => {
       const fechaAusencia = a.fecha;
-      const hoysStr = hoy.toISOString().split("T")[0];
+      const hoysStr = hoyISO;
       return fechaAusencia === hoysStr && a.horas.includes(hora);
     });
     
@@ -1206,7 +1223,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
         let edificioProfesor = null;
         
         for (let hora of HORAS_GUARDIA) {
-          const key = `${diaHoy}|${hora}|${fProfesor}`;
+          const key = `${hoyISO}|${hora}|${fProfesor}`;
           const zona = cuadrante[key];
           if (zona) {
             zonaProfesor = zona;
@@ -1219,7 +1236,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
         // Buscar ausencias de hoy que el profesor debe cubrir
         const ausenciasACubrir = ausencias.filter(a => {
           const fechaAusencia = a.fecha;
-          const hoysStr = hoy.toISOString().split("T")[0];
+          const hoysStr = hoyISO;
           return fechaAusencia === hoysStr && a.edificio === edificioProfesor;
         });
         
@@ -1263,7 +1280,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
           
           // Verificar si tiene guardias ese día
           const tieneGuardia = HORAS_GUARDIA.some(hora => {
-            const key = `${dia}|${hora}|${fProfesor}`;
+            const key = `${isoLocal(fecha)}|${hora}|${fProfesor}`;
             return cuadrante[key];
           });
           
@@ -1393,7 +1410,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
               {(() => {
                 const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
                 const diaHoy = diasES[diaSeleccionadoGuardias.getDay()];
-                const fechaISO = diaSeleccionadoGuardias.toISOString().split("T")[0];
+                const fechaISO = isoLocal(diaSeleccionadoGuardias);
                 const ausenciasDelDia = ausencias.filter(a => {
                   const fechaAus = a.fecha.split("T")[0];
                   return fechaAus === fechaISO;
@@ -1416,15 +1433,15 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
                 // Convertir la fecha a nombre del día y a formato ISO
                 const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
                 const diaHoy = diasES[diaSeleccionadoGuardias.getDay()];
-                const fechaISO = diaSeleccionadoGuardias.toISOString().split("T")[0];
+                const fechaISO = isoLocal(diaSeleccionadoGuardias);
                 
                 HORAS_GUARDIA.forEach(hora => {
-                  const key = `${diaHoy}|${hora}|${fProfesor}`;
+                  const key = `${fechaISO}|${hora}|${fProfesor}`;
                   const zona = cuadrante[key];
                   
                   if (zona) {
                     const z = ZONAS_CENTRO.find(z => z.id === zona);
-                    const keyApoyo = `${diaHoy}|${hora}|${zona}`;
+                    const keyApoyo = `${fechaISO}|${hora}|${zona}`;
                     const profesorApoyo = apoyosGuardia[keyApoyo];
                     
                     // Buscar ausencias de esa fecha y hora
@@ -1623,26 +1640,32 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
   }
   
   const profesorSel = quinceProfesor || "";
-  
-  // Generar 15 días a partir de quinceInicio
-  const generarDias = () => {
-    const dias = [];
-    if (!quinceInicio) return dias;
-    
-    const fecha = new Date(quinceInicio);
-    const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-    
-    for (let i = 0; i < 15; i++) {
-      const d = new Date(fecha);
-      d.setDate(d.getDate() + i);
-      const diaNum = d.getDate();
-      const diaStr = diasES[d.getDay()];
-      dias.push({ dia: `${diaStr.substring(0,3)} ${diaNum}`, fecha: d, key: diaStr });
-    }
-    return dias;
-  };
-  
-  const dias = generarDias();
+  const inicio = quinceInicio || isoLocal(lunesDe());
+
+  // Quincena = dos semanas (14 días) desde el inicio; se muestran solo los días lectivos (L-V)
+  const dias = [];
+  for (let i = 0; i < 14; i++) {
+    const d = sumarDias(inicio, i);
+    if (!esLectivo(d)) continue;
+    dias.push({ dia: `${DIAS_ES[d.getDay()].substring(0,3)} ${d.getDate()}/${d.getMonth()+1}`, fecha: d, key: isoLocal(d) });
+  }
+
+  // Copia a esta quincena las guardias y apoyos de la quincena anterior (14 días antes), de todos los profesores
+  function copiarQuincenaAnterior() {
+    if (!window.confirm("¿Copiar a esta quincena las guardias de la quincena anterior?\nSe sustituirán las guardias ya asignadas en estas fechas, de todos los profesores.")) return;
+    const destino = new Set(dias.map(d => d.key));
+    const origenADestino = Object.fromEntries(dias.map(d => [isoLocal(sumarDias(d.fecha, -14)), d.key]));
+    const copiar = prev => {
+      const next = {};
+      Object.entries(prev).forEach(([k, v]) => { if (!destino.has(k.split("|")[0])) next[k] = v; });
+      Object.entries(prev).forEach(([k, v]) => {
+        const [f, ...resto] = k.split("|");
+        if (origenADestino[f]) next[[origenADestino[f], ...resto].join("|")] = v;
+      });
+      return next;
+    };
+    setCuadrante(copiar); setApoyosGuardia(copiar);
+  }
   
   return (
     <div>
@@ -1671,12 +1694,18 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
         <div style={{ background:C.white, borderRadius:12, padding:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)", overflowX:"auto" }}>
           <div style={{ marginBottom: 16 }}>
             <label style={labelStyle}>Inicio de quincena</label>
-            <input type="date" value={quinceInicio} onChange={e => setQInicio(e.target.value)} style={inpStyle} />
+            <input type="date" value={inicio} onChange={e => setQInicio(e.target.value)} style={inpStyle} />
+            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              <button onClick={() => setQInicio(isoLocal(sumarDias(inicio, -14)))} style={{ background: C.cream, border: "1px solid #ddd", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.dark }}>← Quincena anterior</button>
+              <button onClick={() => setQInicio(isoLocal(sumarDias(inicio, 14)))} style={{ background: C.cream, border: "1px solid #ddd", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.dark }}>Quincena siguiente →</button>
+              <button onClick={copiarQuincenaAnterior} style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.blue }}>📋 Copiar de la quincena anterior</button>
+            </div>
+            {dias.length > 0 && <div style={{ fontSize: 12, color: C.gray, marginTop: 6 }}>Del {dias[0].fecha.toLocaleDateString("es-ES")} al {dias[dias.length - 1].fecha.toLocaleDateString("es-ES")}</div>}
           </div>
           
           <div style={{ fontWeight:700, color:C.dark, marginBottom:14, fontSize:14 }}>📅 Cuadrante: <strong>{profesorSel}</strong></div>
           
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11, minWidth:1200 }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11, minWidth: 90 + 150 * dias.length }}>
             <thead>
               <tr style={{ background:C.dark }}>
                 <th style={{ padding:"8px 8px", color:"#fff", textAlign:"left", width:80 }}>Hora</th>
@@ -1734,32 +1763,30 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
 // ═══════════════════════════════════════════════════════════════════════════
 // COORDINACIÓN DIARIA DE AUSENCIAS
 // ═══════════════════════════════════════════════════════════════════════════
-function CoordinacionAusencias({ ausencias, cuadrante, apoyosGuardia, profesoresGuardia, HORAS_GUARDIA, ZONAS_CENTRO, DIAS_SEMANA, C, inpStyle, selStyle, labelStyle, fechaCoordinacion, setFechaCoordinacion }) {
+function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia, profesoresGuardia, HORAS_GUARDIA, ZONAS_CENTRO, DIAS_SEMANA, C, inpStyle, selStyle, labelStyle, fechaCoordinacion, setFechaCoordinacion }) {
   
   const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   
   // Obtener ausencias del día seleccionado
   const ausenciasDelDia = ausencias.filter(a => {
     if (!fechaCoordinacion) return false;
-    const fechaAus = typeof a.fecha === 'string' ? a.fecha.split("T")[0] : new Date(a.fecha).toISOString().split("T")[0];
-    const fechaSel = new Date(fechaCoordinacion).toISOString().split("T")[0];
+    const fechaAus = isoLocal(a.fecha);
+    const fechaSel = isoLocal(fechaCoordinacion);
     return fechaAus === fechaSel;
   });
   
   // Obtener guardias del día seleccionado
   const guardiasDia = [];
   if (fechaCoordinacion) {
-    const fecha = new Date(fechaCoordinacion);
-    const diaStr = diasES[fecha.getDay()];
+    const fechaSel = isoLocal(fechaCoordinacion);
     
     HORAS_GUARDIA.forEach(hora => {
-      ZONAS_CENTRO.forEach(zona => {
-        // Buscar profesor de guardia para esa zona/hora/día
-        const profesorGuardia = Object.entries(profesoresGuardia).find(([k]) => k.startsWith(`${diaStr}|${hora}|`))?.[1] || "";
-        const zonaAsignada = profesorGuardia ? cuadrante[`${diaStr}|${hora}|${profesorGuardia}`] : "";
+      profesores.forEach(profesorGuardia => {
+        // Zona asignada a este profesor en esa fecha y hora
+        const zona = ZONAS_CENTRO.find(z => z.id === cuadrante[`${fechaSel}|${hora}|${profesorGuardia}`]);
         
-        if (zonaAsignada === zona.id) {
-          const apoyo = apoyosGuardia[`${diaStr}|${hora}|${zona.id}`] || "";
+        if (zona) {
+          const apoyo = apoyosGuardia[`${fechaSel}|${hora}|${zona.id}`] || "";
           guardiasDia.push({
             hora,
             zona: zona.label,
@@ -1792,7 +1819,7 @@ function CoordinacionAusencias({ ausencias, cuadrante, apoyosGuardia, profesores
         <input type="date" value={fechaCoordinacion} onChange={e => setFechaCoordinacion(e.target.value)} style={inpStyle} />
         {fechaCoordinacion && (
           <div style={{ marginTop: 10, fontSize: 13, color: C.gray }}>
-            📅 {new Date(fechaCoordinacion).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            📅 {parseISO(fechaCoordinacion).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </div>
         )}
       </div>
@@ -1807,7 +1834,7 @@ function CoordinacionAusencias({ ausencias, cuadrante, apoyosGuardia, profesores
         <>
           {/* CUADRANTE DE GUARDIAS */}
           <div style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}>🛡️ Cuadrante de Guardias - {new Date(fechaCoordinacion).toLocaleDateString("es-ES")}</div>
+            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}>🛡️ Cuadrante de Guardias - {parseISO(fechaCoordinacion).toLocaleDateString("es-ES")}</div>
             
             {Object.keys(guardiasEdificios).length === 0 ? (
               <div style={{ color: C.gray, fontSize: 13, padding: 20, textAlign: "center" }}>
@@ -2105,14 +2132,14 @@ function ParteDia({ profesores, cuadrante, ausencias, C }) {
   const hoy      = new Date();
   const diasES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy   = diasES[hoy.getDay()];
-  const fechaHoy = hoy.toISOString().split("T")[0];
+  const fechaHoy = isoLocal(hoy);
   const ausHoy   = ausencias.filter(a => a.fecha === fechaHoy);
   const profesoresAusentes = new Set(ausHoy.flatMap(a => a.horas.map(h => `${a.profesor}|${h}`)));
 
   const asignaciones = [];
   HORAS_GUARDIA.forEach(hora => {
     profesores.forEach(prof => {
-      const zona = cuadrante[`${diaHoy}|${hora}|${prof}`];
+      const zona = cuadrante[`${fechaHoy}|${hora}|${prof}`];
       if (!zona) return;
       const z = ZONAS_CENTRO.find(z => z.id === zona);
       asignaciones.push({ hora, profesor:prof, zona:z?.label||zona, ausente:profesoresAusentes.has(`${prof}|${hora}`) });
@@ -2260,6 +2287,7 @@ export default function App() {
   const [printParte, setPrintParte] = useState(null);
   const [printInforme, setPrintInforme] = useState(false);
   const [showCuadrante, setShowCuadrante] = useState(false); // Nuevo: modal cuadrante
+  const [semanaCuadrante, setSemanaCuadrante] = useState(0); // 0 = esta semana, 1 = la siguiente...
 
   // Filtros generales
   const [filtCurso, setFiltCurso]           = useState("");
@@ -2751,7 +2779,7 @@ export default function App() {
               const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
               const diaHoy  = diasES[new Date().getDay()];
               const guardiasHoy = HORAS_GUARDIA.map(hora => {
-                const key  = `${diaHoy}|${hora}|${usuario}`;
+                const key  = `${isoLocal()}|${hora}|${usuario}`;
                 const zona = cuadrante[key];
                 return zona ? { hora, zona } : null;
               }).filter(Boolean).length;
@@ -3013,35 +3041,7 @@ export default function App() {
 
         {/* ── Ver Guardias (profesor) ── */}
         {tab === "guardias_ver" && (
-          <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>📄 Guardias del día</h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 20 }}>
-              {[{ label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length, color: C.blue }, { label: "Esta Semana", value: guardias.filter(g => weekKey(g.fecha) === weekKey(new Date())).length, color: C.teal }, { label: "Total", value: guardias.length, color: C.dark }].map(s => (
-                <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
-            {guardias.length === 0
-              ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No hay guardias registradas</Card>
-              : guardias.map(g => (
-                <Card key={g.id} style={{ borderLeft: `4px solid ${C.blue}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🔄 {g.hora} · {g.modulo} · {g.curso}{g.materia && ` · ${g.materia}`}</div>
-                      <div style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>📅 {fmt(g.ts)}</div>
-                      <div style={{ fontSize: 13, marginTop: 6 }}><span style={{ color: C.salmon, fontWeight: 600 }}>Ausente:</span> {g.profesorAusente} <span style={{ color: C.gray, marginLeft: 8 }}>({g.motivo})</span></div>
-                      <div style={{ fontSize: 13, marginTop: 2 }}><span style={{ color: C.teal, fontWeight: 600 }}>Guardia:</span> {g.profesorGuardia}</div>
-                      {g.material && <div style={{ fontSize: 13, marginTop: 6, background: C.cream, borderRadius: 6, padding: "6px 10px" }}>📝 Material: {g.material}</div>}
-                    </div>
-                    <span style={{ background: g.profesorGuardia === fProfesor ? "#E8F5F3" : "#EEF5F8", color: g.profesorGuardia === fProfesor ? C.teal : C.blue, borderRadius: 8, padding: "4px 12px", fontSize: 12, fontWeight: 700 }}>
-                      {g.profesorGuardia === fProfesor ? "✅ Tú la cubres" : "👤 " + g.profesorGuardia}
-                    </span>
-                  </div>
-                </Card>
-              ))}
-          </div>
+          <ParteDia profesores={profesores} cuadrante={cuadrante} ausencias={ausencias} C={C} />
         )}
 
         {/* ── Mis Partes ── */}
@@ -3345,6 +3345,7 @@ export default function App() {
         {/* ── Coordinación Diaria de Ausencias (Jefatura) ── */}
         {tab === "coordinacion" && (
           <CoordinacionAusencias
+            profesores={profesores}
             ausencias={ausencias}
             cuadrante={cuadrante}
             apoyosGuardia={apoyosGuardia}
@@ -3552,22 +3553,28 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
           <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias Completo</div>
-              <button onClick={() => setShowCuadrante(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias</div>
+                <button onClick={() => setSemanaCuadrante(w => w - 1)} aria-label="Semana anterior" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>←</button>
+                <span style={{ fontSize: 13 }}>Semana del {sumarDias(lunesDe(), 7 * semanaCuadrante).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
+                <button onClick={() => setSemanaCuadrante(w => w + 1)} aria-label="Semana siguiente" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>→</button>
+              </div>
+              <button onClick={() => { setShowCuadrante(false); setSemanaCuadrante(0); }} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: 20, overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11, minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: C.dark }}>
                     <th style={{ padding: "10px 8px", color: "#fff", textAlign: "left", fontWeight: 600 }}>Hora</th>
-                    {DIAS_SEMANA.map(d => <th key={d} style={{ padding: "10px 8px", color: "#fff", textAlign: "center", fontWeight: 600 }}>{d.substring(0,3)}</th>)}
+                    {[0,1,2,3,4].map(i => { const f = sumarDias(lunesDe(), 7 * semanaCuadrante + i); return <th key={i} style={{ padding: "10px 8px", color: "#fff", textAlign: "center", fontWeight: 600 }}>{DIAS_ES[f.getDay()].substring(0,3)} {f.getDate()}/{f.getMonth()+1}</th>; })}
                   </tr>
                 </thead>
                 <tbody>
                   {HORAS_GUARDIA.map((hora, idx) => (
                     <tr key={hora} style={{ background: idx % 2 === 0 ? "#fff" : "#f9fafb", borderBottom: "1px solid #e5e7eb" }}>
                       <td style={{ padding: "10px 8px", fontWeight: 700, color: C.dark, width: 80 }}>{hora}</td>
-                      {DIAS_SEMANA.map(dia => {
+                      {[0,1,2,3,4].map(i => {
+                        const dia = isoLocal(sumarDias(lunesDe(), 7 * semanaCuadrante + i));
                         const asignaciones = [];
                         profesores.forEach(prof => {
                           const key = `${dia}|${hora}|${prof}`;
@@ -3663,6 +3670,7 @@ export default function App() {
             </div>
             <div style={{ padding: 24 }}>
               <CoordinacionAusencias 
+                profesores={profesores}
                 ausencias={ausencias} 
                 cuadrante={cuadrante} 
                 apoyosGuardia={apoyosGuardia} 
