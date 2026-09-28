@@ -1117,6 +1117,47 @@ const sumarDias = (d, n) => { const x = parseISO(d); x.setDate(x.getDate() + n);
 const lunesDe = (d = new Date()) => { const x = parseISO(d); const dow = x.getDay(); return sumarDias(x, dow === 0 ? 1 : 1 - dow); };
 const esLectivo = d => { const w = parseISO(d).getDay(); return w !== 0 && w !== 6; };
 
+// ─── Datos de ejemplo (solo modo demostración) ───────────────────────────────
+// Rellena el cuadrante de la quincena actual y unas ausencias de hoy y mañana,
+// con profesores ficticios, para ver cómo funcionan guardias y ausencias.
+function datosEjemploGuardias(profesores) {
+  const n = profesores.length;
+  const zonasClase  = ["A0-pasillo", "A1-pasillo", "A2-pasillo", "B1-pasillo", "C1-pasillo"];
+  const zonasRecreo = ["rec-puerta", "rec-central", "rec-coches", "rec-pistas"];
+  const cuadrante = {}, apoyos = {};
+  const lunes = lunesDe();
+  const diasQuincena = Array.from({ length: 14 }, (_, i) => sumarDias(lunes, i)).filter(esLectivo);
+  diasQuincena.forEach((dia, di) => {
+    const f = isoLocal(dia);
+    HORAS_GUARDIA.forEach((hora, hi) => {
+      const base = di * 3 + hi * 5;
+      const zonas = hora === "Recreo" ? zonasRecreo : zonasClase;
+      zonas.forEach((zona, zi) => {
+        cuadrante[`${f}|${hora}|${profesores[(base + zi) % n]}`] = zona;
+        if (zi < 2) apoyos[`${f}|${hora}|${zona}`] = profesores[(base + 6 + zi) % n];
+      });
+    });
+  });
+  // Día de las ausencias: hoy si es lectivo; si no, el próximo lunes
+  let dia = parseISO(new Date());
+  while (!esLectivo(dia)) dia = sumarDias(dia, 1);
+  const diaISO = isoLocal(dia);
+  const manana = (() => { let d = sumarDias(dia, 1); while (!esLectivo(d)) d = sumarDias(d, 1); return isoLocal(d); })();
+  const quien = (hora, zona) => Object.keys(cuadrante).find(k => k.startsWith(`${diaISO}|${hora}|`) && cuadrante[k] === zona)?.split("|")[2];
+  const ausente1 = quien("2ª hora", "A1-pasillo");
+  const ausente2 = quien("Recreo", "rec-central");
+  const ts = new Date().toISOString();
+  const ausencias = [
+    { id: 1, profesor: ausente1, motivo: "Enfermedad", fecha: diaISO, horas: ["2ª hora", "3ª hora"], edificio: "A", aula: "2º ESO B", asignatura: "Matemáticas", tarea: "Ejercicios 1 a 10 de la página 54. Se recogen al final de la clase.", ubicacion: "Conserjería", enlace: "", ts, leida: false },
+    { id: 2, profesor: ausente2, motivo: "Formación", fecha: diaISO, horas: ["Recreo", "5ª hora"], edificio: "B", aula: "4º ESO C", asignatura: "Inglés", tarea: "Lectura del texto de la unidad 3 y resumen en el cuaderno.", ubicacion: "Mesa del aula", enlace: "", ts, leida: false },
+    { id: 3, profesor: profesores[(Math.max(0, profesores.indexOf(ausente1)) + 3) % n], motivo: "Asunto personal", fecha: manana, horas: ["1ª hora"], edificio: "C", aula: "1º ESO A", asignatura: "Música", tarea: "Repaso de figuras rítmicas con la ficha 7.", ubicacion: "Departamento de Música", enlace: "", ts, leida: false },
+  ];
+  // Profesor recomendado para probar: tiene guardia hoy en el Edificio A y no está ausente
+  const sugerido = profesores.find(p => p !== ausente1 && p !== ausente2 &&
+    HORAS_GUARDIA.some(h => ["A0-pasillo", "A2-pasillo"].includes(cuadrante[`${diaISO}|${h}|${p}`])));
+  return { cuadrante, apoyos, ausencias, sugerido, ausentes: [ausente1, ausente2] };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1507,6 +1548,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, ausencias, fProfes
 // ═══════════════════════════════════════════════════════════════════════════
 function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
   const [enviado, setEnviado] = useState(false);
+  const [ausEdificio, setAusEdificio] = useState("");
 
   function toggleHora(h) {
     setAusHoras(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h]);
@@ -1514,10 +1556,10 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
 
   function enviar() {
     if (!ausProfesor || !ausFecha || ausHoras.length === 0) return;
-    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, aula:ausAula, asignatura:ausAsignatura, ts:new Date().toISOString(), leida:false };
+    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, aula:ausAula, asignatura:ausAsignatura, edificio:ausEdificio, ts:new Date().toISOString(), leida:false };
     setAusencias(prev => [nueva, ...prev]);
     setEnviado(true);
-    setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion(""); setAusAula(""); setAusAsignatura("");
+    setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion(""); setAusAula(""); setAusAsignatura(""); setAusEdificio("");
     setTimeout(() => setEnviado(false), 4000);
   }
 
@@ -1571,7 +1613,14 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
             placeholder="Describe qué deben hacer los alumnos, qué material hay preparado..."
             style={{ ...inpStyle, resize:"vertical" }} />
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(180px, 1fr))", gap:14, marginBottom:20 }}>
+          <div>
+            <label style={labelStyle}>Edificio del aula</label>
+            <select value={ausEdificio} onChange={e => setAusEdificio(e.target.value)} style={selStyle}>
+              <option value="">— Seleccionar —</option>
+              {["A","B","C"].map(e => <option key={e} value={e}>Edificio {e}</option>)}
+            </select>
+          </div>
           <div>
             <label style={labelStyle}>Aula donde imparto clase (importante para el profesor de guardia)</label>
             <input type="text" value={ausAula} onChange={e => setAusAula(e.target.value)}
@@ -1860,7 +1909,15 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
                         <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                           <td style={{ padding: "8px", fontWeight: 600, color: C.dark }}>{g.hora}</td>
                           <td style={{ padding: "8px", color: "#555" }}>{g.zona}</td>
-                          <td style={{ padding: "8px", fontWeight: 600, color: C.teal }}>{g.profesor || "—"}</td>
+                          {(() => {
+                            const ausente = ausenciasDelDia.some(a => a.profesor === g.profesor && a.horas.includes(g.hora));
+                            return (
+                              <td style={{ padding: "8px", fontWeight: 600, color: ausente ? C.salmon : C.teal }}>
+                                {g.profesor || "—"}
+                                {ausente && <span style={{ marginLeft: 6, fontSize: 11, background: "#FDF0EF", color: C.salmon, borderRadius: 6, padding: "1px 6px", whiteSpace: "nowrap" }}>🔴 Ausente</span>}
+                              </td>
+                            );
+                          })()}
                           <td style={{ padding: "8px", color: "#666" }}>{g.apoyo || "—"}</td>
                         </tr>
                       ))}
@@ -2416,6 +2473,14 @@ export default function App() {
     return true;
   });
 
+  function cargarEjemploGuardias() {
+    if (!window.confirm("Se cargará un cuadrante de guardias de esta quincena y varias ausencias de ejemplo, con profesores ficticios.\n\nSustituye el cuadrante y las ausencias que haya ahora en este navegador. ¿Continuar?")) return;
+    const ej = datosEjemploGuardias(profesores);
+    setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setAusencias(ej.ausencias);
+    if (ej.sugerido) setUsuario(ej.sugerido);
+    window.alert(`Ejemplo cargado.\n\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• Para verlo como profesor de guardia, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
+  }
+
   function cambiarPerfil(id) {
     const p = PERFILES.find(x => x.id === id);
     if (!p || p.id === perfil?.id) return;
@@ -2529,6 +2594,12 @@ export default function App() {
         <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
         <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
         <AvisoDemo />
+        {MODO_DEMO && (
+          <button onClick={cargarEjemploGuardias}
+            style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+            🧪 Cargar ejemplo de guardias y ausencias
+          </button>
+        )}
         
         <div style={{ marginBottom: 24, textAlign: "left" }}>
           <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>¿Quién eres?</label>
