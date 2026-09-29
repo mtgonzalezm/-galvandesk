@@ -23,6 +23,9 @@ const DEMO_PROFESORES = [
   "Carmen López", "Pedro Sánchez", "Ana Jiménez", "Luis García",
   "Carlos Moreno", "María Fernández", "Jorge Ruiz", "Laura Torres",
   "Sofía Martín", "Pablo Díaz", "Elena Vega", "Roberto Castro",
+  "Beatriz Navarro", "Javier Ortega", "Rocío Herrera", "Miguel Romero",
+  "Nuria Gil", "Óscar Molina", "Raquel Serrano", "Sergio Delgado",
+  "Inés Prieto", "Álvaro Cano", "Marta Rubio", "David Ibáñez",
 ];
 
 const GRAVEDAD = [
@@ -164,6 +167,141 @@ const PERFILES = [
   { id: "admin",    label: "⚙️ Administración" },
 ];
 const tabInicial = id => id === "jefatura" ? "dashboard" : id === "admin" ? "admin_panel" : "partes";
+
+// ─── Cargos y acceso ─────────────────────────────────────────────────────────
+// Cada profesor tiene un cargo, y el cargo decide a qué perfiles puede entrar.
+const CARGOS = [
+  { id: "profesor",   label: "Profesor/a",           perfiles: ["profesor"] },
+  { id: "jefatura",   label: "Jefatura de Estudios", perfiles: ["profesor", "jefatura"] },
+  { id: "direccion",  label: "Dirección",            perfiles: ["profesor", "jefatura", "admin"] },
+  { id: "secretaria", label: "Secretaría",           perfiles: ["profesor", "admin"] },
+  { id: "tic",        label: "Coordinación TIC",     perfiles: ["profesor", "admin"] },
+];
+// Cargos de ejemplo (profesorado ficticio); el resto es Profesor/a
+const CUENTAS_DEMO = { "Luis García": { cargo: "direccion" }, "Ana Jiménez": { cargo: "jefatura" }, "Elena Vega": { cargo: "tic" } };
+const cargoDe = (cuentas, nombre) => CARGOS.find(c => c.id === (cuentas?.[nombre]?.cargo || "profesor")) || CARGOS[0];
+const perfilesPermitidos = (cuentas, nombre) => PERFILES.filter(p => cargoDe(cuentas, nombre).perfiles.includes(p.id));
+const MIN_CLAVE = 6;
+// Las claves nunca se guardan tal cual: solo su huella SHA-256 (requiere conexión segura HTTPS).
+// En esta versión de demostración se guardan en el navegador; en el servidor del centro irán al servidor.
+async function hashClave(nombre, clave) {
+  if (!window.crypto?.subtle) throw new Error("sin-https");
+  const buf = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(`galvandesk|${nombre}|${clave}`));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ─── Pantalla de entrada: nombre → clave → perfil ───────────────────────────
+function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEjemplo, nombreSugerido }) {
+  const [paso, setPaso] = useState("nombre");
+  const [nombre, setNombre] = useState(nombreSugerido || "");
+  const [clave, setClave] = useState("");
+  const [clave2, setClave2] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => { if (nombreSugerido) { setNombre(nombreSugerido); setPaso("nombre"); setError(""); } }, [nombreSugerido]);
+
+  const tieneClave = !!cuentas[nombre]?.clave;
+  const permitidos = perfilesPermitidos(cuentas, nombre);
+  const cargo = cargoDe(cuentas, nombre);
+
+  function continuar() {
+    const n = nombre.trim();
+    if (!profesores.includes(n)) { setError("Ese nombre no está en la lista del profesorado. Elígelo de la lista o pide a Administración que te añada."); return; }
+    setNombre(n); setError(""); setClave(""); setClave2(""); setPaso("clave");
+  }
+  async function entrar() {
+    try {
+      if (!tieneClave) {
+        if (clave.length < MIN_CLAVE) { setError(`La clave debe tener al menos ${MIN_CLAVE} caracteres.`); return; }
+        if (clave !== clave2) { setError("Las dos claves no coinciden."); return; }
+        const h = await hashClave(nombre, clave);
+        setCuentas(prev => ({ ...prev, [nombre]: { ...(prev[nombre] || {}), clave: h } }));
+      } else if (await hashClave(nombre, clave) !== cuentas[nombre].clave) {
+        setError("Clave incorrecta."); setClave(""); return;
+      }
+    } catch { setError("La conexión no es segura (HTTPS): no se pueden comprobar las claves."); return; }
+    setError(""); setClave(""); setClave2("");
+    if (permitidos.length === 1) onEntrar(nombre, permitidos[0]); else setPaso("perfil");
+  }
+
+  const inp = { width: "100%", padding: "12px 14px", borderRadius: 10, border: `2px solid ${C.cream}`, fontSize: 15, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 10 };
+  const lbl = { display: "block", fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 };
+  const btnPrincipal = { display: "block", width: "100%", padding: "14px 20px", marginTop: 6, background: C.teal, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700 };
+  const enlace = { background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 14, padding: 0 };
+
+  return (
+    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
+      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <div style={{ background: C.white, borderRadius: 20, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
+        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
+        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
+        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        <AvisoDemo />
+
+        {paso === "nombre" && (
+          <div style={{ textAlign: "left" }}>
+            {MODO_DEMO && (
+              <button onClick={onCargarEjemplo}
+                style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+                🧪 Cargar ejemplo de guardias y ausencias
+              </button>
+            )}
+            <label style={lbl} htmlFor="gd-nombre">¿Quién eres?</label>
+            <input id="gd-nombre" type="text" placeholder="Tu nombre" list="lista-profesores" value={nombre} autoComplete="off"
+              onChange={e => { setNombre(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") continuar(); }} style={inp} />
+            <datalist id="lista-profesores">{profesores.map(p => <option key={p} value={p} />)}</datalist>
+            <small style={{ color: C.gray, display: "block", marginBottom: 8 }}>Escribe y elige tu nombre de la lista.</small>
+            {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
+            <button onClick={continuar} style={btnPrincipal}>Continuar</button>
+          </div>
+        )}
+
+        {paso === "clave" && (
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.dark }}>Hola, {nombre}</div>
+            <div style={{ fontSize: 12, color: C.gray, marginBottom: 16 }}>Cargo: {cargo.label}</div>
+            {tieneClave ? (
+              <>
+                <label style={lbl} htmlFor="gd-clave">Tu clave</label>
+                <input id="gd-clave" type="password" autoComplete="current-password" autoFocus value={clave}
+                  onChange={e => { setClave(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") entrar(); }} style={inp} />
+              </>
+            ) : (
+              <>
+                <div style={{ background: "#EEF5F8", borderRadius: 10, padding: "10px 12px", fontSize: 13, color: C.blue, marginBottom: 12 }}>
+                  Es la primera vez que entras. Crea tu clave personal (mínimo {MIN_CLAVE} caracteres).
+                </div>
+                <label style={lbl} htmlFor="gd-clave">Nueva clave</label>
+                <input id="gd-clave" type="password" autoComplete="new-password" autoFocus value={clave} onChange={e => { setClave(e.target.value); setError(""); }} style={inp} />
+                <label style={lbl} htmlFor="gd-clave2">Repite la clave</label>
+                <input id="gd-clave2" type="password" autoComplete="new-password" value={clave2}
+                  onChange={e => { setClave2(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") entrar(); }} style={inp} />
+              </>
+            )}
+            {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
+            <button onClick={entrar} style={btnPrincipal}>Entrar</button>
+            {tieneClave && <div style={{ fontSize: 12, color: C.gray, marginTop: 10 }}>¿Has olvidado tu clave? Pide a Administración que la restablezca.</div>}
+            <button onClick={() => { setPaso("nombre"); setClave(""); setClave2(""); setError(""); }} style={enlace}>← No soy {nombre}</button>
+          </div>
+        )}
+
+        {paso === "perfil" && (
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 4 }}>¿Con qué perfil entras?</div>
+            <div style={{ fontSize: 12, color: C.gray, marginBottom: 14 }}>Según tu cargo ({cargo.label}) puedes usar estos perfiles.</div>
+            {permitidos.map(p => (
+              <button key={p.id} onClick={() => onEntrar(nombre, p)}
+                style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark }}>
+                {p.label}
+              </button>
+            ))}
+            <button onClick={() => setPaso("nombre")} style={enlace}>← Cambiar de persona</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 const AvisoDemo = ({ compacto }) => MODO_DEMO ? (
   <div role="note" style={compacto
     ? { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, textAlign: "center", padding: "6px 12px", borderBottom: "1px solid #fbbf24" }
@@ -1140,6 +1278,14 @@ const esLectivo = d => { const w = parseISO(d).getDay(); return w !== 0 && w !==
 // ─── Equipo de guardia de cada zona ─────────────────────────────────────────
 // Cada zona tiene: titular (en el cuadrante), apoyo y sustituto. El sustituto entra
 // si falta el titular o el apoyo. Apoyos y sustitutos: clave "fecha|hora|zona".
+// Ningún profesor puede tener más de este número de guardias en un día (sumando titular, apoyo y sustituto)
+const MAX_GUARDIAS_DIA = 4;
+function guardiasDelDia(fecha, profesor, cuadrante, apoyos = {}, sustitutos = {}) {
+  let n = Object.keys(cuadrante).filter(k => k.startsWith(`${fecha}|`) && k.endsWith(`|${profesor}`)).length;
+  [apoyos, sustitutos].forEach(m => Object.entries(m).forEach(([k, v]) => { if (v === profesor && k.startsWith(`${fecha}|`)) n++; }));
+  return n;
+}
+
 const ESTADOS_ZONA = {
   completa:    { label: "🟢 Completa",           color: "#0f766e", bg: "#E8F5F3" },
   sustituto:   { label: "🟠 Entra el sustituto", color: "#b45309", bg: "#fef3c7" },
@@ -1211,20 +1357,23 @@ const TareaAusente = ({ a, C }) => (
 // con profesores ficticios, para ver cómo funcionan guardias y ausencias.
 function datosEjemploGuardias(profesores) {
   const n = profesores.length;
-  const zonasClase  = ["A0-pasillo", "A1-pasillo", "A2-pasillo", "B1-pasillo"];
-  const zonasRecreo = ["rec-puerta", "rec-central", "rec-coches", "rec-pistas"];
+  const zonasClase  = ["A0-pasillo", "A1-pasillo", "B1-pasillo"];
+  const zonasRecreo = ["rec-puerta", "rec-central", "rec-pistas"];
   const cuadrante = {}, apoyos = {}, sustitutos = {};
   const lunes = lunesDe();
   const diasQuincena = Array.from({ length: 14 }, (_, i) => sumarDias(lunes, i)).filter(esLectivo);
+  // Reparto en rueda: cada hora usa 9 profesores distintos (3 zonas x titular, apoyo y sustituto).
+  // Con 24 profesores y 8 horas, cada uno tiene 3 guardias al día.
   diasQuincena.forEach((dia, di) => {
     const f = isoLocal(dia);
-    HORAS_GUARDIA.forEach((hora, hi) => {
-      const base = di * 3 + hi * 5;
+    let k = di * 5;
+    HORAS_GUARDIA.forEach(hora => {
       const zonas = hora === "Recreo" ? zonasRecreo : zonasClase;
-      zonas.forEach((zona, zi) => {
-        cuadrante[`${f}|${hora}|${profesores[(base + zi) % n]}`] = zona;
-        apoyos[`${f}|${hora}|${zona}`] = profesores[(base + 4 + zi) % n];
-        sustitutos[`${f}|${hora}|${zona}`] = profesores[(base + 8 + zi) % n];
+      zonas.forEach(zona => {
+        cuadrante[`${f}|${hora}|${profesores[k % n]}`] = zona;
+        apoyos[`${f}|${hora}|${zona}`] = profesores[(k + 1) % n];
+        sustitutos[`${f}|${hora}|${zona}`] = profesores[(k + 2) % n];
+        k += 3;
       });
     });
   });
@@ -1304,7 +1453,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
       <h2 style={{ color:C.dark, marginTop:0 }}>🔄 Mi Guardia Hoy</h2>
       <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
         <label style={labelStyle}>Soy el/la profesor/a</label>
-        <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle}>
+        <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle} disabled={profesores.includes(usuario)}>
           {profesores.map(p => <option key={p}>{p}</option>)}
         </select>
       </div>
@@ -1601,7 +1750,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
 // ═══════════════════════════════════════════════════════════════════════════
 // NOTIFICAR AUSENCIA (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
+function NotificarAusencia({ usuario, profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
   const [enviado, setEnviado] = useState(false);
   const [ausEdificio, setAusEdificio] = useState("");
 
@@ -1632,7 +1781,7 @@ function NotificarAusencia({ profesores, ausencias, setAusencias, ausProfesor, s
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
           <div>
             <label style={labelStyle}>Soy el/la profesor/a *</label>
-            <select value={ausProfesor} onChange={e => setAusProfesor(e.target.value)} style={selStyle}>
+            <select value={ausProfesor} onChange={e => setAusProfesor(e.target.value)} style={selStyle} disabled={profesores.includes(usuario)}>
               <option value="">— Seleccionar —</option>
               {profesores.map(p => <option key={p}>{p}</option>)}
             </select>
@@ -1823,7 +1972,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
           </div>
           
           <div style={{ fontWeight:700, color:C.dark, marginBottom:4, fontSize:14 }}>📅 Cuadrante: <strong>{profesorSel}</strong></div>
-          <div style={{ fontSize:12, color:C.gray, marginBottom:8 }}>En cada guardia: <strong>📍 zona</strong> del titular, <strong>👥 apoyo</strong> y <strong>🔁 sustituto</strong> (entra si falta el titular o el apoyo).</div>
+          <div style={{ fontSize:12, color:C.gray, marginBottom:8 }}>En cada guardia: <strong>📍 zona</strong> del titular, <strong>👥 apoyo</strong> y <strong>🔁 sustituto</strong> (entra si falta el titular o el apoyo). Máximo {MAX_GUARDIAS_DIA} guardias por profesor y día; entre paréntesis, las que ya tiene ese día.</div>
           {(() => {
             const incompletas = dias.reduce((n, d) => n + HORAS_GUARDIA.filter(h => { const z = cuadrante[`${d.key}|${h}|${profesorSel}`]; const k = `${d.key}|${h}|${z}`; return z && (!apoyosGuardia[k] || !sustitutosGuardia[k]); }).length, 0);
             return incompletas > 0
@@ -1835,7 +1984,15 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
             <thead>
               <tr style={{ background:C.dark }}>
                 <th style={{ padding:"8px 8px", color:"#fff", textAlign:"left", width:80 }}>Hora</th>
-                {dias.map((d, idx) => <th key={idx} style={{ padding:"8px 8px", color:"#fff", textAlign:"center", whiteSpace:"nowrap" }}>{d.dia}</th>)}
+                {dias.map((d, idx) => {
+                  const nd = guardiasDelDia(d.key, profesorSel, cuadrante, apoyosGuardia, sustitutosGuardia);
+                  return (
+                    <th key={idx} style={{ padding:"8px 8px", color:"#fff", textAlign:"center", whiteSpace:"nowrap" }}>
+                      {d.dia}
+                      <div title="Guardias de este profesor ese día (titular, apoyo y sustituto)" style={{ fontSize:10, fontWeight:600, marginTop:2, color: nd >= MAX_GUARDIAS_DIA ? "#fecaca" : "rgba(255,255,255,0.75)" }}>{nd}/{MAX_GUARDIAS_DIA} guardias</div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -1849,6 +2006,9 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
                     const sustituto = zona ? sustitutosGuardia[`${d.key}|${hora}|${zona}`] || "" : "";
                     // Quien ya tiene una guardia a esa hora (titular, apoyo o sustituto) no puede estar en otra
                     const pref = `${d.key}|${hora}|`;
+                    const nDia = p => guardiasDelDia(d.key, p, cuadrante, apoyosGuardia, sustitutosGuardia);
+                    const lleno = p => nDia(p) >= MAX_GUARDIAS_DIA;
+                    const selBloqueado = !zona && lleno(profesorSel);
                     const ocupados = new Set([
                       ...profesores.filter(p => cuadrante[`${pref}${p}`]),
                       ...Object.entries(apoyosGuardia).filter(([k]) => k.startsWith(pref)).map(([, v]) => v),
@@ -1858,9 +2018,10 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
                     return (
                       <td key={idx} style={{ padding:"4px 6px", minWidth: 140 }}>
                         <div style={{ display:"flex", flexDirection:"column", gap:"3px" }}>
-                          <select value={zona} onChange={e => setZona(d.key, hora, profesorSel, e.target.value)}
-                            style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid ${zona?"#00B7B5":"#d1d5db"}`, fontSize:10, background:zona?"#E8F5F3":"#fff", color:C.dark, cursor:"pointer", fontWeight: zona ? 600 : 400 }}>
-                            <option value="">📍 Zona</option>
+                          <select value={zona} onChange={e => setZona(d.key, hora, profesorSel, e.target.value)} disabled={selBloqueado}
+                            title={selBloqueado ? `Ya tiene ${MAX_GUARDIAS_DIA} guardias este día` : "Zona de la que es titular"}
+                            style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid ${zona?"#00B7B5":"#d1d5db"}`, fontSize:10, background: selBloqueado ? "#f3f4f6" : zona?"#E8F5F3":"#fff", color: selBloqueado ? "#9ca3af" : C.dark, cursor: selBloqueado ? "not-allowed" : "pointer", fontWeight: zona ? 600 : 400 }}>
+                            <option value="">{selBloqueado ? `Máx. ${MAX_GUARDIAS_DIA} al día` : "📍 Zona"}</option>
                             <optgroup label="── Edificio A">{ZONAS_CENTRO.filter(z=>z.edificio==="A").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
                             <optgroup label="── Edificio B">{ZONAS_CENTRO.filter(z=>z.edificio==="B").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
                             <optgroup label="── Edificio C">{ZONAS_CENTRO.filter(z=>z.edificio==="C").map(z=><option key={z.id} value={z.id}>{z.label}</option>)}</optgroup>
@@ -1870,14 +2031,14 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
                             <select value={apoyo} onChange={e => setApoyo(d.key, hora, zona, e.target.value)} title={apoyo ? "Profesor de apoyo" : "Falta asignar el profesor de apoyo"}
                               style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid ${apoyo ? "#00B7B5" : C.salmon}`, fontSize:10, background: apoyo ? "#e0f7f6" : "#FDF0EF", color: apoyo ? C.dark : "#9f1239", cursor:"pointer", fontWeight: 600 }}>
                               <option value="">⚠️ Falta apoyo</option>
-                              {profesores.filter(p => p !== profesorSel && (!ocupados.has(p) || p === apoyo)).map(p => <option key={p} value={p}>👥 {p}</option>)}
+                              {profesores.filter(p => p !== profesorSel && ((!ocupados.has(p) && !lleno(p)) || p === apoyo)).map(p => <option key={p} value={p}>👥 {p} ({nDia(p)})</option>)}
                             </select>
                           )}
                           {zona && (
                             <select value={sustituto} onChange={e => setSustituto(d.key, hora, zona, e.target.value)} title={sustituto ? "Sustituto: entra si falta el titular o el apoyo" : "Falta asignar el sustituto"}
                               style={{ width:"100%", padding:"4px 4px", borderRadius:4, border:`1px solid ${sustituto ? "#7c3aed" : C.salmon}`, fontSize:10, background: sustituto ? "#f3e8ff" : "#FDF0EF", color: sustituto ? C.dark : "#9f1239", cursor:"pointer", fontWeight: 600 }}>
                               <option value="">⚠️ Falta sustituto</option>
-                              {profesores.filter(p => p !== profesorSel && (!ocupados.has(p) || p === sustituto)).map(p => <option key={p} value={p}>🔁 {p}</option>)}
+                              {profesores.filter(p => p !== profesorSel && ((!ocupados.has(p) && !lleno(p)) || p === sustituto)).map(p => <option key={p} value={p}>🔁 {p} ({nDia(p)})</option>)}
                             </select>
                           )}
                         </div>
@@ -2505,6 +2666,7 @@ export default function App() {
   const [cuadrante, setCuadrante]     = useState({});
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [sustitutosGuardia, setSustitutosGuardia] = useState({}); // {fecha|hora|zona: profesor}
+  const [cuentas, setCuentas] = useState(CUENTAS_DEMO); // {nombre: {cargo, clave}}
   const [profesoresGuardia, setProfesoresGuardia] = useState({}); // Nuevo: {dia|hora|zona: profesor}
   const [ausencias, setAusencias]     = useState([]);
   const [quinceInicio, setQInicio]    = useState("");
@@ -2536,8 +2698,12 @@ export default function App() {
       const ap = await sGet("apoyos_guardia");     if (ap) setApoyosGuardia(ap);
       const su = await sGet("sustitutos_guardia"); if (su) setSustitutosGuardia(su);
       const pg = await sGet("profesores_guardia"); if (pg) setProfesoresGuardia(pg);
+      const cu = await sGet("cuentas"); if (cu) setCuentas(cu);
+      const cuentasActuales = cu || CUENTAS_DEMO;
       const ses = leerSesion();
-      if (ses?.usuario && ses?.perfil) {
+      // Solo se recupera la sesión si esa persona tiene clave y su cargo permite ese perfil
+      if (ses?.usuario && ses?.perfil && cuentasActuales[ses.usuario]?.clave &&
+          perfilesPermitidos(cuentasActuales, ses.usuario).some(p => p.id === ses.perfil.id)) {
         setUsuario(ses.usuario); setPerfil(ses.perfil);
         if ((pr || DEMO_PROFESORES).includes(ses.usuario)) setFProfesor(ses.usuario);
         setTab(ses.perfil.id === "jefatura" ? "dashboard" : ses.perfil.id === "admin" ? "admin_panel" : "partes");
@@ -2558,6 +2724,10 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
   useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("sustitutos_guardia", sustitutosGuardia); }, [sustitutosGuardia, loading]);
+  useEffect(() => { if (!loading) sSet("cuentas", cuentas); }, [cuentas, loading]);
+  // Cada profesor actúa siempre en su propio nombre
+  const identidadFija = !!usuario && profesores.includes(usuario);
+  useEffect(() => { if (identidadFija) { setFProfesor(usuario); setAusProfesor(usuario); } }, [usuario, identidadFija]);
   useEffect(() => { if (!loading) sSet("profesores_guardia", profesoresGuardia); }, [profesoresGuardia, loading]);
 
   // Derivados
@@ -2586,14 +2756,17 @@ export default function App() {
 
   function cargarEjemploGuardias() {
     if (!window.confirm("Se cargará un cuadrante de guardias de esta quincena y varias ausencias de ejemplo, con profesores ficticios.\n\nSustituye el cuadrante y las ausencias que haya ahora en este navegador. ¿Continuar?")) return;
-    const ej = datosEjemploGuardias(profesores);
+    // El ejemplo usa los profesores ficticios de demostración; se añaden a la lista si faltan
+    const lista = [...new Set([...profesores, ...DEMO_PROFESORES])];
+    setProfesores(lista);
+    const ej = datosEjemploGuardias(DEMO_PROFESORES);
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias);
     if (ej.sugerido) setUsuario(ej.sugerido);
     window.alert(`Ejemplo cargado.\n\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
   }
 
   function cambiarPerfil(id) {
-    const p = PERFILES.find(x => x.id === id);
+    const p = perfilesPermitidos(cuentas, usuario).find(x => x.id === id);
     if (!p || p.id === perfil?.id) return;
     guardarSesion({ usuario, perfil: p });
     setPerfil(p); setTab(tabInicial(p.id));
@@ -2696,48 +2869,14 @@ export default function App() {
   if (printParte)   return <PrintParte parte={printParte} onClose={() => setPrintParte(null)} />;
   if (printInforme) return <PrintInforme type={informeType} partes={partesFiltrados} banos={banosFiltrados} filtros={{ filtCurso, filtAlumno, filtGravedad, filtFechaDesde, filtFechaHasta }} onClose={() => setPrintInforme(false)} />;
 
-  // ── Pantalla de selección de perfil ──
+  // ── Pantalla de entrada ──
   if (!perfil) return (
-    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
-      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
-      <div style={{ background: C.white, borderRadius: 20, padding: "40px 36px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
-        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
-        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
-        <AvisoDemo />
-        {MODO_DEMO && (
-          <button onClick={cargarEjemploGuardias}
-            style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
-            🧪 Cargar ejemplo de guardias y ausencias
-          </button>
-        )}
-        
-        <div style={{ marginBottom: 24, textAlign: "left" }}>
-          <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: C.dark, marginBottom: 8 }}>¿Quién eres?</label>
-          <input 
-            type="text" 
-            placeholder="Tu nombre" 
-            list="lista-profesores"
-            value={usuario || ""}
-            onChange={e => setUsuario(e.target.value)}
-            style={{ width: "100%", padding: "12px 14px", borderRadius: 10, border: `2px solid ${C.cream}`, fontSize: 14, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 12 }}
-          />
-          <datalist id="lista-profesores">{profesores.map(p => <option key={p} value={p} />)}</datalist>
-          <small style={{ color: C.gray, display: "block" }}>Escribe y elige tu nombre de la lista. Se recordará en este dispositivo.</small>
-        </div>
-
-        {PERFILES.map(p => (
-          <button key={p.id}
-            onClick={() => { if (!usuario?.trim()) { alert("Por favor, ingresa tu nombre"); return; } const nombre = usuario.trim(); setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre); guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(p.id === "jefatura" ? "dashboard" : p.id === "admin" ? "admin_panel" : "partes"); }}
-            style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark, transition: "all .2s" }}
-            onMouseOver={e => { e.currentTarget.style.background = C.teal; e.currentTarget.style.color = "#fff"; }}
-            onMouseOut={e => { e.currentTarget.style.background = C.cream; e.currentTarget.style.color = C.dark; }}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-    </div>
+    <PantallaEntrada profesores={profesores} cuentas={cuentas} setCuentas={setCuentas}
+      nombreSugerido={usuario} onCargarEjemplo={cargarEjemploGuardias}
+      onEntrar={(nombre, p) => {
+        setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre);
+        guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(tabInicial(p.id));
+      }} />
   );
 
   const tabs = perfil.id === "profesor"
@@ -2816,10 +2955,10 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <select value={perfil.id} onChange={e => cambiarPerfil(e.target.value)} aria-label="Cambiar de perfil" title="Cambiar de perfil"
+          {perfilesPermitidos(cuentas, usuario).length > 1 && <select value={perfil.id} onChange={e => cambiarPerfil(e.target.value)} aria-label="Cambiar de perfil" title="Cambiar de perfil"
             style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 13, fontWeight: 600, maxWidth: 160 }}>
-            {PERFILES.map(p => <option key={p.id} value={p.id} style={{ color: C.dark }}>{p.label}</option>)}
-          </select>
+            {perfilesPermitidos(cuentas, usuario).map(p => <option key={p.id} value={p.id} style={{ color: C.dark }}>{p.label}</option>)}
+          </select>}
           <button onClick={salir} 
             onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
@@ -3055,7 +3194,7 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>👤 Profesor responsable</label>
-                <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle}>{profesores.map(p => <option key={p}>{p}</option>)}</select>
+                <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle} disabled={identidadFija}>{profesores.map(p => <option key={p}>{p}</option>)}</select>
               </div>
               <Btn onClick={crearParte} disabled={!fAlumno || !fDesc.trim()} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
                 📋 Generar Parte
@@ -3498,6 +3637,7 @@ export default function App() {
         {/* ── Notificar Ausencia (Profesor) ── */}
         {tab === "notif_ausencia" && (
           <NotificarAusencia
+            usuario={usuario}
             profesores={profesores} ausencias={ausencias} setAusencias={setAusencias}
             ausProfesor={ausProfesor} setAusProfesor={setAusProfesor}
             ausMotivo={ausMotivo} setAusMotivo={setAusMotivo}
@@ -3726,12 +3866,37 @@ export default function App() {
             </Card>
             <Card style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark }}>👨‍🏫 {profesores.length} profesor(es)</div>
-              {profesores.map((p, i) => (
-                <div key={i} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.cream}`, fontSize: 14, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 500, color: C.dark }}>👤 {p}</span>
-                  <button onClick={() => setProfesores(prev => prev.filter((_, j) => j !== i))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🗑</button>
-                </div>
-              ))}
+              <div style={{ padding: "10px 20px", fontSize: 12, color: C.gray, borderBottom: `1px solid ${C.cream}` }}>
+                El cargo decide a qué perfiles puede entrar cada persona: Profesor/a solo al de profesor; Jefatura de Estudios también a Jefatura; Dirección a los tres; Secretaría y Coordinación TIC también a Administración.
+              </div>
+              {profesores.map((p, i) => {
+                const cuenta = cuentas[p] || {};
+                return (
+                  <div key={p} style={{ padding: "10px 20px", borderBottom: `1px solid ${C.cream}`, fontSize: 14, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ minWidth: 160 }}>
+                      <div style={{ fontWeight: 600, color: C.dark }}>👤 {p}{p === usuario ? " (tú)" : ""}</div>
+                      <div style={{ fontSize: 11, color: cuenta.clave ? C.teal : C.gray }}>{cuenta.clave ? "Clave creada" : "Sin clave: la creará al entrar por primera vez"}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                      <select aria-label={`Cargo de ${p}`} value={cuenta.cargo || "profesor"}
+                        onChange={e => {
+                          const nuevo = e.target.value;
+                          if (p === usuario && !CARGOS.find(c => c.id === nuevo).perfiles.includes("admin") &&
+                              !window.confirm("Vas a quitarte el acceso a Administración. ¿Continuar?")) return;
+                          setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), cargo: nuevo } }));
+                        }}
+                        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 13 }}>
+                        {CARGOS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                      {cuenta.clave && (
+                        <button onClick={() => { if (window.confirm(`¿Restablecer la clave de ${p}? La próxima vez que entre tendrá que crear una nueva.`)) setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), clave: null } })); }}
+                          style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🔑 Restablecer clave</button>
+                      )}
+                      <button aria-label={`Eliminar a ${p}`} onClick={() => { if (window.confirm(`¿Eliminar a ${p} de la lista del profesorado?`)) setProfesores(prev => prev.filter((_, j) => j !== i)); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🗑</button>
+                    </div>
+                  </div>
+                );
+              })}
             </Card>
           </div>
         )}
