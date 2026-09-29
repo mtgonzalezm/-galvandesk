@@ -2111,9 +2111,8 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
       return;
     }
     
-    const textoFinal = tipoMensaje === "predefinido" ? 
-      (mensajesPredefinidos.find(m => m.id == tipoMensaje)?.texto || "") :
-      mensajePersonalizado;
+    // El texto escrito (o el del mensaje rápido elegido, que se copia al cuadro de texto)
+    const textoFinal = mensajePersonalizado.trim() || (mensajesPredefinidos.find(m => m.id === tipoMensaje)?.texto || "");
     
     if (!textoFinal.trim()) {
       alert("Escribe un mensaje");
@@ -2199,7 +2198,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
               {mensajesPredefinidos.map(m => (
                 <button
                   key={m.id}
-                  onClick={() => setTipoMensaje(m.id)}
+                  onClick={() => { setTipoMensaje(m.id); setMensajePersonalizado(m.texto); }}
                   style={{
                     padding: "10px 12px",
                     borderRadius: 8,
