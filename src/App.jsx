@@ -394,7 +394,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
       filtros.filtFechaDesde && `Desde: ${fmtD(filtros.filtFechaDesde)}`,
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
-    const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
+    const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts || b.salida)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor || "-"}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
     
     const descargarPDF = () => {
       const elemento = document.querySelector('[data-print-informe]');
@@ -445,10 +445,10 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
             <tbody>
               {banos.map((b, i) => (
                 <tr key={b.id} style={{ background: i % 2 === 0 ? "#fff" : C.light }}>
-                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>{fmt(b.ts)}</td>
+                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>{fmt(b.ts || b.salida)}</td>
                   <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", fontWeight: 600 }}>{b.alumno}</td>
                   <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{b.curso}</td>
-                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{b.profesor}</td>
+                  <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{b.profesor || "-"}</td>
                   <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{b.motivo || "-"}</td>
                 </tr>
               ))}
@@ -1381,13 +1381,14 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
         return (
           <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
             <div style={{ fontSize:13, fontWeight:600, color:C.gray, marginBottom:12 }}>📅 Próximos 7 días</div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:8 }}>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7,minmax(0,1fr))", gap:4 }}>
               {proximosDias.map((p, idx) => (
                 <div key={idx} 
                   onClick={() => p.tieneGuardia && setDiaSeleccionadoGuardias(p.fecha)}
                   style={{ 
                     textAlign:"center", 
-                    padding:12, 
+                    padding:"10px 2px", 
+                    minWidth:0,
                     borderRadius:10, 
                     background: p.tieneGuardia ? "#E8F5F3" : "#f3f4f6",
                     border: idx === 0 ? `2px solid ${C.teal}` : "2px solid transparent",
@@ -1400,7 +1401,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
                   <div style={{ fontSize:11, fontWeight:600, color:C.gray, marginBottom:4 }}>{p.dia.substring(0,3)}</div>
                   <div style={{ fontSize:14, fontWeight:700, color:C.dark, marginBottom:6 }}>{p.fecha.getDate()}</div>
                   <div style={{ fontSize:20 }}>{p.tieneGuardia ? "✅" : "⭕"}</div>
-                  <div style={{ fontSize:10, color: p.tieneGuardia ? C.teal : C.gray, fontWeight:600, marginTop:4 }}>
+                  <div style={{ fontSize:9, color: p.tieneGuardia ? C.teal : C.gray, fontWeight:600, marginTop:4, overflow:"hidden", textOverflow:"ellipsis" }}>
                     {p.tieneGuardia ? "Guardia" : "Libre"}
                   </div>
                 </div>
@@ -1505,7 +1506,7 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
       {/* PANEL LATERAL: Guardias del día seleccionado */}
       {diaSeleccionadoGuardias && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 50 }} onClick={() => setDiaSeleccionadoGuardias(null)}>
-          <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: 400, background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
+          <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: "min(400px, 100vw)", background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
             <div style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.blue})`, color: "#fff", padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}</div>
@@ -2578,8 +2579,9 @@ export default function App() {
 
   const banosFiltrados = banos.filter(b => {
     if (filtCurso && b.curso !== filtCurso) return false;
-    if (filtFechaDesde && b.ts.split("T")[0] < filtFechaDesde) return false;
-    if (filtFechaHasta && b.ts.split("T")[0] > filtFechaHasta) return false;
+    const fb = (b.ts || b.salida || "").split("T")[0];
+    if (filtFechaDesde && fb < filtFechaDesde) return false;
+    if (filtFechaHasta && fb > filtFechaHasta) return false;
     return true;
   });
 
@@ -2672,7 +2674,8 @@ export default function App() {
     if (!bAlumno) return;
     const id = parseInt(bAlumno); checkAbusoBano(id);
     const al = alumnos.find(a => a.id === id);
-    setBanos(prev => [{ id: Date.now(), alumnoId: id, alumno: al.nombre, curso: al.curso, fecha: todayStr(), salida: new Date().toISOString(), regreso: null }, ...prev]);
+    const ahora = new Date().toISOString();
+    setBanos(prev => [{ id: Date.now(), alumnoId: id, alumno: al.nombre, curso: al.curso, fecha: todayStr(), salida: ahora, ts: ahora, profesor: usuario || "", regreso: null }, ...prev]);
     setBAlumno(""); setBBusqueda("");
   }
 
@@ -2782,11 +2785,19 @@ export default function App() {
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; }
         @media print { .no-print { display: none !important; } }
+        @media (max-width: 600px) {
+          .gd-header { padding: 10px 12px !important; }
+          .gd-header-izq { gap: 8px !important; }
+          .gd-logo { display: none; }
+          .gd-header select { max-width: 120px !important; }
+          .gd-modulos { padding: 10px 8px !important; gap: 6px !important; }
+          .gd-modulos button { flex: 1 1 0; min-width: 0; padding: 10px 6px !important; font-size: 13px !important; }
+        }
       `}</style>
       <AvisoDemo compacto />
       {/* Header — ancho completo CON BOTÓN HOME */}
-      <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div className="gd-header" style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", gap: 8 }}>
+        <div className="gd-header-izq" style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
           <button onClick={() => { 
             setTab(perfil.id === "jefatura" ? "dashboard" : perfil.id === "admin" ? "admin_panel" : "partes"); 
             if (perfil.id === "profesor") setModuloProfesor("alumnos"); 
@@ -2798,8 +2809,8 @@ export default function App() {
             ↩️
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 26 }}>🏫</span>
-            <div>
+            <span className="gd-logo" style={{ fontSize: 26 }}>🏫</span>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .5 }}>GalvánDesk</div>
               <div style={{ fontSize: 11, opacity: .8 }}>IES Enrique Tierno Galván · {perfil.label}</div>
             </div>
@@ -2821,7 +2832,7 @@ export default function App() {
 
       {/* Selector módulo Profesor */}
       {perfil.id === "profesor" && (
-        <div style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
+        <div className="gd-modulos" style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
           {[
             { id: "alumnos",  label: "👨‍🎓 Partes",  icon: "📋" },
             { id: "guardias", label: "🔄 Guardias",  icon: "⏰" },
@@ -2850,7 +2861,7 @@ export default function App() {
 
       {/* Selector módulo Jefatura */}
       {perfil.id === "jefatura" && (
-        <div style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
+        <div className="gd-modulos" style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
           {[
             { id: "alumnos",  label: "📋 Partes & Alumnos" },
             { id: "guardias", label: "🔄 Guardias & Ausencias" },
@@ -2879,7 +2890,7 @@ export default function App() {
 
       {/* Selector módulo Admin */}
       {perfil.id === "admin" && (
-        <div style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
+        <div className="gd-modulos" style={{ background: "#f0f4f7", display: "flex", justifyContent: "center", gap: 12, padding: "12px 24px", borderBottom: `1px solid #e2e8f0` }}>
           {[
             { id: "alumnos",  label: "👥 Alumnos", color: "#06b6d4" },
             { id: "guardias", label: "👨‍🏫 Profesores", color: "#ec4899" },
@@ -2954,7 +2965,7 @@ export default function App() {
               else saludo = "¡Buenas noches";
               
               const partesHoy = partes.filter(p => p.ts.split("T")[0] === todayStr() && p.profesor === usuario).length;
-              const banoHoy = banos.filter(b => b.ts.split("T")[0] === todayStr() && b.profesor === usuario).length;
+              const banoHoy = banos.filter(b => (b.ts || b.salida || "").split("T")[0] === todayStr() && b.profesor === usuario).length;
               
               // Calcular guardias pendientes del profesor
               const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
@@ -3275,7 +3286,7 @@ export default function App() {
                 { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "⚠️" },
                 { label: "Muy Graves",   value: partes.filter(p => p.gravedad === "muy_grave").length,      color: C.salmon, emoji: "🔴" },
                 { label: "Fuera Ahora",  value: banoActivos.length,                                         color: C.blue,   emoji: "🚻" },
-                { label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length,        color: "#7c3aed",emoji: "🔄" },
+                { label: "Profes ausentes hoy", value: new Set(ausencias.filter(a => isoLocal(a.fecha) === isoLocal()).map(a => a.profesor)).size, color: "#7c3aed",emoji: "🔄" },
                 { label: "Alertas",      value: alertasNoLeidas,                                             color: C.salmon, emoji: "🔔" },
               ].map(s => (
                 <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
