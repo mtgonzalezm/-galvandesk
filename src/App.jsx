@@ -254,6 +254,23 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             <small style={{ color: C.gray, display: "block", marginBottom: 8 }}>Escribe y elige tu nombre de la lista.</small>
             {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
             <button onClick={continuar} style={btnPrincipal}>Continuar</button>
+            {MODO_DEMO && (
+              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px dashed ${C.cream}` }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 4 }}>Probar la demostración sin clave</div>
+                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>Solo existe en esta versión de prueba. Entra como un profesor ficticio de cada cargo:</div>
+                {[
+                  { txt: "👨‍🏫 Profesor/a", sub: nombreSugerido || "María Fernández", accion: () => onEntrar(nombreSugerido || "María Fernández", PERFILES[0]) },
+                  { txt: "📊 Jefatura de Estudios", sub: "Ana Jiménez · Profesor y Jefatura", accion: () => { setNombre("Ana Jiménez"); setError(""); setPaso("perfil"); } },
+                  { txt: "⚙️ Dirección", sub: "Luis García · Profesor, Jefatura y Administración", accion: () => { setNombre("Luis García"); setError(""); setPaso("perfil"); } },
+                ].map(b => (
+                  <button key={b.txt} onClick={b.accion}
+                    style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", marginBottom: 8, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 10, cursor: "pointer" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>{b.txt}</div>
+                    <div style={{ fontSize: 11, color: C.gray }}>{b.sub}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -3119,7 +3136,7 @@ export default function App() {
       const cuentasActuales = cu || CUENTAS_DEMO;
       const ses = leerSesion();
       // Solo se recupera la sesión si esa persona tiene clave y su cargo permite ese perfil
-      if (ses?.usuario && ses?.perfil && cuentasActuales[ses.usuario]?.clave &&
+      if (ses?.usuario && ses?.perfil && (cuentasActuales[ses.usuario]?.clave || MODO_DEMO) &&
           perfilesPermitidos(cuentasActuales, ses.usuario).some(p => p.id === ses.perfil.id)) {
         setUsuario(ses.usuario); setPerfil(ses.perfil);
         if ((pr || DEMO_PROFESORES).includes(ses.usuario)) setFProfesor(ses.usuario);
