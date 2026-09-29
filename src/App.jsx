@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import html2pdf from 'html2pdf.js';
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 // ─── Paleta de colores ───────────────────────────────────────────────────────
 const C = {
   cream: "#F4F0E4", teal: "#44A194", blue: "#00B7B5", salmon: "#EC8F8D",
@@ -377,6 +378,112 @@ function CopyBtn({ getText, label = "📋 Copiar texto" }) {
   );
 }
 
+// ─── PDF ─────────────────────────────────────────────────────────────────────
+// Los PDF se crean como documentos de texto (no como capturas de pantalla):
+// se descargan igual en el móvil, en Safari y en Chrome, pesan poco y no cortan columnas.
+const OSCURO = [44, 74, 82], VERDE = [68, 161, 148], GRIS = [100, 116, 139];
+const sinEmoji = t => String(t ?? "").replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}\u{20E3}]/gu, "").replace(/\s+/g, " ").trim();
+const nombreArchivo = t => sinEmoji(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase();
+function cabeceraPDF(doc, titulo, subtitulo) {
+  const w = doc.internal.pageSize.getWidth();
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
+  doc.text("IES ENRIQUE TIERNO GALVÁN · MADRID", w / 2, 14, { align: "center" });
+  doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(...OSCURO);
+  doc.text(titulo, w / 2, 22, { align: "center" });
+  if (subtitulo) { doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...GRIS); doc.text(sinEmoji(subtitulo), w / 2, 28, { align: "center", maxWidth: w - 28 }); }
+  doc.setDrawColor(...VERDE); doc.setLineWidth(0.6); doc.line(14, 32, w - 14, 32);
+  doc.setTextColor(0);
+  return 38;
+}
+function guardarPDF(doc, archivo) {
+  const n = doc.getNumberOfPages(), w = doc.internal.pageSize.getWidth(), h = doc.internal.pageSize.getHeight();
+  const hoy = new Date().toLocaleDateString("es-ES");
+  for (let i = 1; i <= n; i++) {
+    doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
+    doc.text(`GalvánDesk · IES Enrique Tierno Galván · ${hoy} · Página ${i} de ${n}`, w / 2, h - 8, { align: "center" });
+  }
+  doc.save(archivo);
+}
+const estiloTabla = { styles: { fontSize: 9, cellPadding: 2, overflow: "linebreak", valign: "top" }, headStyles: { fillColor: OSCURO, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [248, 246, 240] }, margin: { left: 14, right: 14, bottom: 16 } };
+const textoTipificacion = p => {
+  const t = TIPIFICACION[p.gravedad]?.find(t => t.id === p.tipificacion)?.label;
+  return t ? `${t} (${p.gravedad === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM"})` : "-";
+};
+
+function pdfParte(parte) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const g = gObj(parte.gravedad);
+  let y = cabeceraPDF(doc, "Parte de incidencia", `Ref. PARTE-${parte.id}`);
+  autoTable(doc, { ...estiloTabla, startY: y, theme: "grid", styles: { ...estiloTabla.styles, fontSize: 10 },
+    columnStyles: { 0: { fontStyle: "bold", cellWidth: 48, fillColor: [238, 245, 248] } },
+    body: [
+      ["Alumno/a", parte.alumno], ["Curso", parte.curso], ["Tutor/a", parte.tutor || "-"],
+      ["Tipo de parte", parte.tipo], ["Hora de clase", parte.hora || "-"], ["Fecha y hora", fmt(parte.ts)],
+      ["Profesor/a responsable", parte.profesor], ["Gravedad", `${sinEmoji(g?.label)} (${g?.desc || ""})`],
+      ["Tipificación", textoTipificacion(parte)],
+      ...(parte.esGrupal ? [["Parte de grupo", "Sí"]] : []),
+    ].map(([k, v]) => [k, sinEmoji(v)]) });
+  y = doc.lastAutoTable.finalY + 8;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Descripción de los hechos", 14, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  const lineas = doc.splitTextToSize(sinEmoji(parte.descripcion), doc.internal.pageSize.getWidth() - 28);
+  doc.text(lineas, 14, y + 6); y += 6 + lineas.length * 5 + 6;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Contacto de la familia", 14, y);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  doc.text(`Correo: ${parte.email || "-"}    Teléfono: ${parte.telefono || "-"}`, 14, y + 6);
+  y += 24;
+  doc.setDrawColor(150); doc.setLineWidth(0.3);
+  doc.line(14, y, 90, y); doc.line(120, y, 196, y);
+  doc.setFontSize(9); doc.setTextColor(...GRIS);
+  doc.text("Firma del profesor/a", 14, y + 5); doc.text("Recibí (familia)", 120, y + 5);
+  guardarPDF(doc, `parte-${nombreArchivo(parte.alumno)}-${isoLocal(parte.ts)}.pdf`);
+}
+
+function pdfInformePartes(partes, filtrosTexto) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  const fecha = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
+  const y = cabeceraPDF(doc, "Informe de partes", `Generado el ${fecha} · Jefatura de Estudios${filtrosTexto ? ` · ${filtrosTexto}` : ""}`);
+  const cuenta = gr => partes.filter(p => p.gravedad === gr).length;
+  doc.setFontSize(10); doc.setFont("helvetica", "bold");
+  doc.text(`Total: ${partes.length}   ·   Leves: ${cuenta("leve")}   ·   Graves: ${cuenta("grave")}   ·   Muy graves: ${cuenta("muy_grave")}`, 14, y);
+  autoTable(doc, { ...estiloTabla, startY: y + 4,
+    head: [["Fecha y hora", "Hora", "Alumno/a", "Curso", "Tipo", "Gravedad", "Tipificación", "Profesor/a", "Descripción"]],
+    body: partes.map(p => [fmt(p.ts), p.hora || "-", p.alumno + (p.esGrupal ? " (grupo)" : ""), p.curso, p.tipo, sinEmoji(gObj(p.gravedad)?.label), textoTipificacion(p), p.profesor, p.descripcion].map(sinEmoji)),
+    columnStyles: { 0: { cellWidth: 26 }, 1: { cellWidth: 15 }, 2: { cellWidth: 30 }, 3: { cellWidth: 17 }, 4: { cellWidth: 29 }, 5: { cellWidth: 21 }, 6: { cellWidth: 44 }, 7: { cellWidth: 25 }, 8: { cellWidth: "auto" } } });
+  guardarPDF(doc, `informe-partes-${isoLocal()}.pdf`);
+}
+
+function pdfInformeBanos(banos, filtrosTexto) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const fecha = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
+  const y = cabeceraPDF(doc, "Informe de salidas al baño", `Generado el ${fecha} · Jefatura de Estudios${filtrosTexto ? ` · ${filtrosTexto}` : ""}`);
+  doc.setFontSize(10); doc.setFont("helvetica", "bold"); doc.text(`Total de salidas: ${banos.length}`, 14, y);
+  const dur = b => b.regreso ? `${Math.max(1, Math.round((new Date(b.regreso) - new Date(b.salida)) / 60000))} min` : "Fuera";
+  autoTable(doc, { ...estiloTabla, startY: y + 4,
+    head: [["Salida", "Regreso", "Duración", "Alumno/a", "Curso", "Autorizado por"]],
+    body: banos.map(b => [fmt(b.ts || b.salida), b.regreso ? horaCorta(b.regreso) : "-", dur(b), b.alumno, b.curso, b.profesor || "-"].map(sinEmoji)) });
+  guardarPDF(doc, `informe-banos-${isoLocal()}.pdf`);
+}
+
+function pdfFirmasYListas(fecha, filas, listasDia) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  let y = cabeceraPDF(doc, "Firmas de guardia y listas", parseISO(fecha).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" }));
+  const cuerpo = [];
+  filas.forEach(f => {
+    if (f.personas.length === 0) cuerpo.push([`${f.hora} (${HORARIO[f.hora]})`, f.zona, "Nadie en la zona", "-"]);
+    f.personas.forEach(({ p, firma }) => cuerpo.push([`${f.hora} (${HORARIO[f.hora]})`, f.zona, p, firma ? `Firmada a las ${horaCorta(firma.ts)}` : f.empezada ? "SIN FIRMAR" : "Aún no ha empezado"]));
+  });
+  autoTable(doc, { ...estiloTabla, startY: y, head: [["Hora", "Zona", "Profesor/a", "Firma"]], body: cuerpo.map(r => r.map(sinEmoji)),
+    didParseCell: d => { if (d.section === "body" && d.column.index === 3 && d.cell.raw === "SIN FIRMAR") { d.cell.styles.textColor = [180, 83, 9]; d.cell.styles.fontStyle = "bold"; } } });
+  y = doc.lastAutoTable.finalY + 10;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text("Listas pasadas en guardia", 14, y);
+  autoTable(doc, { ...estiloTabla, startY: y + 3, head: [["Hora", "Grupo", "Profesor/a", "Faltas"]],
+    body: listasDia.length ? listasDia.map(l => [l.hora, l.curso, `${l.profesor} (${horaCorta(l.ts)})`, l.ausentes.length ? l.ausentes.map(a => a.nombre).join(", ") : "Sin faltas"].map(sinEmoji)) : [["-", "-", "-", "No se pasó ninguna lista"]] });
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
+  doc.text("Las faltas oficiales de asistencia se registran en Raíces.", 14, doc.lastAutoTable.finalY + 6);
+  guardarPDF(doc, `firmas-guardia-${fecha}.pdf`);
+}
+
 // ─── Vista impresión parte ────────────────────────────────────────────────────
 function PrintParte({ parte, onClose }) {
   const g = gObj(parte.gravedad);
@@ -384,8 +491,9 @@ function PrintParte({ parte, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "Georgia, serif" }}>
       <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: "system-ui" }}>GalvánDesk · Vista previa — Ctrl+P para PDF</span>
-        <div style={{ display: "flex", gap: 8 }}>
+        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: "system-ui" }}>GalvánDesk · Vista previa del parte</span>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button onClick={() => pdfParte(parte)} style={{ background: "#16a34a", border: "none", color: "#fff", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontFamily: "system-ui" }}>⬇️ Descargar PDF</button>
           <CopyBtn getText={() => texto} />
           <button onClick={onClose} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>✕ Cerrar</button>
         </div>
@@ -455,23 +563,12 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
     ].filter(Boolean).join(" · ");
     const textoPlano = `GALVÁNDESK — INFORME DE PARTES\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
     
-    const descargarPDF = () => {
-      const elemento = document.querySelector('[data-print-informe]');
-      const nombreArchivo = "informe-partes.pdf";
-      const opt = {
-        margin: 10,
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-      };
-      html2pdf().set(opt).from(elemento).save();
-    };
+    const descargarPDF = () => pdfInformePartes(partes, filtrosTexto);
     
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Partes · Ctrl+P para PDF</span>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Partes</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
             <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
@@ -534,23 +631,12 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
     ].filter(Boolean).join(" · ");
     const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts || b.salida)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor || "-"}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
     
-    const descargarPDF = () => {
-      const elemento = document.querySelector('[data-print-informe]');
-      const nombreArchivo = "informe-banos.pdf";
-      const opt = {
-        margin: 10,
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-      };
-      html2pdf().set(opt).from(elemento).save();
-    };
+    const descargarPDF = () => pdfInformeBanos(banos, filtrosTexto);
     
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Baños · Ctrl+P para PDF</span>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Baños</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
             <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
@@ -1433,7 +1519,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
           <label style={{ display: "block", fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 6 }}>Fecha</label>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value || isoLocal())} style={inpStyle} />
         </div>
-        <button onClick={() => window.print()} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 10, padding: "11px 18px", cursor: "pointer", fontWeight: 700 }}>🖨 Imprimir</button>
+        <button onClick={() => pdfFirmasYListas(fecha, filas, listasDia)} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 10, padding: "11px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 16 }}>
         {[
@@ -1512,7 +1598,7 @@ const AYUDAS = {
     "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
     "Elige la hora, el tipo y la gravedad, y después la falta tipificada de la lista oficial.",
     "Describe lo ocurrido con hechos concretos.",
-    "Pulsa «Generar Parte». En «Mis Partes» puedes verlo o guardarlo en PDF para la familia."] },
+    "Pulsa «Generar Parte». Después puedes descargarlo en PDF para la familia con el botón «PDF»."] },
   parte_grupo: { titulo: "Parte de grupo", pasos: [
     "Elige el grupo.",
     "Quita a los alumnos que no estuvieron implicados.",
@@ -1524,7 +1610,7 @@ const AYUDAS = {
     "Si un alumno sale demasiadas veces, Jefatura recibe un aviso automático."] },
   historial: { titulo: "Mis partes", pasos: [
     "Aquí están los partes que has puesto.",
-    "Pulsa «Ver» para consultarlo o «PDF» para guardarlo o imprimirlo."] },
+    "Pulsa «Ver» para consultarlo o «PDF» para descargarlo."] },
   mi_guardia: { titulo: "Mi guardia de hoy", pasos: [
     "Cada tarjeta es una guardia de hoy: la hora, la zona y tu papel (titular, apoyo o sustituto).",
     "Si te toca entrar por alguien, aparece en rojo, con la tarea que ha dejado y dónde está el material.",
@@ -1559,7 +1645,7 @@ const AYUDAS = {
   informe: { titulo: "Informes", pasos: [
     "Elige si quieres un informe de partes o de salidas al baño.",
     "Filtra por curso, alumno, gravedad o fechas.",
-    "Pulsa el botón del informe y guárdalo en PDF con Ctrl+P (Cmd+P en Mac)."] },
+    "Pulsa el botón del informe y después «Descargar PDF»."] },
   cuadrante: { titulo: "Preparar el cuadrante", pasos: [
     "Elige el profesor y el inicio de la quincena.",
     "En cada día y hora, elige la zona de la que es titular.",
@@ -1578,7 +1664,7 @@ const AYUDAS = {
   firmas_jef: { titulo: "Firmas y listas", pasos: [
     "Elige una fecha.",
     "Verás quién ha firmado cada guardia y a qué hora; las que faltan salen en naranja.",
-    "Debajo, las listas pasadas en guardia con las faltas. Pulsa «Imprimir» para el archivo."] },
+    "Debajo, las listas pasadas en guardia con las faltas. Pulsa «Descargar PDF» para el archivo."] },
   admin_panel: { titulo: "Alumnado", pasos: [
     "Exporta el listado de Raíces a CSV o Excel y arrástralo en «Importar CSV/Excel».",
     "También puedes añadir alumnos uno a uno en «Añadir manual» y revisarlos en «Lista completa»."] },
@@ -3481,7 +3567,7 @@ export default function App() {
                   <strong style={{ color: C.teal }}>✅ Parte generado · {fmt(parteGenerado.ts)}</strong>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={() => setShowParte(parteGenerado)} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>👁 Ver</button>
-                    <button onClick={() => setPrintParte(parteGenerado)} style={{ background: C.salmon, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨 PDF</button>
+                    <button onClick={() => pdfParte(parteGenerado)} style={{ background: C.salmon, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨 PDF</button>
                   </div>
                 </div>
               </Card>
@@ -3714,7 +3800,7 @@ export default function App() {
             <h2 style={{ color: C.dark, marginTop: 0 }}>🗂 Mis Partes Enviados</h2>
             {partes.filter(p => p.profesor === fProfesor).length === 0
               ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No has generado ningún parte aún</Card>
-              : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+              : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
           </div>
         )}
 
@@ -3842,7 +3928,7 @@ export default function App() {
                               <div style={{ display: "flex", gap: 6 }}>
                                 <Badge g={p.gravedad} />
                                 <button onClick={() => setShowParte(p)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Ver</button>
-                                <button onClick={() => setPrintParte(p)} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
+                                <button onClick={() => pdfParte(p)} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
                               </div>
                             </div>
                           ))}
@@ -3887,7 +3973,7 @@ export default function App() {
                   </Card>
                   {pAl.length === 0
                     ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes registrados</Card>
-                    : pAl.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+                    : pAl.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
                 </div>
               );
             })() : (
@@ -3936,7 +4022,7 @@ export default function App() {
             </Card>
             {partesFiltrados.length === 0
               ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes con los filtros actuales</Card>
-              : partesFiltrados.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => setPrintParte(p)} />)}
+              : partesFiltrados.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
           </div>
         )}
 
@@ -4161,7 +4247,7 @@ export default function App() {
 
             <Card>
               <div style={{ background: "#EEF5F8", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: C.blue }}>
-                💡 El informe se abrirá en pantalla completa. Usa <strong>Ctrl+P</strong> → <strong>"Guardar como PDF"</strong>.
+                💡 El informe se abrirá en pantalla completa. Pulsa <strong>⬇️ Descargar PDF</strong> para guardarlo o imprimirlo.
               </div>
               
               {informeType === "partes" ? (
@@ -4179,7 +4265,7 @@ export default function App() {
                     {filtFechaDesde && ` · Desde: ${fmtD(filtFechaDesde)}`}{filtFechaHasta && ` · Hasta: ${fmtD(filtFechaHasta)}`}
                   </div>
                   <Btn onClick={() => setPrintInforme(true)} disabled={partesFiltrados.length === 0} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                    🖨 Ver Informe de Partes y Guardar como PDF (Ctrl+P)
+                    📄 Ver informe de partes y descargar PDF
                   </Btn>
                 </>
               ) : (
@@ -4195,7 +4281,7 @@ export default function App() {
                     {filtFechaDesde && ` · Desde: ${fmtD(filtFechaDesde)}`}{filtFechaHasta && ` · Hasta: ${fmtD(filtFechaHasta)}`}
                   </div>
                   <Btn onClick={() => setPrintInforme(true)} disabled={banosFiltrados.length === 0} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                    🖨 Ver Informe de Baños y Guardar como PDF (Ctrl+P)
+                    📄 Ver informe de baños y descargar PDF
                   </Btn>
                 </>
               )}
@@ -4374,9 +4460,9 @@ export default function App() {
               <div style={{ marginTop: 12, background: "#EEF5F8", borderRadius: 8, padding: 12, fontSize: 13 }}>
                 <strong style={{ color: C.blue }}>📬 Familia:</strong> ✉️ {showParte.email} · 📱 {showParte.telefono}
               </div>
-              <button onClick={() => { setShowParte(null); setPrintParte(showParte); }}
+              <button onClick={() => pdfParte(showParte)}
                 style={{ marginTop: 16, width: "100%", background: C.salmon, color: "#fff", border: "none", borderRadius: 10, padding: "12px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
-                🖨 Imprimir / Guardar como PDF (Ctrl+P)
+                ⬇️ Descargar PDF
               </button>
             </div>
           </div>
