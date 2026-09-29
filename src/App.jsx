@@ -244,7 +244,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             {MODO_DEMO && (
               <button onClick={onCargarEjemplo}
                 style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
-                🧪 Cargar ejemplo de guardias y ausencias
+                🧪 Cargar datos de ejemplo (partes, informes, guardias…)
               </button>
             )}
             <label style={lbl} htmlFor="gd-nombre">¿Quién eres?</label>
@@ -456,18 +456,37 @@ function pdfParte(parte) {
   guardarPDF(doc, `parte-${nombreArchivo(parte.alumno)}-${isoLocal(parte.ts)}.pdf`);
 }
 
-function pdfInformePartes(partes, filtrosTexto) {
+// Resumen por grupo con su tutor/a (para el informe en pantalla y en PDF)
+function resumenPorGrupo(partes, tutores = {}) {
+  const grupos = [...new Set(partes.map(p => p.curso))].sort();
+  return grupos.map(curso => {
+    const pC = partes.filter(p => p.curso === curso);
+    const cuenta = g => pC.filter(p => p.gravedad === g).length;
+    return { curso, tutor: tutores[curso]?.tutor || pC.find(p => p.tutor)?.tutor || "", email: tutores[curso]?.email || "",
+      leve: cuenta("leve"), grave: cuenta("grave"), muy_grave: cuenta("muy_grave"), total: pC.length };
+  });
+}
+const tutorDeParte = (p, tutores = {}) => p.tutor || tutores[p.curso]?.tutor || "";
+
+function pdfInformePartes(partes, filtrosTexto, tutores = {}, fechaInforme) {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
-  const fecha = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
-  const y = cabeceraPDF(doc, "Informe de partes", `Generado el ${fecha} · Jefatura de Estudios${filtrosTexto ? ` · ${filtrosTexto}` : ""}`);
+  const fecha = new Date(fechaInforme || Date.now()).toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
+  let y = cabeceraPDF(doc, "Informe de partes", `Generado el ${fecha} · Jefatura de Estudios${filtrosTexto ? ` · ${filtrosTexto}` : ""}`);
   const cuenta = gr => partes.filter(p => p.gravedad === gr).length;
   doc.setFontSize(10); doc.setFont("helvetica", "bold");
   doc.text(`Total: ${partes.length}   ·   Leves: ${cuenta("leve")}   ·   Graves: ${cuenta("grave")}   ·   Muy graves: ${cuenta("muy_grave")}`, 14, y);
-  autoTable(doc, { ...estiloTabla, startY: y + 4,
-    head: [["Fecha y hora", "Hora", "Alumno/a", "Curso", "Tipo", "Gravedad", "Tipificación", "Profesor/a", "Descripción"]],
-    body: partes.map(p => [fmt(p.ts), p.hora || "-", p.alumno + (p.esGrupal ? " (grupo)" : ""), p.curso, p.tipo, sinEmoji(gObj(p.gravedad)?.label), textoTipificacion(p), p.profesor, p.descripcion].map(sinEmoji)),
-    columnStyles: { 0: { cellWidth: 26 }, 1: { cellWidth: 15 }, 2: { cellWidth: 30 }, 3: { cellWidth: 17 }, 4: { cellWidth: 29 }, 5: { cellWidth: 21 }, 6: { cellWidth: 44 }, 7: { cellWidth: 25 }, 8: { cellWidth: "auto" } } });
-  guardarPDF(doc, `informe-partes-${isoLocal()}.pdf`);
+  doc.setFontSize(11); doc.setTextColor(...OSCURO); doc.text("Resumen por grupo y tutoría", 14, y + 9); doc.setTextColor(0);
+  autoTable(doc, { ...estiloTabla, startY: y + 12,
+    head: [["Grupo", "Tutor/a del grupo", "Correo del tutor/a", "Leves", "Graves", "Muy graves", "Total"]],
+    body: resumenPorGrupo(partes, tutores).map(r => [r.curso, r.tutor || "Sin registrar", r.email || "-", r.leve, r.grave, r.muy_grave, r.total].map(sinEmoji)),
+    columnStyles: { 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" }, 6: { halign: "center", fontStyle: "bold" } } });
+  y = doc.lastAutoTable.finalY + 8;
+  doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(...OSCURO); doc.text("Detalle de los partes", 14, y); doc.setTextColor(0);
+  autoTable(doc, { ...estiloTabla, startY: y + 3,
+    head: [["Fecha y hora", "Hora", "Alumno/a", "Curso", "Tutor/a", "Tipo", "Gravedad", "Tipificación", "Profesor/a", "Descripción"]],
+    body: partes.map(p => [fmt(p.ts), p.hora || "-", p.alumno + (p.esGrupal ? " (grupo)" : ""), p.curso, tutorDeParte(p, tutores) || "-", p.tipo, sinEmoji(gObj(p.gravedad)?.label), textoTipificacion(p), p.profesor, p.descripcion].map(sinEmoji)),
+    columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 14 }, 2: { cellWidth: 30 }, 3: { cellWidth: 18 }, 4: { cellWidth: 24 }, 5: { cellWidth: 27 }, 6: { cellWidth: 19 }, 7: { cellWidth: 40 }, 8: { cellWidth: 24 }, 9: { cellWidth: "auto" } } });
+  guardarPDF(doc, `informe-partes-${isoLocal(fechaInforme || new Date())}.pdf`);
 }
 
 function pdfInformeBanos(banos, filtrosTexto) {
@@ -563,7 +582,7 @@ function PrintParte({ parte, onClose }) {
 }
 
 // ─── Vista impresión informe ──────────────────────────────────────────────────
-function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
+function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, onDescargado, onClose }) {
   const fecha = new Date().toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
   
   if (type === "partes") {
@@ -574,13 +593,15 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
     };
     const filtrosTexto = [
       filtros.filtCurso && `Curso: ${filtros.filtCurso}`,
+      filtros.filtCurso && tutores[filtros.filtCurso]?.tutor && `Tutor/a: ${tutores[filtros.filtCurso].tutor}`,
       filtros.filtGravedad && GRAVEDAD.find(g => g.id === filtros.filtGravedad)?.label,
       filtros.filtFechaDesde && `Desde: ${fmtD(filtros.filtFechaDesde)}`,
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
-    const textoPlano = `GALVÁNDESK — INFORME DE PARTES\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
+    const textoPlano = `GALVÁNDESK — INFORME DE PARTES\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} (tutor/a: ${tutorDeParte(p, tutores) || "-"}) | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
     
-    const descargarPDF = () => pdfInformePartes(partes, filtrosTexto);
+    const resumen = resumenPorGrupo(partes, tutores);
+    const descargarPDF = () => { pdfInformePartes(partes, filtrosTexto, tutores); onDescargado?.({ tipo: "partes", filtrosTexto, ids: partes.map(p => p.id) }); };
     
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
@@ -607,10 +628,31 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
               </div>
             ))}
           </div>
+          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px" }}>👩‍🏫 Resumen por grupo y tutoría</div>
+          <div style={{ overflowX: "auto", marginBottom: 24 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+              <thead><tr style={{ background: C.blue, color: "#fff" }}>{["Grupo", "Tutor/a del grupo", "Correo", "Leves", "Graves", "Muy graves", "Total"].map(h => <th key={h} style={{ padding: "8px", textAlign: "left" }}>{h}</th>)}</tr></thead>
+              <tbody>
+                {resumen.map((r, i) => (
+                  <tr key={r.curso} style={{ background: i % 2 === 0 ? "#fff" : C.light }}>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", fontWeight: 700 }}>{r.curso}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{r.tutor || <span style={{ color: C.salmon }}>Sin registrar</span>}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", color: C.gray }}>{r.email || "—"}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", textAlign: "center" }}>{r.leve}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", textAlign: "center" }}>{r.grave}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", textAlign: "center" }}>{r.muy_grave}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", textAlign: "center", fontWeight: 800 }}>{r.total}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px" }}>📋 Detalle de los partes</div>
+          <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: C.dark, color: "#fff" }}>
-                {["Fecha", "Hora", "Alumno", "Curso", "Tipo", "Gravedad", "Profesor", "Descripción"].map(h => (
+                {["Fecha", "Hora", "Alumno", "Curso", "Tutor/a", "Tipo", "Gravedad", "Profesor", "Descripción"].map(h => (
                   <th key={h} style={{ padding: "9px 8px", textAlign: "left" }}>{h}</th>
                 ))}
               </tr>
@@ -624,6 +666,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", whiteSpace: "nowrap" }}>{p.hora || "-"}</td>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee", fontWeight: 600 }}>{p.alumno}{p.esGrupal ? <span style={{ marginLeft: 4, fontSize: 10, color: C.teal }}>◆grupal</span> : null}</td>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{p.curso}</td>
+                    <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{tutorDeParte(p, tutores) || "—"}</td>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{p.tipo}</td>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}><span style={{ background: g.bg, color: g.color, padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: 11 }}>{g.label}</span></td>
                     <td style={{ padding: "7px 8px", borderBottom: "1px solid #eee" }}>{p.profesor}</td>
@@ -633,6 +676,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
               })}
             </tbody>
           </table>
+          </div>
           <div style={{ marginTop: 24, textAlign: "center", color: "#aaa", fontSize: 11, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
             GalvánDesk · IES Enrique Tierno Galván · Madrid · {fecha}
           </div>
@@ -648,7 +692,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, onClose }) {
     ].filter(Boolean).join(" · ");
     const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts || b.salida)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor || "-"}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
     
-    const descargarPDF = () => pdfInformeBanos(banos, filtrosTexto);
+    const descargarPDF = () => { pdfInformeBanos(banos, filtrosTexto); onDescargado?.({ tipo: "banos", filtrosTexto, ids: banos.map(b => b.id) }); };
     
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
@@ -717,7 +761,7 @@ function ParteCard({ parte, onVer, onPrint }) {
             {parte.esGrupal && <span style={{ fontSize: 11, background: "#e8f5f3", color: C.teal, borderRadius: 6, padding: "2px 8px", marginLeft: 6 }}>👥 grupal</span>}
           </div>
           <div style={{ fontSize: 12, color: C.gray, marginTop: 3 }}>
-            📚 {parte.curso} · {parte.tipo} · ⏰ {parte.hora || "—"} · 📅 {fmt(parte.ts)} · 👤 {parte.profesor}
+            📚 {parte.curso}{parte.tutor ? ` (tutor/a: ${parte.tutor})` : ""} · {parte.tipo} · ⏰ {parte.hora || "—"} · 📅 {fmt(parte.ts)} · 👤 {parte.profesor}
           </div>
           <div style={{ fontSize: 13, marginTop: 6, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {parte.descripcion}
@@ -736,6 +780,65 @@ function ParteCard({ parte, onVer, onPrint }) {
 }
 
 // ─── Gestión de alumnos ───────────────────────────────────────────────────────
+// ─── Tutorías de grupo ───────────────────────────────────────────────────────
+// Cada grupo tiene su tutor/a. Se usa en los partes nuevos y en los informes.
+function TutoriasGrupos({ cursos, tutores, setTutores, setAlumnos, profesores, soloCurso, C, inpStyle }) {
+  const lista = soloCurso ? [soloCurso] : [...new Set([...cursos, ...Object.keys(tutores)])].sort();
+  function cambiar(curso, campo, valor) {
+    setTutores(prev => ({ ...prev, [curso]: { ...(prev[curso] || {}), [campo]: valor } }));
+    if (campo === "tutor") setAlumnos(prev => prev.map(a => a.curso === curso ? { ...a, tutor: valor } : a));
+  }
+  const inp = { ...inpStyle, padding: "8px 10px", fontSize: 13 };
+  return (
+    <div style={{ background: C.white, borderRadius: 14, padding: 18, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: `1px solid ${C.cream}` }}>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>👩‍🏫 {soloCurso ? `Tutor/a de ${soloCurso}` : "Tutorías de grupo"}</div>
+      <div style={{ fontSize: 12, color: C.gray, margin: "4px 0 12px" }}>
+        {soloCurso ? "Aparece en el informe. Si lo cambias aquí, queda guardado para el grupo." : "El tutor/a de cada grupo aparece en los partes y en los informes. Los cambios se guardan solos."}
+      </div>
+      {lista.length === 0 && <div style={{ fontSize: 13, color: C.gray }}>Aún no hay grupos. Añade alumnado primero.</div>}
+      {lista.map(curso => (
+        <div key={curso} style={{ display: "grid", gridTemplateColumns: soloCurso ? "repeat(auto-fit,minmax(180px,1fr))" : "72px minmax(0,1fr) minmax(0,1fr)", gap: 8, alignItems: "center", marginBottom: 8 }}>
+          {!soloCurso && <div style={{ fontWeight: 700, color: C.dark, fontSize: 13 }}>{curso}</div>}
+          <select aria-label={`Tutor/a de ${curso}`} value={tutores[curso]?.tutor || ""} onChange={e => cambiar(curso, "tutor", e.target.value)} style={inp}>
+            <option value="">— Sin tutor/a —</option>
+            {[...new Set([...(profesores || []), tutores[curso]?.tutor].filter(Boolean))].sort().map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <input aria-label={`Correo del tutor/a de ${curso}`} type="email" placeholder="Correo del centro (opcional)" value={tutores[curso]?.email || ""} onChange={e => cambiar(curso, "email", e.target.value)} style={inp} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Informes guardados ─────────────────────────────────────────────────────
+// Cada vez que se descarga un informe queda anotado: quién, cuándo, con qué filtros
+// y qué partes contenía. Se puede volver a descargar igual que estaba.
+function InformesGuardados({ informes, setInformes, partes, banos, tutores, C }) {
+  if (!informes.length) return null;
+  function descargar(inf) {
+    if (inf.tipo === "banos") pdfInformeBanos(banos.filter(b => inf.ids.includes(b.id)), inf.filtrosTexto);
+    else pdfInformePartes(partes.filter(p => inf.ids.includes(p.id)), inf.filtrosTexto, tutores, inf.ts);
+  }
+  return (
+    <div style={{ background: C.white, borderRadius: 14, padding: 18, marginTop: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🗂 Informes guardados</div>
+      <div style={{ fontSize: 12, color: C.gray, margin: "4px 0 12px" }}>Cada informe descargado queda aquí anotado con sus partes, para volver a sacarlo igual.</div>
+      {informes.map(inf => (
+        <div key={inf.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderTop: `1px solid ${C.cream}`, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14, color: C.dark }}>{inf.tipo === "banos" ? "🚻 Salidas al baño" : "📋 Partes"} · {inf.total} registro{inf.total !== 1 ? "s" : ""}</div>
+            <div style={{ fontSize: 12, color: C.gray }}>{fmt(inf.ts)} · {inf.autor || "—"}{inf.filtrosTexto ? ` · ${inf.filtrosTexto}` : " · Sin filtros"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => descargar(inf)} style={{ background: "#E8F5F3", color: C.teal, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>⬇️ PDF</button>
+            <button aria-label="Quitar del historial" onClick={() => { if (window.confirm("¿Quitar este informe del historial? Los partes no se borran.")) setInformes(prev => prev.filter(x => x.id !== inf.id)); }} style={{ background: "#f3f4f6", color: C.gray, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>🗑</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
   const [nuevoAlumno, setNuevoAlumno] = useState({ nombre: "", curso: "", tutor: "", email: "", telefono: "", nia: "" });
   const [preview, setPreview] = useState(null);
@@ -1662,7 +1765,9 @@ const AYUDAS = {
   informe: { titulo: "Informes", pasos: [
     "Elige si quieres un informe de partes o de salidas al baño.",
     "Filtra por curso, alumno, gravedad o fechas.",
-    "Pulsa el botón del informe y después «Descargar PDF»."] },
+    "Si eliges un curso, verás su tutor/a: puedes cambiarlo o añadir su correo y queda guardado para el grupo.",
+    "Pulsa el botón del informe y después «Descargar PDF». El informe lleva un resumen por grupo con su tutor/a.",
+    "Cada informe descargado queda en «Informes guardados», abajo, para volver a sacarlo igual."] },
   cuadrante: { titulo: "Preparar el cuadrante", pasos: [
     "Elige el profesor y el inicio de la quincena.",
     "En cada día y hora, elige la zona de la que es titular.",
@@ -1684,7 +1789,8 @@ const AYUDAS = {
     "Debajo, las listas pasadas en guardia con las faltas. Pulsa «Descargar PDF» para el archivo."] },
   admin_panel: { titulo: "Alumnado", pasos: [
     "Exporta el listado de Raíces a CSV o Excel y arrástralo en «Importar CSV/Excel».",
-    "También puedes añadir alumnos uno a uno en «Añadir manual» y revisarlos en «Lista completa»."] },
+    "También puedes añadir alumnos uno a uno en «Añadir manual» y revisarlos en «Lista completa».",
+    "Arriba, en «Tutorías de grupo», elige el tutor/a de cada grupo (y su correo del centro si quieres). Sale en los partes y en los informes."] },
   admin_profesores: { titulo: "Profesorado", pasos: [
     "Añade a cada profesor con su nombre completo.",
     "Asígnale su cargo: decide a qué perfiles puede entrar.",
@@ -1717,6 +1823,165 @@ function AyudaPantalla({ id, C }) {
 // ─── Datos de ejemplo (solo modo demostración) ───────────────────────────────
 // Rellena el cuadrante de la quincena actual y unas ausencias de hoy y mañana,
 // con profesores ficticios, para ver cómo funcionan guardias y ausencias.
+// ─── Datos de ejemplo de convivencia (todo ficticio) ────────────────────────
+// Grupos con su tutor/a, alumnado inventado, partes de todas las gravedades y
+// tipificaciones, salidas al baño, alertas e informes guardados.
+const GRUPOS_DEMO = [
+  { curso: "1º ESO A", tutor: "Carmen López" },  { curso: "1º ESO B", tutor: "Jorge Ruiz" },
+  { curso: "2º ESO A", tutor: "Laura Torres" },  { curso: "2º ESO B", tutor: "Pedro Sánchez" },
+  { curso: "3º ESO A", tutor: "Ana Jiménez" },   { curso: "3º ESO B", tutor: "Sofía Martín" },
+  { curso: "4º ESO A", tutor: "Pablo Díaz" },    { curso: "4º ESO C", tutor: "Luis García" },
+];
+const correoDemo = nombre => nombre.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, ".") + "@ejemplo.es";
+const TUTORES_DEMO = Object.fromEntries(GRUPOS_DEMO.map(g => [g.curso, { tutor: g.tutor, email: correoDemo(g.tutor) }]));
+// Tutor/a de un grupo: primero la tutoría registrada; si no, la del alumnado del grupo
+const tutorDeGrupo = (tutores, alumnos, curso) => tutores?.[curso]?.tutor || alumnos.find(a => a.curso === curso && a.tutor)?.tutor || "";
+
+const DESCRIPCIONES_DEMO = {
+  "1L": "Interrumpe la explicación varias veces con comentarios en voz alta. Se le avisa dos veces y continúa.",
+  "2L": "No trae libro ni cuaderno por tercera vez esta semana y no realiza las actividades propuestas.",
+  "3L": "Llega 20 minutos tarde a primera hora sin justificación.",
+  "4L": "Se queda en el pasillo durante el cambio de clase y entra al aula 10 minutos tarde sin permiso.",
+  "5L": "Habla continuamente con los compañeros de mesa e impide que terminen la tarea.",
+  "6L": "Contesta de malas formas a un compañero cuando se le pide que devuelva un material.",
+  "7L": "Pinta la mesa con rotulador. Se le pide que la limpie al final de la clase.",
+  "8L": "Usa el móvil en clase sin permiso. Se le pide que lo guarde y tarda en hacerlo.",
+  "9L": "No acude a la recuperación en el recreo impuesta por un parte anterior.",
+  "10L": "Lanza bolas de papel a los compañeros durante la explicación.",
+  aG: "Acumula faltas de asistencia injustificadas a primera hora durante tres semanas. La tutoría lo comunica a Jefatura.",
+  bG: "Impide el desarrollo normal del examen hablando y molestando a los compañeros pese a los avisos.",
+  cG: "Insulta a una compañera delante del grupo durante el cambio de clase.",
+  dG: "Se niega a cambiarse de sitio cuando se le pide y desafía las indicaciones del profesor ante el grupo.",
+  eG: "Rompe intencionadamente la persiana del aula.",
+  fG: "Esconde la mochila de un compañero, que la encuentra más tarde en el baño.",
+  gG: "Anima a varios compañeros a salir del aula sin permiso durante la clase.",
+  hG: "Participa en una pelea en el patio durante el recreo. Ambos alumnos aceptaban la pelea.",
+  iG: "Activa sin motivo el pulsador de la alarma de incendios durante la 4ª hora.",
+  jG: "Reiteración en el trimestre de faltas leves (tres partes leves registrados).",
+  kG: "Se le sorprende copiando en el examen con el móvil.",
+  lG: "Sabía que un compañero estaba siendo acosado y no lo comunicó a ningún profesor.",
+  mG: "Comparte en un grupo de mensajería una foto de un compañero tomada en clase sin su permiso.",
+  nG: "No cumple la medida correctora de reparar el material que había dañado.",
+  aMG: "Amenaza e insulta gravemente al profesor cuando se le pide que guarde el móvil.",
+  bMG: "Tras la investigación de la tutoría se confirma que lleva semanas humillando a un compañero en el recreo.",
+  cMG: "Agrede a un compañero en el pasillo; el compañero necesita atención en la enfermería del centro.",
+  dMG: "Dirige insultos discriminatorios a una compañera delante del grupo.",
+  eMG: "Graba una pelea en el patio y la difunde en redes sociales.",
+  fMG: "Arranca intencionadamente un lavabo de los baños de la planta 1.",
+  gMG: "Falsifica la firma de la familia en un justificante de faltas.",
+  hMG: "Se le encuentra con un vapeador y lo ofrece a compañeros dentro del centro.",
+  iMG: "Entra con la contraseña de un profesor al aula virtual y modifica tareas.",
+  jMG: "Provoca un incidente en la cafetería que obliga a desalojarla.",
+  kMG: "Reiteración en el mismo trimestre de dos faltas graves.",
+  lMG: "Incita a sus compañeros a agredir a otro alumno a la salida del centro.",
+  mMG: "Se presenta en el centro durante los días de expulsión que tenía impuestos.",
+};
+const tipoDeTipificacion = t => ["3L", "aG"].includes(t) ? "Ausencia" : ["2L", "kG"].includes(t) ? "Académico" : t === "10L" ? "Otro" : "Comportamiento";
+
+function datosEjemploConvivencia(profesores) {
+  // Generador pseudoaleatorio con semilla: el ejemplo sale igual cada vez
+  let semilla = 20260929;
+  const azar = () => { semilla = (semilla * 1103515245 + 12345) % 2147483648; return semilla / 2147483648; };
+  const elegir = arr => arr[Math.floor(azar() * arr.length)];
+  const NOMBRES = ["Hugo", "Martina", "Leo", "Valeria", "Mateo", "Carla", "Iker", "Noa", "Álex", "Julia", "Daniel", "Irene", "Nicolás", "Lola", "Bruno", "Aitana", "Samuel", "Claudia", "Adam", "Vega", "Eric", "Olivia", "Gael", "Alba", "Izan", "Nerea", "Thiago", "Mía", "Rubén", "Ainhoa", "Marco", "Daniela"];
+  const APELLIDOS = ["Navarro", "Molina", "Ortiz", "Delgado", "Castro", "Rubio", "Marín", "Sanz", "Iglesias", "Núñez", "Medina", "Garrido", "Cortés", "Santos", "Lozano", "Guerrero", "Cano", "Prieto", "Méndez", "Cruz", "Calvo", "Gallego", "Vidal", "León", "Herrera", "Márquez", "Peña", "Flores", "Cabrera", "Campos", "Vega", "Fuentes"];
+  // Alumnado: los 8 de siempre (con su tutor actualizado) y 4 más por grupo
+  const alumnos = DEMO_ALUMNOS.map(a => ({ ...a, tutor: TUTORES_DEMO[a.curso]?.tutor || a.tutor }));
+  let id = 100, k = 0;
+  GRUPOS_DEMO.forEach(g => {
+    const yaHay = alumnos.filter(a => a.curso === g.curso).length;
+    for (let i = yaHay; i < 5; i++) {
+      const nombre = `${NOMBRES[k % NOMBRES.length]} ${APELLIDOS[k % APELLIDOS.length]} ${APELLIDOS[(k * 7 + 3) % APELLIDOS.length]}`;
+      const ap = APELLIDOS[k % APELLIDOS.length].normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      alumnos.push({ id: id++, nombre, curso: g.curso, tutor: g.tutor, email: `familia.${ap}${k}@email.com`, telefono: `6${String(10000000 + k * 7919).slice(0, 8)}`, nia: "" });
+      k++;
+    }
+  });
+  // Días lectivos de las últimas 8 semanas, del más antiguo al más reciente
+  const hoy = new Date(), hoyISO = isoLocal(hoy);
+  const dias = []; // sin hoy
+  // Solo días de curso: sin julio ni agosto, y en septiembre desde el día 8
+  const deCurso = x => { const m = x.getMonth(); return m !== 6 && m !== 7 && !(m === 8 && x.getDate() < 8); };
+  for (let d = 56; d >= 1; d--) { const x = sumarDias(hoy, -d); if (esLectivo(x) && deCurso(x)) dias.push(x); }
+  if (dias.length < 5) for (let d = 1; dias.length < 5; d++) { const x = sumarDias(hoy, -d); if (esLectivo(x)) dias.unshift(x); }
+  const horasClase = HORAS.filter(h => h !== "Recreo" && h !== "7ª hora");
+  const momento = (dia, hora) => {
+    const d = parseISO(dia); const [hh, mm] = inicioHora(hora).split(":").map(Number);
+    d.setHours(hh, mm + 5 + Math.floor(azar() * 40)); return d;
+  };
+  const partes = [];
+  const nuevoParte = (al, tip, grav, dia, hora, extra = {}) => {
+    let ts = momento(dia, hora);
+    if (ts > hoy) ts = new Date(hoy.getTime() - 5 * 60000);
+    partes.push({ id: 1000 + partes.length, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono,
+      tipo: tipoDeTipificacion(tip), gravedad: grav, tipificacion: tip, descripcion: DESCRIPCIONES_DEMO[tip],
+      profesor: elegir(profesores.filter(p => p !== al.tutor)), hora, ts: ts.toISOString(), ...extra });
+  };
+  // Un alumno "difícil" por grupo concentra más partes (así se ven las acumulaciones)
+  const dificiles = GRUPOS_DEMO.map(g => alumnos.filter(a => a.curso === g.curso)[1]);
+  const quien = () => azar() < 0.45 ? elegir(dificiles) : elegir(alumnos);
+  // 1) Cada tipificación aparece al menos una vez
+  const todas = [...TIPIFICACION.leve.map(t => [t.id, "leve"]), ...TIPIFICACION.grave.map(t => [t.id, "grave"]), ...TIPIFICACION.muy_grave.map(t => [t.id, "muy_grave"])];
+  todas.forEach(([tip, grav], i) => nuevoParte(quien(), tip, grav, dias[Math.floor((i / todas.length) * (dias.length - 1))], elegir(horasClase)));
+  // 2) Más partes, sobre todo leves, como en un trimestre real
+  for (let i = 0; i < 48; i++) {
+    const r = azar();
+    const grav = r < 0.65 ? "leve" : r < 0.92 ? "grave" : "muy_grave";
+    const pool = grav === "leve" ? ["1L", "1L", "2L", "3L", "5L", "5L", "6L", "8L", "8L", "4L"] : grav === "grave" ? ["cG", "dG", "dG", "bG", "hG", "jG"] : ["aMG", "cMG", "bMG"];
+    nuevoParte(quien(), elegir(pool), grav, elegir(dias), elegir(horasClase));
+  }
+  // 3) Dos partes de grupo
+  const diaGrupo1 = dias[dias.length - 6] || dias[0], diaGrupo2 = dias[dias.length - 15] || dias[0];
+  alumnos.filter(a => a.curso === "3º ESO B").forEach(al => nuevoParte(al, "1L", "leve", diaGrupo1, "5ª hora", { esGrupal: true, descripcion: "Todo el grupo sale del aula antes del timbre y no vuelve cuando se le pide." }));
+  alumnos.filter(a => a.curso === "2º ESO A").forEach(al => nuevoParte(al, "5L", "leve", diaGrupo2, "6ª hora", { esGrupal: true, descripcion: "El grupo impide el desarrollo de la clase con ruido constante; no se puede terminar la actividad." }));
+  // 4) Partes de hoy, en horas que ya han empezado
+  if (esLectivo(hoy)) {
+    const empezadas = horasClase.filter(h => horaEmpezada(hoyISO, h));
+    [["8L", "leve"], ["1L", "leve"], ["dG", "grave"]].slice(0, empezadas.length).forEach(([tip, grav], i) => nuevoParte(elegir(dificiles), tip, grav, hoy, empezadas[Math.min(i, empezadas.length - 1)]));
+  }
+  partes.sort((a, b) => b.ts.localeCompare(a.ts));
+
+  // Salidas al baño de las dos últimas semanas (una, fuera ahora mismo)
+  const banos = [];
+  dias.slice(-10).forEach(dia => {
+    const n = 2 + Math.floor(azar() * 3);
+    for (let i = 0; i < n; i++) {
+      const al = azar() < 0.3 ? dificiles[2] : elegir(alumnos);
+      const salida = momento(dia, elegir(horasClase));
+      if (salida > hoy) continue;
+      const regreso = new Date(salida.getTime() + (3 + Math.floor(azar() * 10)) * 60000);
+      banos.push({ id: 5000 + banos.length, alumnoId: al.id, alumno: al.nombre, curso: al.curso, fecha: isoLocal(salida), salida: salida.toISOString(), ts: salida.toISOString(), regreso: regreso.toISOString(), profesor: elegir(profesores) });
+    }
+  });
+  if (esLectivo(hoy)) {
+    const al = dificiles[4]; const salida = new Date(hoy.getTime() - 6 * 60000);
+    banos.push({ id: 5000 + banos.length, alumnoId: al.id, alumno: al.nombre, curso: al.curso, fecha: hoyISO, salida: salida.toISOString(), ts: salida.toISOString(), regreso: null, profesor: elegir(profesores) });
+  }
+  banos.sort((a, b) => b.ts.localeCompare(a.ts));
+
+  // Alertas: acumulación de leves y límite de partes (las más antiguas, ya leídas)
+  const alertas = [];
+  alumnos.forEach(al => {
+    const pA = partes.filter(p => p.alumnoId === al.id).sort((a, b) => a.ts.localeCompare(b.ts));
+    const leves = pA.filter(p => p.gravedad === "leve");
+    if (leves.length >= 3) alertas.push({ id: 7000 + alertas.length, tipo: "acumulacion_leves", alumno: al.nombre, curso: al.curso, msg: "Acumulación de 3 partes leves — Considerar sanción", ts: leves[2].ts, leida: false });
+    if (pA.length >= 3) alertas.push({ id: 7000 + alertas.length, tipo: "total_partes", alumno: al.nombre, curso: al.curso, msg: "Ha alcanzado 3 partes en total", ts: pA[2].ts, leida: false });
+  });
+  const semana = banos.filter(b => b.alumnoId === dificiles[2].id);
+  if (semana.length > 3) alertas.push({ id: 7000 + alertas.length, tipo: "bano", alumno: dificiles[2].nombre, curso: dificiles[2].curso, msg: `Ha ido al baño ${semana.length} veces en las dos últimas semanas`, ts: semana[0].ts, leida: false });
+  alertas.sort((a, b) => b.ts.localeCompare(a.ts));
+  alertas.forEach((a, i) => { if (i >= 5) a.leida = true; });
+
+  // Dos informes ya guardados, como si Jefatura los hubiera descargado
+  const hace = n => sumarDias(hoy, -n);
+  const informes = [
+    { id: 9001, tipo: "partes", ts: new Date(hace(14).setHours(13, 50)).toISOString(), autor: "Ana Jiménez", filtros: { filtCurso: "2º ESO B" }, filtrosTexto: `Curso: 2º ESO B · Tutor/a: ${TUTORES_DEMO["2º ESO B"].tutor}`, ids: partes.filter(p => p.curso === "2º ESO B" && p.ts < hace(14).toISOString()).map(p => p.id) },
+    { id: 9002, tipo: "partes", ts: new Date(hace(7).setHours(14, 20)).toISOString(), autor: "Luis García", filtros: { filtGravedad: "grave" }, filtrosTexto: "Graves", ids: partes.filter(p => p.gravedad === "grave" && p.ts < hace(7).toISOString()).map(p => p.id) },
+  ];
+  informes.forEach(i => { i.total = i.ids.length; });
+  return { alumnos, partes, banos, alertas, informes, tutores: TUTORES_DEMO };
+}
+
 function datosEjemploGuardias(profesores) {
   const n = profesores.length;
   const zonasClase  = ["A0-pasillo", "A1-pasillo", "B1-pasillo"];
@@ -3033,6 +3298,8 @@ export default function App() {
   const [alertas, setAlertas]     = useState([]);
   const [mensajes, setMensajes]   = useState([]);
   const [guardias, setGuardias]   = useState([]);
+  const [tutores, setTutores]     = useState(TUTORES_DEMO); // {curso: {tutor, email}}
+  const [informes, setInformes]   = useState([]);           // informes descargados
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
   const [showCoordinacion, setShowCoordinacion] = useState(false);
@@ -3123,6 +3390,13 @@ export default function App() {
       const a  = await sGet("alertas");   if (a)  setAlertas(a);
       const m  = await sGet("mensajes");  if (m)  setMensajes(m);
       const al = await sGet("alumnos");   if (al) setAlumnos(al);
+      const tu = await sGet("tutores");   if (tu) setTutores(tu);
+      const inf = await sGet("informes"); if (inf) setInformes(inf);
+      // Primera visita a la demostración: se cargan partes, baños y alertas de ejemplo
+      if (MODO_DEMO && !p) {
+        const ej = datosEjemploConvivencia(DEMO_PROFESORES);
+        setAlumnos(ej.alumnos); setPartes(ej.partes); setBanos(ej.banos); setAlertas(ej.alertas); setInformes(ej.informes); setTutores(ej.tutores);
+      }
       const pr = await sGet("profesores");if (pr) setProfesores(pr);
       const g  = await sGet("guardias");    if (g)  setGuardias(g);
       const cq = await sGet("cuadrante");   if (cq) setCuadrante(cq);
@@ -3152,6 +3426,8 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("alertas", alertas); },   [alertas, loading]);
   useEffect(() => { if (!loading) sSet("mensajes", mensajes); }, [mensajes, loading]);
   useEffect(() => { if (!loading) sSet("alumnos", alumnos); },   [alumnos, loading]);
+  useEffect(() => { if (!loading) sSet("tutores", tutores); },   [tutores, loading]);
+  useEffect(() => { if (!loading) sSet("informes", informes); }, [informes, loading]);
   useEffect(() => { if (!loading) sSet("profesores", profesores); }, [profesores, loading]);
   useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias,   loading]);
   useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
@@ -3191,7 +3467,9 @@ export default function App() {
   });
 
   function cargarEjemploGuardias() {
-    if (!window.confirm("Se cargará un cuadrante de guardias de esta quincena y varias ausencias de ejemplo, con profesores ficticios.\n\nSustituye el cuadrante y las ausencias que haya ahora en este navegador. ¿Continuar?")) return;
+    if (!window.confirm("Se cargarán datos de ejemplo, todos ficticios: alumnado y tutorías, partes de todo tipo, salidas al baño, alertas, informes guardados, cuadrante de guardias de esta quincena y ausencias.\n\nSustituye lo que haya ahora en este navegador. ¿Continuar?")) return;
+    const conv = datosEjemploConvivencia(DEMO_PROFESORES);
+    setAlumnos(conv.alumnos); setPartes(conv.partes); setBanos(conv.banos); setAlertas(conv.alertas); setInformes(conv.informes); setTutores(conv.tutores);
     // El ejemplo usa los profesores ficticios de demostración; se añaden a la lista si faltan
     const lista = [...new Set([...profesores, ...DEMO_PROFESORES])];
     setProfesores(lista);
@@ -3199,7 +3477,7 @@ export default function App() {
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias);
     setFirmas(ej.firmas); setListas([]);
     if (ej.sugerido) setUsuario(ej.sugerido);
-    window.alert(`Ejemplo cargado.\n\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
+    window.alert(`Ejemplo cargado.\n\n• ${conv.partes.length} partes de todas las gravedades, ${conv.alumnos.length} alumnos en ${Object.keys(conv.tutores).length} grupos con su tutor/a, salidas al baño y alertas.\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
   }
 
   function cambiarPerfil(id) {
@@ -3238,7 +3516,7 @@ export default function App() {
   function crearParte() {
     if (!fAlumno || !fDesc.trim()) return;
     const al = alumnos.find(a => a.id === parseInt(fAlumno));
-    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, tipificacion: fTipificacion, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
+    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, tipificacion: fTipificacion, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
     generarAlertasParte(p, partes);
     setPartes(prev => [p, ...prev]);
     setParteGenerado(p);
@@ -3249,7 +3527,7 @@ export default function App() {
     if (!gCurso || !gDesc.trim()) return;
     const grupo = alumnos.filter(a => a.curso === gCurso && !gExcluidos.includes(a.id));
     const ts = new Date().toISOString();
-    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, tipificacion: gTipificacion, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
+    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, tipificacion: gTipificacion, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
     const partesTemp = [...partes]; nuevos.forEach(p => generarAlertasParte(p, partesTemp));
     setPartes(prev => [...nuevos, ...prev]);
     setGrupoGenerado({ curso: gCurso, total: nuevos.length, ts });
@@ -3304,7 +3582,10 @@ export default function App() {
   );
 
   if (printParte)   return <PrintParte parte={printParte} onClose={() => setPrintParte(null)} />;
-  if (printInforme) return <PrintInforme type={informeType} partes={partesFiltrados} banos={banosFiltrados} filtros={{ filtCurso, filtAlumno, filtGravedad, filtFechaDesde, filtFechaHasta }} onClose={() => setPrintInforme(false)} />;
+  if (printInforme) return <PrintInforme type={informeType} partes={partesFiltrados} banos={banosFiltrados} tutores={tutores}
+    filtros={{ filtCurso, filtAlumno, filtGravedad, filtFechaDesde, filtFechaHasta }}
+    onDescargado={inf => setInformes(prev => [{ id: Date.now(), ts: new Date().toISOString(), autor: usuario || "", total: inf.ids.length, ...inf }, ...prev].slice(0, 100))}
+    onClose={() => setPrintInforme(false)} />;
 
   // ── Pantalla de entrada ──
   if (!perfil) return (
@@ -3394,7 +3675,7 @@ export default function App() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {perfilesPermitidos(cuentas, usuario).length > 1 && <select value={perfil.id} onChange={e => cambiarPerfil(e.target.value)} aria-label="Cambiar de perfil" title="Cambiar de perfil"
-            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 13, fontWeight: 600, maxWidth: 160 }}>
+            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 13, fontWeight: 600, maxWidth: 210 }}>
             {perfilesPermitidos(cuentas, usuario).map(p => <option key={p.id} value={p.id} style={{ color: C.dark }}>{p.label}</option>)}
           </select>}
           <button onClick={salir} 
@@ -4276,6 +4557,9 @@ export default function App() {
                     <input type="date" value={filtFechaDesde} onChange={e => setFiltFechaDesde(e.target.value)} style={{ ...inpStyle, fontSize: 13 }} />
                     <input type="date" value={filtFechaHasta} onChange={e => setFiltFechaHasta(e.target.value)} style={{ ...inpStyle, fontSize: 13 }} />
                   </div>
+                  {filtCurso
+                    ? <TutoriasGrupos soloCurso={filtCurso} cursos={cursos} tutores={tutores} setTutores={setTutores} setAlumnos={setAlumnos} profesores={profesores} C={C} inpStyle={inpStyle} />
+                    : <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>👩‍🏫 El informe incluye el tutor/a de cada grupo. Elige un curso para ver o cambiar su tutor/a.</div>}
                   <div style={{ background: C.cream, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.dark }}>
                     El informe incluirá <strong>{partesFiltrados.length} parte(s)</strong>
                     {filtCurso && ` · ${filtCurso}`}{filtGravedad && ` · ${GRAVEDAD.find(g => g.id === filtGravedad)?.label}`}
@@ -4303,10 +4587,14 @@ export default function App() {
                 </>
               )}
             </Card>
+            <InformesGuardados informes={informes} setInformes={setInformes} partes={partes} banos={banos} tutores={tutores} C={C} />
           </div>
         )}
 
         {/* ── Admin Alumnos ── */}
+        {tab === "admin_panel" && (
+          <TutoriasGrupos cursos={cursos} tutores={tutores} setTutores={setTutores} setAlumnos={setAlumnos} profesores={profesores} C={C} inpStyle={inpStyle} />
+        )}
         {tab === "admin_panel" && (
           <AdminAlumnos alumnos={alumnos} setAlumnos={setAlumnos} inpStyle={inpStyle} C={C} />
         )}
