@@ -427,6 +427,26 @@ const textoTipificacion = p => {
   return t ? `${t} (${p.gravedad === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM"})` : "-";
 };
 
+// Texto del parte para copiar y pegar en un correo
+function textoParte(parte) {
+  const g = gObj(parte.gravedad);
+  const tip = TIPIFICACION[parte.gravedad]?.find(t => t.id === parte.tipificacion)?.label;
+  return `PARTE DE INCIDENCIA — IES Enrique Tierno Galván (Madrid)
+Ref.: PARTE-${parte.id}
+
+Alumno/a: ${parte.alumno}
+Curso: ${parte.curso}
+Tutor/a del grupo: ${parte.tutor || "-"}${parte.tutorEmail ? ` (${parte.tutorEmail})` : ""}
+Fecha y hora: ${fmt(parte.ts)} · ${parte.hora || "hora no indicada"}
+Profesor/a que pone el parte: ${parte.profesor}
+Gravedad: ${sinEmoji(g?.label)} (${g?.desc || ""})${tip ? `\nTipificación: ${tip}` : ""}
+
+Descripción de los hechos:
+${parte.descripcion}
+
+Para cualquier aclaración pueden contactar con el tutor/a del grupo o con Jefatura de Estudios.`;
+}
+
 function pdfParte(parte) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const g = gObj(parte.gravedad);
@@ -434,7 +454,7 @@ function pdfParte(parte) {
   autoTable(doc, { ...estiloTabla, startY: y, theme: "grid", styles: { ...estiloTabla.styles, fontSize: 10 },
     columnStyles: { 0: { fontStyle: "bold", cellWidth: 48, fillColor: [238, 245, 248] } },
     body: [
-      ["Alumno/a", parte.alumno], ["Curso", parte.curso], ["Tutor/a", parte.tutor || "-"],
+      ["Alumno/a", parte.alumno], ["Curso", parte.curso], ["Tutor/a del grupo", parte.tutor || "-"], ["Correo del tutor/a", parte.tutorEmail || "-"],
       ["Tipo de parte", parte.tipo], ["Hora de clase", parte.hora || "-"], ["Fecha y hora", fmt(parte.ts)],
       ["Profesor/a responsable", parte.profesor], ["Gravedad", `${sinEmoji(g?.label)} (${g?.desc || ""})`],
       ["Tipificación", textoTipificacion(parte)],
@@ -523,7 +543,7 @@ function pdfFirmasYListas(fecha, filas, listasDia) {
 // ─── Vista impresión parte ────────────────────────────────────────────────────
 function PrintParte({ parte, onClose }) {
   const g = gObj(parte.gravedad);
-  const texto = `GALVÁNDESK — PARTE DE INCIDENCIA\nIES Enrique Tierno Galván · Madrid\n${"─".repeat(50)}\nGravedad: ${g.label} — ${g.desc}\n\nAlumno/a: ${parte.alumno}\nCurso / Aula: ${parte.curso}\nTutor de grupo: ${parte.tutor}\nTipo de parte: ${parte.tipo}\nHora: ${parte.hora || "No especificada"}\nFecha y hora: ${fmt(parte.ts)}\nProfesor responsable: ${parte.profesor}\n\nDescripción:\n${parte.descripcion}\n\nContacto familia:\nEmail: ${parte.email}\nTeléfono: ${parte.telefono}\n${"─".repeat(50)}\nRef: PARTE-${parte.id}`;
+  const texto = textoParte(parte);
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "Georgia, serif" }}>
       <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -542,7 +562,7 @@ function PrintParte({ parte, onClose }) {
             <span style={{ display: "inline-block", padding: "6px 20px", borderRadius: 8, fontWeight: 700, fontSize: 15, background: g.bg, color: g.color, border: `2px solid ${g.color}` }}>{g.label} — {g.desc}</span>
           </div>
         </div>
-        {[["Alumno/a", parte.alumno], ["Curso / Aula", parte.curso], ["Tutor de grupo", parte.tutor], ["Tipo de parte", parte.tipo], ["Hora de clase", parte.hora || "No especificada"], ["Fecha y hora", fmt(parte.ts)], ["Profesor responsable", parte.profesor]].map(([k, v]) => (
+        {[["Alumno/a", parte.alumno], ["Curso / Aula", parte.curso], ["Tutor/a del grupo", parte.tutor || "—"], ["Correo del tutor/a", parte.tutorEmail || "—"], ["Tipo de parte", parte.tipo], ["Hora de clase", parte.hora || "No especificada"], ["Fecha y hora", fmt(parte.ts)], ["Profesor responsable", parte.profesor]].map(([k, v]) => (
           <InfoRow key={k} label={k} value={v} />
         ))}
         {parte.tipificacion && (() => {
@@ -747,6 +767,31 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
       </div>
     );
   }
+}
+
+// ─── Cómo avisar a la familia y a Jefatura ─────────────────────────────────
+// La app no envía correos: el profesor lo manda desde su correo del centro.
+function ComoAvisar({ parte }) {
+  const direcciones = [parte.email, parte.tutorEmail].filter(Boolean).join(", ");
+  const btn = { border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 };
+  return (
+    <div style={{ marginTop: 14, background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 14, textAlign: "left" }}>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 14, marginBottom: 6 }}>📨 Cómo avisar a la familia y a Jefatura</div>
+      <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.55 }}>
+        Escribe un correo desde tu cuenta del centro a la familia y a Jefatura (con el tutor/a en copia) y elige una de estas dos formas:
+        <ol style={{ margin: "6px 0 10px", paddingLeft: 20 }}>
+          <li><strong>Descarga el PDF</strong> y adjúntalo al correo.</li>
+          <li><strong>Copia el texto</strong> del parte y pégalo en el cuerpo del correo.</li>
+        </ol>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button onClick={() => pdfParte(parte)} style={{ ...btn, background: "#16a34a", color: "#fff" }}>⬇️ Descargar PDF</button>
+        <CopyBtn getText={() => textoParte(parte)} label="📋 Copiar texto" />
+        {direcciones && <CopyBtn getText={() => direcciones} label="✉️ Copiar correos (familia y tutor/a)" />}
+      </div>
+      <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>La app no envía correos: se mandan desde tu correo del centro, que es el canal oficial.</div>
+    </div>
+  );
 }
 
 // ─── Tarjeta de parte ────────────────────────────────────────────────────────
@@ -1718,7 +1763,8 @@ const AYUDAS = {
     "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
     "Elige la hora, el tipo y la gravedad, y después la falta tipificada de la lista oficial.",
     "Describe lo ocurrido con hechos concretos.",
-    "Pulsa «Generar Parte». Después puedes descargarlo en PDF para la familia con el botón «PDF»."] },
+    "Pulsa «Generar Parte». El parte lleva el tutor/a del grupo y su correo.",
+    "Para avisar a la familia y a Jefatura, escribe un correo desde tu cuenta del centro y adjunta el PDF («Descargar PDF») o pega el texto («Copiar texto»). «Copiar correos» te da las direcciones de la familia y del tutor/a."] },
   parte_grupo: { titulo: "Parte de grupo", pasos: [
     "Elige el grupo.",
     "Quita a los alumnos que no estuvieron implicados.",
@@ -1913,7 +1959,7 @@ function datosEjemploConvivencia(profesores) {
   const nuevoParte = (al, tip, grav, dia, hora, extra = {}) => {
     let ts = momento(dia, hora);
     if (ts > hoy) ts = new Date(hoy.getTime() - 5 * 60000);
-    partes.push({ id: 1000 + partes.length, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, email: al.email, telefono: al.telefono,
+    partes.push({ id: 1000 + partes.length, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: al.tutor, tutorEmail: TUTORES_DEMO[al.curso]?.email || "", email: al.email, telefono: al.telefono,
       tipo: tipoDeTipificacion(tip), gravedad: grav, tipificacion: tip, descripcion: DESCRIPCIONES_DEMO[tip],
       profesor: elegir(profesores.filter(p => p !== al.tutor)), hora, ts: ts.toISOString(), ...extra });
   };
@@ -3448,6 +3494,8 @@ export default function App() {
   const banoActivos   = banos.filter(b => !b.regreso);
   const alertasNoLeidas = alertas.filter(a => !a.leida).length;
   const partesDeAlumno = id => partes.filter(p => p.alumnoId === id);
+  // Completa un parte con el tutor/a y su correo (los partes antiguos no los guardaban)
+  const completar = p => p && ({ ...p, tutor: p.tutor || tutores[p.curso]?.tutor || "", tutorEmail: p.tutorEmail || tutores[p.curso]?.email || "" });
   const partesLeves    = id => partesDeAlumno(id).filter(p => p.gravedad === "leve").length;
   const partesFiltrados = partes.filter(p => {
     if (filtCurso     && p.curso    !== filtCurso)              return false;
@@ -3516,7 +3564,7 @@ export default function App() {
   function crearParte() {
     if (!fAlumno || !fDesc.trim()) return;
     const al = alumnos.find(a => a.id === parseInt(fAlumno));
-    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, tipificacion: fTipificacion, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
+    const p = { id: Date.now(), alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, tutorEmail: tutores[al.curso]?.email || "", email: al.email, telefono: al.telefono, tipo: fTipo, gravedad: fGravedad, tipificacion: fTipificacion, descripcion: fDesc, profesor: fProfesor, hora: fHora, ts: new Date().toISOString() };
     generarAlertasParte(p, partes);
     setPartes(prev => [p, ...prev]);
     setParteGenerado(p);
@@ -3527,7 +3575,7 @@ export default function App() {
     if (!gCurso || !gDesc.trim()) return;
     const grupo = alumnos.filter(a => a.curso === gCurso && !gExcluidos.includes(a.id));
     const ts = new Date().toISOString();
-    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, tipificacion: gTipificacion, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
+    const nuevos = grupo.map(al => ({ id: Date.now() + al.id, alumnoId: al.id, alumno: al.nombre, curso: al.curso, tutor: tutorDeGrupo(tutores, alumnos, al.curso) || al.tutor, tutorEmail: tutores[al.curso]?.email || "", email: al.email, telefono: al.telefono, tipo: gTipo, gravedad: gGravedad, tipificacion: gTipificacion, descripcion: gDesc, profesor: fProfesor, hora: gHora, ts, esGrupal: true }));
     const partesTemp = [...partes]; nuevos.forEach(p => generarAlertasParte(p, partesTemp));
     setPartes(prev => [...nuevos, ...prev]);
     setGrupoGenerado({ curso: gCurso, total: nuevos.length, ts });
@@ -3864,10 +3912,10 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <strong style={{ color: C.teal }}>✅ Parte generado · {fmt(parteGenerado.ts)}</strong>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => setShowParte(parteGenerado)} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>👁 Ver</button>
-                    <button onClick={() => pdfParte(parteGenerado)} style={{ background: C.salmon, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🖨 PDF</button>
+                    <button onClick={() => setShowParte(completar(parteGenerado))} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>👁 Ver</button>
                   </div>
                 </div>
+                <ComoAvisar parte={completar(parteGenerado)} />
               </Card>
             )}
             <Card>
@@ -4098,7 +4146,7 @@ export default function App() {
             <h2 style={{ color: C.dark, marginTop: 0 }}>🗂 Mis Partes Enviados</h2>
             {partes.filter(p => p.profesor === fProfesor).length === 0
               ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No has generado ningún parte aún</Card>
-              : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
+              : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(completar(p))} onPrint={() => pdfParte(completar(p))} />)}
           </div>
         )}
 
@@ -4225,8 +4273,8 @@ export default function App() {
                               <span style={{ color: "#374151" }}>📅 {fmt(p.ts)} · {p.hora} · {p.tipo}{p.esGrupal ? " · grupal" : ""}</span>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <Badge g={p.gravedad} />
-                                <button onClick={() => setShowParte(p)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Ver</button>
-                                <button onClick={() => pdfParte(p)} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
+                                <button onClick={() => setShowParte(completar(p))} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Ver</button>
+                                <button onClick={() => pdfParte(completar(p))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
                               </div>
                             </div>
                           ))}
@@ -4271,7 +4319,7 @@ export default function App() {
                   </Card>
                   {pAl.length === 0
                     ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes registrados</Card>
-                    : pAl.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
+                    : pAl.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(completar(p))} onPrint={() => pdfParte(completar(p))} />)}
                 </div>
               );
             })() : (
@@ -4320,7 +4368,7 @@ export default function App() {
             </Card>
             {partesFiltrados.length === 0
               ? <Card style={{ textAlign: "center", color: C.gray }}>Sin partes con los filtros actuales</Card>
-              : partesFiltrados.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(p)} onPrint={() => pdfParte(p)} />)}
+              : partesFiltrados.map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(completar(p))} onPrint={() => pdfParte(completar(p))} />)}
           </div>
         )}
 
@@ -4747,7 +4795,7 @@ export default function App() {
             <div style={{ padding: 24 }}>
               {(() => { const g = gObj(showParte.gravedad); return <div style={{ background: g.bg, border: `2px solid ${g.color}`, borderRadius: 10, padding: 12, marginBottom: 20, textAlign: "center" }}><strong style={{ color: g.color, fontSize: 16 }}>{g.label} — {g.desc}</strong></div>; })()}
               {showParte.esGrupal && <div style={{ background: "#E8F5F3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 12 }}>👥 Parte generado como parte de grupo</div>}
-              {[["Alumno", showParte.alumno], ["Curso", showParte.curso], ["Tutor", showParte.tutor], ["Tipo", showParte.tipo], ["Hora", showParte.hora || "No especificada"], ["Fecha y hora", fmt(showParte.ts)], ["Profesor", showParte.profesor]].map(([k, v]) => (
+              {[["Alumno", showParte.alumno], ["Curso", showParte.curso], ["Tutor/a del grupo", showParte.tutor || "—"], ["Correo del tutor/a", showParte.tutorEmail || "—"], ["Tipo", showParte.tipo], ["Hora", showParte.hora || "No especificada"], ["Fecha y hora", fmt(showParte.ts)], ["Profesor", showParte.profesor]].map(([k, v]) => (
                 <InfoRow key={k} label={k} value={v} />
               ))}
               {showParte.tipificacion && (() => {
@@ -4765,10 +4813,7 @@ export default function App() {
               <div style={{ marginTop: 12, background: "#EEF5F8", borderRadius: 8, padding: 12, fontSize: 13 }}>
                 <strong style={{ color: C.blue }}>📬 Familia:</strong> ✉️ {showParte.email} · 📱 {showParte.telefono}
               </div>
-              <button onClick={() => pdfParte(showParte)}
-                style={{ marginTop: 16, width: "100%", background: C.salmon, color: "#fff", border: "none", borderRadius: 10, padding: "12px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
-                ⬇️ Descargar PDF
-              </button>
+              <ComoAvisar parte={showParte} />
             </div>
           </div>
         </div>
