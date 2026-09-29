@@ -1967,7 +1967,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
 // ═══════════════════════════════════════════════════════════════════════════
 // NOTIFICAR AUSENCIA (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function NotificarAusencia({ usuario, profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
+function NotificarAusencia({ usuario, modoJefatura = false, profesores, ausencias, setAusencias, ausProfesor, setAusProfesor, ausMotivo, setAusMotivo, ausFecha, setAusFecha, ausHoras, setAusHoras, ausTarea, setAusTarea, ausEnlace, setAusEnlace, ausUbicacion, setAusUbicacion, ausAula, setAusAula, ausAsignatura, setAusAsignatura, fProfesor, C, inpStyle, selStyle, labelStyle, fmt }) {
   const [enviado, setEnviado] = useState(false);
   const [ausEdificio, setAusEdificio] = useState("");
 
@@ -1977,18 +1977,20 @@ function NotificarAusencia({ usuario, profesores, ausencias, setAusencias, ausPr
 
   function enviar() {
     if (!ausProfesor || !ausFecha || ausHoras.length === 0) return;
-    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, aula:ausAula, asignatura:ausAsignatura, edificio:ausEdificio, ts:new Date().toISOString(), leida:false };
+    const nueva = { id:Date.now(), profesor:ausProfesor, motivo:ausMotivo, fecha:ausFecha, horas:ausHoras, tarea:ausTarea, enlace:ausEnlace, ubicacion:ausUbicacion, aula:ausAula, asignatura:ausAsignatura, edificio:ausEdificio, ts:new Date().toISOString(), leida:false,
+      ...(modoJefatura && ausProfesor !== usuario ? { registradaPor: usuario } : {}) };
     setAusencias(prev => [nueva, ...prev]);
     setEnviado(true);
     setAusFecha(""); setAusHoras([]); setAusTarea(""); setAusEnlace(""); setAusUbicacion(""); setAusAula(""); setAusAsignatura(""); setAusEdificio("");
     setTimeout(() => setEnviado(false), 4000);
   }
 
-  const misAusencias = ausencias.filter(a => a.profesor === fProfesor);
+  const misAusencias = modoJefatura ? [] : ausencias.filter(a => a.profesor === fProfesor);
 
   return (
     <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📢 Notificar Ausencia</h2>
+      <h2 style={{ color:C.dark, marginTop:0 }}>{modoJefatura ? "📞 Registrar una ausencia comunicada por teléfono" : "📢 Notificar Ausencia"}</h2>
+      {modoJefatura && <p style={{ marginTop: -6, color: C.gray, fontSize: 13 }}>Para cuando un profesor llama al instituto y no puede avisar desde la app. Su guardia y la tarea llegan igual a quien le cubre.</p>}
       {enviado && (
         <div style={{ background:"#E8F5F3", border:`2px solid ${C.teal}`, borderRadius:12, padding:16, marginBottom:16, fontWeight:700, color:C.teal, fontSize:15 }}>
           ✅ Ausencia notificada. Jefatura ha sido informada.
@@ -1998,7 +2000,7 @@ function NotificarAusencia({ usuario, profesores, ausencias, setAusencias, ausPr
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
           <div>
             <label style={labelStyle}>Soy el/la profesor/a *</label>
-            <select value={ausProfesor} onChange={e => setAusProfesor(e.target.value)} style={selStyle} disabled={profesores.includes(usuario)}>
+            <select value={ausProfesor} onChange={e => setAusProfesor(e.target.value)} style={selStyle} disabled={!modoJefatura && profesores.includes(usuario)}>
               <option value="">— Seleccionar —</option>
               {profesores.map(p => <option key={p}>{p}</option>)}
             </select>
@@ -2071,7 +2073,7 @@ function NotificarAusencia({ usuario, profesores, ausencias, setAusencias, ausPr
         </div>
         <button onClick={enviar} disabled={!ausProfesor || !ausFecha || ausHoras.length === 0}
           style={{ width:"100%", padding:14, borderRadius:10, border:"none", background:(!ausProfesor||!ausFecha||ausHoras.length===0)?"#94a3b8":C.salmon, color:"#fff", fontWeight:700, fontSize:15, cursor:(!ausProfesor||!ausFecha||ausHoras.length===0)?"not-allowed":"pointer" }}>
-          📢 Notificar Ausencia a Jefatura
+          {modoJefatura ? "📞 Registrar la ausencia" : "📢 Notificar Ausencia a Jefatura"}
         </button>
       </div>
       {misAusencias.length > 0 && (
@@ -2801,7 +2803,7 @@ function GestionAusencias({ ausencias, setAusencias, profesores, C, fmt }) {
                 <div style={{ fontSize:13, color:C.dark, marginTop:3 }}>⏰ Horas: <strong>{a.horas.join(", ")}</strong></div>
                 {a.tarea && <div style={{ fontSize:13, marginTop:6, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 {a.tarea}</div>}
               </div>
-              <div style={{ fontSize:11, color:C.gray, whiteSpace:"nowrap" }}>Notificado: {fmt(a.ts)}</div>
+              <div style={{ fontSize:11, color:C.gray, whiteSpace:"nowrap", textAlign:"right" }}>Notificado: {fmt(a.ts)}{a.registradaPor && <div>📞 Registrada por {a.registradaPor}</div>}</div>
             </div>
           </div>
         ))
@@ -2886,6 +2888,7 @@ export default function App() {
   const [cuentas, setCuentas] = useState(CUENTAS_DEMO); // {nombre: {cargo, clave}}
   const [firmas, setFirmas] = useState([]);   // firmas de guardia
   const [listas, setListas] = useState([]);   // listas pasadas en guardia
+  const [registroTelefono, setRegistroTelefono] = useState(false); // Jefatura registra una ausencia por teléfono
   const [profesoresGuardia, setProfesoresGuardia] = useState({}); // Nuevo: {dia|hora|zona: profesor}
   const [ausencias, setAusencias]     = useState([]);
   const [quinceInicio, setQInicio]    = useState("");
@@ -3924,7 +3927,29 @@ export default function App() {
         )}
 
         {tab === "ausencias_jef" && (
-          <GestionAusencias ausencias={ausencias} setAusencias={setAusencias} profesores={profesores} C={C} fmt={fmt} />
+          <div>
+            <div style={{ marginBottom: 14 }}>
+              <button onClick={() => { setRegistroTelefono(v => !v); setAusProfesor(""); }}
+                style={{ background: registroTelefono ? "#f3f4f6" : C.salmon, color: registroTelefono ? C.dark : "#fff", border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
+                {registroTelefono ? "✕ Cerrar el registro" : "📞 Registrar una ausencia comunicada por teléfono"}
+              </button>
+            </div>
+            {registroTelefono && (
+              <NotificarAusencia modoJefatura usuario={usuario}
+                profesores={profesores} ausencias={ausencias} setAusencias={setAusencias}
+                ausProfesor={ausProfesor} setAusProfesor={setAusProfesor}
+                ausMotivo={ausMotivo} setAusMotivo={setAusMotivo}
+                ausFecha={ausFecha} setAusFecha={setAusFecha}
+                ausHoras={ausHoras} setAusHoras={setAusHoras}
+                ausTarea={ausTarea} setAusTarea={setAusTarea}
+                ausEnlace={ausEnlace} setAusEnlace={setAusEnlace}
+                ausUbicacion={ausUbicacion} setAusUbicacion={setAusUbicacion}
+                ausAula={ausAula} setAusAula={setAusAula}
+                ausAsignatura={ausAsignatura} setAusAsignatura={setAusAsignatura}
+                fProfesor={fProfesor} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} fmt={fmt} />
+            )}
+            <GestionAusencias ausencias={ausencias} setAusencias={setAusencias} profesores={profesores} C={C} fmt={fmt} />
+          </div>
         )}
 
         {/* ── Galvángram (Jefatura & Profesor) ── */}
