@@ -1188,6 +1188,24 @@ function guardiasDeProfesor({ fecha, profesor, profesores, cuadrante, apoyos = {
   return lista;
 }
 
+// Clases sin profesor que afectan a una guardia: a esa hora, en el edificio de la zona,
+// o del profesor al que sustituye el sustituto. En el recreo no hay clase.
+function tareasDeGuardia(g, fecha, ausencias) {
+  if (g.hora === "Recreo") return [];
+  return ausencias.filter(a => isoLocal(a.fecha) === fecha && a.horas.includes(g.hora) &&
+    (a.profesor === g.sit?.sustituyeA || !a.edificio || !g.edificio || g.edificio === "-" || a.edificio === g.edificio));
+}
+// Tarjeta con lo que ha dejado el profesor ausente
+const TareaAusente = ({ a, C }) => (
+  <div style={{ background: "#FFFBEB", border: "1px solid #fbbf24", borderRadius: 8, padding: 10, fontSize: 12, color: "#78350F", lineHeight: 1.5 }}>
+    <div style={{ fontWeight: 700, marginBottom: 4 }}>📝 Deja {a.profesor}{a.asignatura ? ` · ${a.asignatura}` : ""}</div>
+    {(a.aula || a.edificio) && <div>🏫 Aula {a.aula || "?"}{a.edificio ? ` · Edificio ${a.edificio}` : ""}</div>}
+    <div>✏️ {a.tarea ? a.tarea : <em>No ha dejado tarea</em>}</div>
+    {a.ubicacion && <div>📍 Material: {a.ubicacion}</div>}
+    {a.enlace && <div><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontWeight: 600 }}>🔗 Ver recursos</a></div>}
+  </div>
+);
+
 // ─── Datos de ejemplo (solo modo demostración) ───────────────────────────────
 // Rellena el cuadrante de la quincena actual y unas ausencias de hoy y mañana,
 // con profesores ficticios, para ver cómo funcionan guardias y ausencias.
@@ -1245,8 +1263,8 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
   // Guardias de hoy: como titular, apoyo o sustituto
   const guardiasDia = guardiasDeProfesor({ fecha: hoyISO, profesor: fProfesor, ...equipo }).map(g => ({
     ...g,
-    // Clases sin profesor a esa hora en el edificio de la zona (solo para el titular)
-    ausencias: g.rol === "titular" ? ausencias.filter(a => isoLocal(a.fecha) === hoyISO && a.horas.includes(g.hora) && (!a.edificio || a.edificio === g.edificio)) : [],
+    // Tareas de las clases sin profesor que afectan a esta guardia
+    ausencias: tareasDeGuardia(g, hoyISO, ausencias),
   }));
 
   return (
@@ -1470,8 +1488,9 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
                   <div>🔁 Sustituto: {nombre(sit.sustituto, sit.sA)}</div>
                 </div>
                 {g.ausencias.length > 0 && (
-                  <div style={{ marginTop: 10, padding: "8px 12px", background: "#FFF8E8", borderRadius: 8, fontSize: 12, color: C.dark, fontWeight: 600, border: "1px solid #fbbf24" }}>
-                    📚 Clases sin profesor en el edificio: {g.ausencias.map(a => `${a.profesor}${a.aula ? ` (${a.aula})` : ""}`).join(", ")}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>📚 Deberes y tareas de las clases sin profesor</div>
+                    <div style={{ display: "grid", gap: 8 }}>{g.ausencias.map(a => <TareaAusente key={a.id} a={a} C={C} />)}</div>
                   </div>
                 )}
               </div>
@@ -1521,8 +1540,8 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
                 const fechaISO = isoLocal(diaSeleccionadoGuardias);
                 
                 guardiasDeProfesor({ fecha: fechaISO, profesor: fProfesor, ...equipo }).forEach(g => {
-                  // Ausencias de esa fecha y hora (clases sin profesor)
-                  const ausenciasHora = g.rol === "titular" ? ausencias.filter(a => isoLocal(a.fecha) === fechaISO && a.horas.includes(g.hora)) : [];
+                  // Tareas de las clases sin profesor que afectan a esta guardia
+                  const ausenciasHora = tareasDeGuardia(g, fechaISO, ausencias);
                   guardiasDelDia.push({ ...g, ausencias: ausenciasHora });
                 });
                 
