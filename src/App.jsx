@@ -86,11 +86,11 @@ const HORARIO = {
   "1ª hora": "8:30 – 9:25",
   "2ª hora": "9:25 – 10:20",
   "3ª hora": "10:20 – 11:15",
-  "Recreo":  "11:15 – 11:40",
-  "4ª hora": "11:40 – 12:35",
-  "5ª hora": "12:35 – 13:30",
-  "6ª hora": "13:30 – 14:25",
-  "7ª hora": "14:25 – 15:20",
+  "Recreo":  "11:15 – 11:45",
+  "4ª hora": "11:45 – 12:40",
+  "5ª hora": "12:40 – 13:35",
+  "6ª hora": "13:35 – 14:30",
+  "7ª hora": "14:30 – 15:25",
 };
 const HORAS = Object.keys(HORARIO);
 const conTramo = h => HORARIO[h] ? `${h} · ${HORARIO[h]}` : h;
