@@ -164,7 +164,7 @@ const MODO_DEMO = true;
 
 const PERFILES = [
   { id: "profesor", label: "👨‍🏫 Profesor" },
-  { id: "jefatura", label: "📊 Jefatura" },
+  { id: "jefatura", label: "📊 Jefatura y Dirección" },
   { id: "admin",    label: "⚙️ Administración" },
 ];
 const tabInicial = id => id === "jefatura" ? "dashboard" : id === "admin" ? "admin_panel" : "partes";
@@ -257,11 +257,11 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             {MODO_DEMO && (
               <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px dashed ${C.cream}` }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 4 }}>Probar la demostración sin clave</div>
-                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>Solo existe en esta versión de prueba. Entra como un profesor ficticio de cada cargo:</div>
+                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>Solo existe en esta versión de prueba. Elige con qué perfil quieres entrar (profesorado ficticio):</div>
                 {[
-                  { txt: "👨‍🏫 Profesor/a", sub: nombreSugerido || "María Fernández", accion: () => onEntrar(nombreSugerido || "María Fernández", PERFILES[0]) },
-                  { txt: "📊 Jefatura de Estudios", sub: "Ana Jiménez · Profesor y Jefatura", accion: () => { setNombre("Ana Jiménez"); setError(""); setPaso("perfil"); } },
-                  { txt: "⚙️ Dirección", sub: "Luis García · Profesor, Jefatura y Administración", accion: () => { setNombre("Luis García"); setError(""); setPaso("perfil"); } },
+                  { txt: "👨‍🏫 Profesor", sub: `${nombreSugerido || "María Fernández"} · partes, guardias y Galvángram`, accion: () => onEntrar(nombreSugerido || "María Fernández", PERFILES[0]) },
+                  { txt: "📊 Jefatura y Dirección", sub: "Ana Jiménez · convivencia, informes, cuadrante de guardias y ausencias", accion: () => onEntrar("Ana Jiménez", PERFILES[1]) },
+                  { txt: "⚙️ Administración", sub: "Elena Vega (Coord. TIC) · dar de alta alumnado, profesorado y cargos", accion: () => onEntrar("Elena Vega", PERFILES[2]) },
                 ].map(b => (
                   <button key={b.txt} onClick={b.accion}
                     style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", marginBottom: 8, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 10, cursor: "pointer" }}>
