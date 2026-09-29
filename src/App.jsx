@@ -1504,6 +1504,113 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
   );
 }
 
+// ─── Ayuda de cada pantalla ──────────────────────────────────────────────────
+// Se abre sola la primera vez que se entra en una pantalla (en ese dispositivo)
+// y después queda recogida en el botón «Cómo se usa».
+const AYUDAS = {
+  partes: { titulo: "Poner un parte", pasos: [
+    "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
+    "Elige la hora, el tipo y la gravedad, y después la falta tipificada de la lista oficial.",
+    "Describe lo ocurrido con hechos concretos.",
+    "Pulsa «Generar Parte». En «Mis Partes» puedes verlo o guardarlo en PDF para la familia."] },
+  parte_grupo: { titulo: "Parte de grupo", pasos: [
+    "Elige el grupo.",
+    "Quita a los alumnos que no estuvieron implicados.",
+    "Elige la gravedad y la falta, y escribe una sola descripción.",
+    "Pulsa «Generar Parte»: se crea un parte para cada alumno."] },
+  bano: { titulo: "Salidas al baño", pasos: [
+    "Busca al alumno y pulsa «Registrar Salida».",
+    "Cuando vuelva, pulsa «Regresó» en la lista «Fuera ahora».",
+    "Si un alumno sale demasiadas veces, Jefatura recibe un aviso automático."] },
+  historial: { titulo: "Mis partes", pasos: [
+    "Aquí están los partes que has puesto.",
+    "Pulsa «Ver» para consultarlo o «PDF» para guardarlo o imprimirlo."] },
+  mi_guardia: { titulo: "Mi guardia de hoy", pasos: [
+    "Cada tarjeta es una guardia de hoy: la hora, la zona y tu papel (titular, apoyo o sustituto).",
+    "Si te toca entrar por alguien, aparece en rojo, con la tarea que ha dejado y dónde está el material.",
+    "Cuando empiece la guardia, pulsa «Firmar guardia».",
+    "Si cubres una clase, pulsa «Pasar lista» y marca solo a quien falta.",
+    "Pulsa un día del calendario para ver tus guardias de ese día."] },
+  notif_ausencia: { titulo: "Avisar de una ausencia", pasos: [
+    "Elige la fecha y marca las horas en que vas a faltar.",
+    "Indica el edificio, el aula y la asignatura, para que sepan qué clase cubrir.",
+    "Deja la tarea para los alumnos y dónde está el material.",
+    "Pulsa «Notificar». Esto completa, no sustituye, el correo de EducaMadrid y la llamada al instituto."] },
+  guardias_ver: { titulo: "Guardias del día", pasos: [
+    "Todas las zonas de guardia de hoy, hora a hora, con quién está en cada una.",
+    "En naranja, las zonas en las que entra el sustituto; en rojo, las que se han quedado sin nadie."] },
+  mensajeria: { titulo: "Galvángram", pasos: [
+    "Elige a quién va el mensaje.",
+    "Toca un mensaje rápido o escribe el tuyo; el texto se puede retocar.",
+    "Pulsa «Enviar Mensaje». Lo verá al abrir la app: no llega como notificación al móvil."] },
+  dashboard: { titulo: "Resumen del día", pasos: [
+    "De un vistazo: partes por gravedad, alumnos fuera del aula, profesores ausentes y alertas.",
+    "Debajo, el resumen por curso y los alumnos con más incidencias.",
+    "Usa las pestañas de arriba para ver el detalle."] },
+  por_curso: { titulo: "Partes por curso", pasos: ["Cada curso muestra sus partes y a sus alumnos, con quién acumula partes."] },
+  por_alumno: { titulo: "Partes por alumno", pasos: ["Elige un curso y un alumno para ver su historial completo, con la gravedad y la tipificación de cada parte."] },
+  partes_todos: { titulo: "Todos los partes", pasos: [
+    "Filtra por curso, alumno, gravedad o fechas.",
+    "Pulsa «Ver» para consultar un parte o «PDF» para guardarlo."] },
+  bano_live: { titulo: "Baños en tiempo real", pasos: ["Arriba, los alumnos que están fuera del aula ahora mismo; debajo, el historial del día."] },
+  alertas: { titulo: "Alertas", pasos: [
+    "Avisos automáticos: tercer parte leve, tercer parte de un alumno, parte fuera de horario y salidas al baño repetidas.",
+    "Pulsa una alerta para marcarla como leída."] },
+  informe: { titulo: "Informes", pasos: [
+    "Elige si quieres un informe de partes o de salidas al baño.",
+    "Filtra por curso, alumno, gravedad o fechas.",
+    "Pulsa el botón del informe y guárdalo en PDF con Ctrl+P (Cmd+P en Mac)."] },
+  cuadrante: { titulo: "Preparar el cuadrante", pasos: [
+    "Elige el profesor y el inicio de la quincena.",
+    "En cada día y hora, elige la zona de la que es titular.",
+    "Asigna el apoyo y el sustituto: lo que falta sale en rojo.",
+    "Nadie puede tener más de 4 guardias al día; entre paréntesis, las que ya tiene cada uno.",
+    "«Copiar de la quincena anterior» evita empezar de cero. Los cambios se guardan solos."] },
+  coordinacion: { titulo: "Coordinación diaria", pasos: [
+    "Elige una fecha.",
+    "Verás las guardias por edificio y, para cada profesor ausente, quién cubre su clase y qué tarea ha dejado."] },
+  parte_dia: { titulo: "Parte del día", pasos: [
+    "Todas las zonas de hoy, hora a hora, con titular, apoyo, sustituto y estado.",
+    "Actúa en las que aparezcan como «Descubierta» o «Solo 1 profesor»."] },
+  ausencias_jef: { titulo: "Ausencias de profesores", pasos: [
+    "Aquí llegan las ausencias que notifica el profesorado. Pulsa una para marcarla como leída.",
+    "Si alguien llama por teléfono, pulsa «Registrar una ausencia comunicada por teléfono» y rellénala por él."] },
+  firmas_jef: { titulo: "Firmas y listas", pasos: [
+    "Elige una fecha.",
+    "Verás quién ha firmado cada guardia y a qué hora; las que faltan salen en naranja.",
+    "Debajo, las listas pasadas en guardia con las faltas. Pulsa «Imprimir» para el archivo."] },
+  admin_panel: { titulo: "Alumnado", pasos: [
+    "Exporta el listado de Raíces a CSV o Excel y arrástralo en «Importar CSV/Excel».",
+    "También puedes añadir alumnos uno a uno en «Añadir manual» y revisarlos en «Lista completa»."] },
+  admin_profesores: { titulo: "Profesorado", pasos: [
+    "Añade a cada profesor con su nombre completo.",
+    "Asígnale su cargo: decide a qué perfiles puede entrar.",
+    "Si alguien olvida su clave, pulsa «Restablecer clave» y la creará de nuevo al entrar."] },
+};
+function AyudaPantalla({ id, C }) {
+  const clave = PREFIJO + "ayuda:" + id;
+  const [abierta, setAbierta] = useState(() => { try { return !localStorage.getItem(clave); } catch { return true; } });
+  const ayuda = AYUDAS[id];
+  if (!ayuda) return null;
+  const cerrar = () => { setAbierta(false); try { localStorage.setItem(clave, "1"); } catch { /* sin almacenamiento */ } };
+  if (!abierta) return (
+    <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+      <button onClick={() => setAbierta(true)} style={{ background: "none", border: `1px solid ${C.blue}`, color: C.blue, borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>ℹ️ Cómo se usa</button>
+    </div>
+  );
+  return (
+    <div className="no-print" role="note" style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+        <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>ℹ️ Cómo se usa: {ayuda.titulo}</div>
+        <button onClick={cerrar} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>Entendido</button>
+      </div>
+      {ayuda.pasos.length === 1
+        ? <p style={{ margin: "8px 0 0", fontSize: 13, color: C.dark, lineHeight: 1.5 }}>{ayuda.pasos[0]}</p>
+        : <ol style={{ margin: "8px 0 0", paddingLeft: 20, fontSize: 13, color: C.dark, lineHeight: 1.55 }}>{ayuda.pasos.map((p, i) => <li key={i}>{p}</li>)}</ol>}
+    </div>
+  );
+}
+
 // ─── Datos de ejemplo (solo modo demostración) ───────────────────────────────
 // Rellena el cuadrante de la quincena actual y unas ausencias de hoy y mañana,
 // con profesores ficticios, para ver cómo funcionan guardias y ausencias.
@@ -3309,6 +3416,9 @@ export default function App() {
 
       {/* Contenido — centrado con max-width */}
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
+
+        {/* Ayuda de la pantalla */}
+        <AyudaPantalla key={tab} id={tab} C={C} />
 
         {/* Alerta flotante */}
         {showAlerta && (
