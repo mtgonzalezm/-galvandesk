@@ -1352,6 +1352,158 @@ const TareaAusente = ({ a, C }) => (
   </div>
 );
 
+// ─── Firmar guardia y pasar lista ────────────────────────────────────────────
+// Firma: {id, fecha, hora, zonaId, zona, profesor, rol, ts}
+// Lista: {id, fecha, hora, curso, profesor, ausentes:[{id, nombre}], ts}
+const minutosDe = t => { const [h, m] = t.trim().split(":").map(Number); return h * 60 + m; };
+const inicioHora = hora => (HORARIO[hora] || "0:00 – 0:00").split("–")[0].trim();
+// ¿Ha empezado ya esa hora en esa fecha? (una fecha pasada, siempre; una futura, nunca)
+function horaEmpezada(fecha, hora, ahora = new Date()) {
+  const hoy = isoLocal(ahora);
+  if (fecha < hoy) return true;
+  if (fecha > hoy) return false;
+  return ahora.getHours() * 60 + ahora.getMinutes() >= minutosDe(inicioHora(hora));
+}
+const horaCorta = iso => new Date(iso).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+
+function PasarLista({ curso, alumnos, existente, onGuardar, onCerrar, C }) {
+  const grupo = alumnos.filter(a => a.curso === curso).sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  const [faltan, setFaltan] = useState(() => new Set((existente?.ausentes || []).map(a => a.id)));
+  const toggle = id => setFaltan(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Pasar lista de ${curso}`} onClick={onCerrar}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 16, width: "min(460px, 100%)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "14px 18px", borderRadius: "16px 16px 0 0", position: "sticky", top: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 16 }}>📋 Pasar lista · {curso}</div>
+          <div style={{ fontSize: 12, opacity: .85 }}>Marca solo a quien falta. {grupo.length} alumnos.</div>
+        </div>
+        <div style={{ padding: 12 }}>
+          {grupo.length === 0 && <div style={{ padding: 20, color: C.gray, textAlign: "center" }}>No hay alumnos cargados en {curso}.</div>}
+          {grupo.map(a => {
+            const falta = faltan.has(a.id);
+            return (
+              <button key={a.id} onClick={() => toggle(a.id)} aria-pressed={falta}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", padding: "12px 14px", marginBottom: 6, borderRadius: 10, cursor: "pointer", fontSize: 14, textAlign: "left",
+                  border: `2px solid ${falta ? C.salmon : "#e5e7eb"}`, background: falta ? "#FDF0EF" : "#fff", color: C.dark }}>
+                <span>{a.nombre}</span>
+                <span style={{ fontWeight: 700, fontSize: 12, color: falta ? "#be123c" : C.teal }}>{falta ? "✗ Falta" : "✓ Presente"}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 8, padding: "0 12px 14px" }}>
+          <button onClick={onCerrar} style={{ flex: 1, padding: 12, borderRadius: 10, border: "1px solid #d1d5db", background: "#f9fafb", cursor: "pointer", fontWeight: 600 }}>Cancelar</button>
+          <button onClick={() => onGuardar(grupo.filter(a => faltan.has(a.id)).map(a => ({ id: a.id, nombre: a.nombre })))}
+            style={{ flex: 2, padding: 12, borderRadius: 10, border: "none", background: C.teal, color: "#fff", cursor: "pointer", fontWeight: 700 }}>
+            Guardar lista ({faltan.size} {faltan.size === 1 ? "falta" : "faltas"})
+          </button>
+        </div>
+        <div style={{ padding: "0 14px 14px", fontSize: 11, color: C.gray }}>Las faltas oficiales se siguen registrando en Raíces.</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Firmas y listas (Jefatura) ─────────────────────────────────────────────
+function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia, ausencias, firmas, listas, C, inpStyle }) {
+  const [fecha, setFecha] = useState(isoLocal());
+  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  // Quién tenía que estar en cada zona y quién ha firmado
+  const filas = [];
+  HORAS_GUARDIA.forEach(hora => {
+    profesores.forEach(prof => {
+      const zonaId = cuadrante[`${fecha}|${hora}|${prof}`];
+      if (!zonaId) return;
+      const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+      const sit = situacionZona({ fecha, hora, zonaId, ...equipo });
+      const personas = sit.enZona.map(p => ({ p, firma: firmas.find(f => f.fecha === fecha && f.hora === hora && f.zonaId === zonaId && f.profesor === p) }));
+      filas.push({ hora, zona: z?.label || zonaId, personas, empezada: horaEmpezada(fecha, hora) });
+    });
+  });
+  const debidas = filas.filter(f => f.empezada).flatMap(f => f.personas);
+  const firmadas = debidas.filter(x => x.firma).length;
+  const listasDia = listas.filter(l => l.fecha === fecha).sort((a, b) => HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora));
+  const pend = debidas.length - firmadas;
+  return (
+    <div>
+      <h2 style={{ color: C.dark, marginTop: 0 }}>✍️ Firmas de guardia y listas</h2>
+      <div className="no-print" style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap" }}>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <label style={{ display: "block", fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 6 }}>Fecha</label>
+          <input type="date" value={fecha} onChange={e => setFecha(e.target.value || isoLocal())} style={inpStyle} />
+        </div>
+        <button onClick={() => window.print()} style={{ background: C.dark, color: "#fff", border: "none", borderRadius: 10, padding: "11px 18px", cursor: "pointer", fontWeight: 700 }}>🖨 Imprimir</button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 16 }}>
+        {[
+          { label: "Firmas esperadas hasta ahora", value: debidas.length, color: C.dark },
+          { label: "Guardias firmadas", value: firmadas, color: C.teal },
+          { label: "Sin firmar", value: pend, color: pend ? "#b45309" : C.teal },
+          { label: "Listas pasadas", value: listasDia.length, color: C.blue },
+        ].map(s => (
+          <div key={s.label} style={{ background: C.white, borderRadius: 10, padding: 14, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ background: C.white, borderRadius: 12, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+        <div style={{ background: C.dark, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}>✍️ Firmas de guardia · {parseISO(fecha).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
+        {filas.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: C.gray }}>No hay guardias en el cuadrante para esta fecha.</div> : (
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 560 }}>
+              <thead><tr style={{ background: C.light }}>
+                {["Hora", "Zona", "Profesores en la zona y firma"].map(h => <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontSize: 12, color: C.gray }}>{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {filas.map((f, i) => (
+                  <tr key={i} style={{ borderTop: `1px solid ${C.cream}` }}>
+                    <td style={{ padding: "8px 14px", fontWeight: 600, whiteSpace: "nowrap" }}>{f.hora}<div style={{ fontSize: 10, color: C.gray, fontWeight: 500 }}>{HORARIO[f.hora]}</div></td>
+                    <td style={{ padding: "8px 14px" }}>{f.zona}</td>
+                    <td style={{ padding: "8px 14px" }}>
+                      {f.personas.length === 0 && <span style={{ color: "#be123c", fontWeight: 600 }}>Nadie en la zona</span>}
+                      {f.personas.map(({ p, firma }) => (
+                        <div key={p} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <span>{p}</span>
+                          {firma ? <span style={{ color: C.teal, fontWeight: 700, fontSize: 12 }}>✓ firmada a las {horaCorta(firma.ts)}</span>
+                            : f.empezada ? <span style={{ color: "#b45309", fontWeight: 700, fontSize: 12 }}>Sin firmar</span>
+                            : <span style={{ color: C.gray, fontSize: 12 }}>Aún no ha empezado</span>}
+                        </div>
+                      ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+      <div style={{ background: C.white, borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+        <div style={{ background: C.blue, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}>📋 Listas pasadas en guardia</div>
+        {listasDia.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: C.gray }}>No se ha pasado ninguna lista este día.</div> : (
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+            <thead><tr style={{ background: C.light }}>
+              {["Hora", "Grupo", "Profesor", "Faltas"].map(h => <th key={h} style={{ padding: "8px 14px", textAlign: "left", fontSize: 12, color: C.gray }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {listasDia.map(l => (
+                <tr key={l.id} style={{ borderTop: `1px solid ${C.cream}` }}>
+                  <td style={{ padding: "8px 14px", fontWeight: 600 }}>{l.hora}</td>
+                  <td style={{ padding: "8px 14px" }}>{l.curso}</td>
+                  <td style={{ padding: "8px 14px" }}>{l.profesor}<div style={{ fontSize: 11, color: C.gray }}>a las {horaCorta(l.ts)}</div></td>
+                  <td style={{ padding: "8px 14px" }}>{l.ausentes.length === 0 ? <span style={{ color: C.teal }}>Sin faltas</span> : l.ausentes.map(a => a.nombre).join(", ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <div style={{ padding: "8px 14px", fontSize: 11, color: C.gray }}>Las faltas oficiales se registran en Raíces.</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Datos de ejemplo (solo modo demostración) ───────────────────────────────
 // Rellena el cuadrante de la quincena actual y unas ausencias de hoy y mañana,
 // con profesores ficticios, para ver cómo funcionan guardias y ausencias.
@@ -1394,18 +1546,46 @@ function datosEjemploGuardias(profesores) {
   // Profesor recomendado para probar: el sustituto que hoy tiene que entrar por el ausente de 2ª hora
   const sust = sustitutos[`${diaISO}|2ª hora|A1-pasillo`];
   const sugerido = [ausente1, ausente2].includes(sust) ? apoyos[`${diaISO}|2ª hora|A1-pasillo`] : sust;
-  return { cuadrante, apoyos, sustitutos, ausencias, sugerido, ausentes: [ausente1, ausente2] };
+  // Firmas de ejemplo: todas las horas ya empezadas hoy, menos las del profesor sugerido
+  // (para que pruebe a firmar) y una que queda pendiente
+  const firmas = [];
+  let pendienteDejada = false;
+  HORAS_GUARDIA.filter(h => horaEmpezada(diaISO, h)).forEach(hora => {
+    Object.entries(cuadrante).filter(([k]) => k.startsWith(`${diaISO}|${hora}|`)).forEach(([k, zonaId]) => {
+      const sit = situacionZona({ fecha: diaISO, hora, zonaId, profesores, cuadrante, apoyos, sustitutos, ausencias });
+      const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+      sit.enZona.forEach(p => {
+        if (p === sugerido) return;
+        if (!pendienteDejada && hora !== "1ª hora") { pendienteDejada = true; return; }
+        const d = parseISO(diaISO); const [hh, mm] = inicioHora(hora).split(":").map(Number); d.setHours(hh, mm + 2 + (p.length % 4));
+        firmas.push({ id: firmas.length + 1, fecha: diaISO, hora, zonaId, zona: z?.label || zonaId, profesor: p, rol: p === sit.titular ? "titular" : p === sit.apoyo ? "apoyo" : "sustituto", ts: d.toISOString() });
+      });
+    });
+  });
+  return { cuadrante, apoyos, sustitutos, ausencias, firmas, sugerido, ausentes: [ausente1, ausente2] };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia = {}, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante, diaSeleccionadoGuardias, setDiaSeleccionadoGuardias }) {
+function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos = [], profesores, cuadrante, apoyosGuardia, sustitutosGuardia = {}, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante, diaSeleccionadoGuardias, setDiaSeleccionadoGuardias }) {
   const hoy     = new Date();
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
   const esFinde = hoy.getDay() === 0 || hoy.getDay() === 6;
   const hoyISO  = isoLocal(hoy);
+  const [listaAbierta, setListaAbierta] = useState(null); // {hora, curso}
+  const cursosCentro = [...new Set(alumnos.map(a => a.curso))].sort();
+  function firmar(g) {
+    setFirmas(prev => [...prev, { id: Date.now(), fecha: hoyISO, hora: g.hora, zonaId: g.zonaId, zona: g.zona, profesor: fProfesor, rol: g.rol, ts: new Date().toISOString() }]);
+  }
+  const listaDe = (hora, curso) => listas.find(l => l.fecha === hoyISO && l.hora === hora && l.curso === curso && l.profesor === fProfesor);
+  function guardarLista(ausentes) {
+    const { hora, curso } = listaAbierta;
+    setListas(prev => [...prev.filter(l => !(l.fecha === hoyISO && l.hora === hora && l.curso === curso && l.profesor === fProfesor)),
+      { id: Date.now(), fecha: hoyISO, hora, curso, profesor: fProfesor, ausentes, ts: new Date().toISOString() }]);
+    setListaAbierta(null);
+  }
 
   const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
   const ahora = horaEnCurso();
@@ -1643,9 +1823,46 @@ function MiGuardiaHoy({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia 
                     <div style={{ display: "grid", gap: 8 }}>{g.ausencias.map(a => <TareaAusente key={a.id} a={a} C={C} />)}</div>
                   </div>
                 )}
+                {/* Firmar la guardia y pasar lista */}
+                {(() => {
+                  const firma = firmas.find(f => f.fecha === hoyISO && f.hora === g.hora && f.zonaId === g.zonaId && f.profesor === fProfesor);
+                  const empezada = horaEmpezada(hoyISO, g.hora);
+                  const cursosTarea = [...new Set(g.ausencias.map(a => a.aula).filter(c => cursosCentro.includes(c)))];
+                  const btn = { borderRadius: 10, padding: "10px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13, border: "none" };
+                  return (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.cream}`, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      {firma
+                        ? <span style={{ ...btn, background: "#E8F5F3", color: C.teal, cursor: "default" }}>✅ Guardia firmada a las {horaCorta(firma.ts)}</span>
+                        : <button onClick={() => firmar(g)} disabled={!empezada} title={empezada ? "Registra que has hecho esta guardia" : `Se puede firmar desde las ${inicioHora(g.hora)}`}
+                            style={{ ...btn, background: empezada ? C.teal : "#e5e7eb", color: empezada ? "#fff" : "#6b7280", cursor: empezada ? "pointer" : "not-allowed" }}>
+                            ✍️ {empezada ? "Firmar guardia" : `Firmar desde las ${inicioHora(g.hora)}`}
+                          </button>}
+                      {g.hora !== "Recreo" && cursosTarea.map(curso => {
+                        const l = listaDe(g.hora, curso);
+                        return (
+                          <button key={curso} onClick={() => setListaAbierta({ hora: g.hora, curso })}
+                            style={{ ...btn, background: l ? "#EEF5F8" : C.blue, color: l ? C.blue : "#fff" }}>
+                            📋 {l ? `Lista de ${curso}: ${l.ausentes.length} ${l.ausentes.length === 1 ? "falta" : "faltas"}` : `Pasar lista · ${curso}`}
+                          </button>
+                        );
+                      })}
+                      {g.hora !== "Recreo" && (
+                        <select aria-label="Pasar lista de otro grupo" value="" onChange={e => e.target.value && setListaAbierta({ hora: g.hora, curso: e.target.value })}
+                          style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid #d1d5db", fontSize: 12, color: C.gray, background: "#fff" }}>
+                          <option value="">📋 Pasar lista de otro grupo…</option>
+                          {cursosCentro.map(c => <option key={c} value={c}>{c}{listaDe(g.hora, c) ? " (pasada)" : ""}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}
+          {listaAbierta && (
+            <PasarLista curso={listaAbierta.curso} alumnos={alumnos} existente={listaDe(listaAbierta.hora, listaAbierta.curso)}
+              onGuardar={guardarLista} onCerrar={() => setListaAbierta(null)} C={C} />
+          )}
           <div style={{ background:"#FFF8E8", borderRadius:10, padding:14, marginTop:8, fontSize:13, color:C.dark, border:"1px solid #fbbf24" }}>
             ⚠️ Si no puedes asistir, notifícalo en <strong>Notificar Ausencia</strong>.
           </div>
@@ -2667,6 +2884,8 @@ export default function App() {
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [sustitutosGuardia, setSustitutosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [cuentas, setCuentas] = useState(CUENTAS_DEMO); // {nombre: {cargo, clave}}
+  const [firmas, setFirmas] = useState([]);   // firmas de guardia
+  const [listas, setListas] = useState([]);   // listas pasadas en guardia
   const [profesoresGuardia, setProfesoresGuardia] = useState({}); // Nuevo: {dia|hora|zona: profesor}
   const [ausencias, setAusencias]     = useState([]);
   const [quinceInicio, setQInicio]    = useState("");
@@ -2699,6 +2918,8 @@ export default function App() {
       const su = await sGet("sustitutos_guardia"); if (su) setSustitutosGuardia(su);
       const pg = await sGet("profesores_guardia"); if (pg) setProfesoresGuardia(pg);
       const cu = await sGet("cuentas"); if (cu) setCuentas(cu);
+      const fi = await sGet("firmas_guardia"); if (fi) setFirmas(fi);
+      const li = await sGet("listas_guardia"); if (li) setListas(li);
       const cuentasActuales = cu || CUENTAS_DEMO;
       const ses = leerSesion();
       // Solo se recupera la sesión si esa persona tiene clave y su cargo permite ese perfil
@@ -2725,6 +2946,8 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("sustitutos_guardia", sustitutosGuardia); }, [sustitutosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("cuentas", cuentas); }, [cuentas, loading]);
+  useEffect(() => { if (!loading) sSet("firmas_guardia", firmas); }, [firmas, loading]);
+  useEffect(() => { if (!loading) sSet("listas_guardia", listas); }, [listas, loading]);
   // Cada profesor actúa siempre en su propio nombre
   const identidadFija = !!usuario && profesores.includes(usuario);
   useEffect(() => { if (identidadFija) { setFProfesor(usuario); setAusProfesor(usuario); } }, [usuario, identidadFija]);
@@ -2761,6 +2984,7 @@ export default function App() {
     setProfesores(lista);
     const ej = datosEjemploGuardias(DEMO_PROFESORES);
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias);
+    setFirmas(ej.firmas); setListas([]);
     if (ej.sugerido) setUsuario(ej.sugerido);
     window.alert(`Ejemplo cargado.\n\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
   }
@@ -2911,6 +3135,7 @@ export default function App() {
           { id: "coordinacion",  label: "🔄 Coordinación Diaria", color: "#8b5cf6" },
           { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
           { id: "ausencias_jef", label: "📢 Ausencias de Profesores", color: "#10b981" },
+          { id: "firmas_jef",    label: "✍️ Firmas y listas", color: "#06b6d4" },
         ]
       : [] // Galvángram no tiene tabs adicionales
     : [
@@ -3631,7 +3856,7 @@ export default function App() {
         {/* ── Baños live (Jefatura) ── */}
         {/* ── Mi Guardia Hoy (Profesor) ── */}
         {tab === "mi_guardia" && (
-          <MiGuardiaHoy profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} diaSeleccionadoGuardias={diaSeleccionadoGuardias} setDiaSeleccionadoGuardias={setDiaSeleccionadoGuardias} />
+          <MiGuardiaHoy firmas={firmas} setFirmas={setFirmas} listas={listas} setListas={setListas} alumnos={alumnos} profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} diaSeleccionadoGuardias={diaSeleccionadoGuardias} setDiaSeleccionadoGuardias={setDiaSeleccionadoGuardias} />
         )}
 
         {/* ── Notificar Ausencia (Profesor) ── */}
@@ -3693,6 +3918,11 @@ export default function App() {
         )}
 
         {/* ── Gestión Ausencias (Jefatura) ── */}
+        {tab === "firmas_jef" && (
+          <FirmasYListas profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia}
+            ausencias={ausencias} firmas={firmas} listas={listas} C={C} inpStyle={inpStyle} />
+        )}
+
         {tab === "ausencias_jef" && (
           <GestionAusencias ausencias={ausencias} setAusencias={setAusencias} profesores={profesores} C={C} fmt={fmt} />
         )}
