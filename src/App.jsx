@@ -1896,7 +1896,8 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
 // y después queda recogida en el botón «Cómo se usa».
 const AYUDAS = {
   mis_estadisticas: { titulo: "Mis estadísticas e informes", pasos: [
-    "Si eres tutor/a, elige «Mi tutoría» para ver todos los partes de tu grupo. Si no, verás los partes que has puesto tú.",
+    "Arriba verás los avisos: alumnado con 3 o más partes este trimestre (los tuyos y, si eres tutor/a, los de tu grupo). Pulsa «Avisar a la familia» y después «Ya he avisado».",
+    "Si eres tutor/a, elige «Mi tutoría» para ver todos los partes de tu grupo. Si no, verás los partes que has puesto tú y el alumnado que sale al baño en tus clases.",
     "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
     "Pulsa una columna o una barra para ver esos partes en grande y qué es lo que más se repite.",
     "En «Partes de un alumno/a», elige al alumno y usa «Contactar con la familia»: informe en PDF, texto del correo ya redactado y sus correos.",
@@ -3902,7 +3903,92 @@ function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C
   );
 }
 
-function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: partesTodos, banos: banosTodos, ausencias: ausTodas, firmas: firmasTodas, listas: listasTodas, alumnos: alumnosTodos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, onVerParte, C, inpStyle, selStyle, labelStyle }) {
+// ─── Avisos a familias: alumnado con muchos partes en el trimestre ───────────
+const UMBRAL_AVISO = 3;
+// Trimestres del curso: septiembre-diciembre, enero-marzo y abril-junio
+function trimestreDe(fecha = new Date()) {
+  const d = parseISO(fecha), y = d.getFullYear(), m = d.getMonth();
+  const [n, ini, fin] = m >= 8 ? [1, new Date(y, 8, 1), new Date(y, 11, 31)] : m <= 2 ? [2, new Date(y, 0, 1), new Date(y, 2, 31)] : [3, new Date(y, 3, 1), new Date(y, 7, 31)];
+  const texto = `el ${n}º trimestre (${n === 1 ? "septiembre a diciembre" : n === 2 ? "enero a marzo" : "abril a junio"} de ${y})`;
+  return { n, desde: isoLocal(ini), hasta: isoLocal(fin), texto, clave: `${y}-T${n}` };
+}
+// Devuelve el alumnado que ha llegado al umbral: por los partes que he puesto yo y, si soy tutor/a, por los de mi grupo
+function alumnosParaAvisar({ partes, usuario, tutores = {}, avisos = {}, umbral = UMBRAL_AVISO }) {
+  const tri = trimestreDe();
+  const misTutorias = Object.entries(tutores).filter(([, t]) => t?.tutor === usuario).map(([c]) => c);
+  const delTri = partes.filter(p => { const f = isoLocal(p.ts); return f >= tri.desde && f <= tri.hasta; });
+  const lista = [];
+  const agrupar = (ps, ambito) => {
+    const porAlumno = new Map();
+    ps.forEach(p => { const k = p.alumnoId ?? p.alumno; if (!porAlumno.has(k)) porAlumno.set(k, []); porAlumno.get(k).push(p); });
+    porAlumno.forEach((ps2, k) => {
+      if (ps2.length < umbral) return;
+      const id = `${usuario}|${ambito}|${k}|${tri.clave}`;
+      const aviso = avisos[id];
+      lista.push({ id, alumnoId: ps2[0].alumnoId, alumno: ps2[0].alumno, curso: ps2[0].curso, ambito, partes: ps2, n: ps2.length,
+        graves: ps2.filter(p => p.gravedad !== "leve").length, aviso, pendiente: !aviso || ps2.length > aviso.n });
+    });
+  };
+  agrupar(delTri.filter(p => p.profesor === usuario), "mios");
+  misTutorias.forEach(c => agrupar(delTri.filter(p => p.curso === c), `tutoria:${c}`));
+  return { tri, lista: lista.sort((a, b) => b.pendiente - a.pendiente || b.n - a.n) };
+}
+
+function PanelAvisos({ partes, alumnos, banos, usuario, tutores, avisos, setAvisos, onVerPartes, C }) {
+  const { tri, lista } = alumnosParaAvisar({ partes, usuario, tutores, avisos });
+  const [abierto, setAbierto] = useState(null);
+  const [verHechos, setVerHechos] = useState(false);
+  const pendientes = lista.filter(x => x.pendiente), hechos = lista.filter(x => !x.pendiente);
+  const marcar = x => setAvisos(prev => ({ ...prev, [x.id]: { n: x.n, ts: new Date().toISOString(), por: usuario } }));
+  const deshacer = x => setAvisos(prev => { const r = { ...prev }; delete r[x.id]; return r; });
+  const tarjeta = (x) => {
+    const al = alumnos.find(a => a.id === x.alumnoId) || { id: x.alumnoId, nombre: x.alumno, curso: x.curso };
+    const banosAl = banos.filter(b => b.alumno === x.alumno && b.curso === x.curso && isoLocal(b.ts || b.salida) >= tri.desde && isoLocal(b.ts || b.salida) <= tri.hasta);
+    return (
+      <div key={x.id} style={{ background: C.white, borderRadius: 10, padding: 12, marginBottom: 8, borderLeft: `4px solid ${x.pendiente ? C.salmon : C.teal}` }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 15 }}>{x.alumno} <span style={{ fontWeight: 500, color: C.gray, fontSize: 13 }}>· {x.curso}</span></div>
+            <div style={{ fontSize: 12, color: C.gray }}>
+              <b style={{ color: C.salmon }}>{x.n} partes</b> este trimestre{x.graves ? ` (${x.graves} graves o muy graves)` : ""} · {x.ambito === "mios" ? "puestos por ti" : `en tu tutoría`}
+              {x.aviso && <> · {x.pendiente ? `avisada con ${x.aviso.n}, hay ${x.n - x.aviso.n} nuevo(s)` : `✅ familia avisada el ${fmtD(x.aviso.ts)}`}</>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button onClick={() => onVerPartes(x)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>👁 Ver partes</button>
+            <button onClick={() => setAbierto(abierto === x.id ? null : x.id)} style={{ background: "#FFFBEB", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>📨 Avisar a la familia</button>
+            {x.pendiente
+              ? <button onClick={() => marcar(x)} style={{ background: C.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✅ Ya he avisado</button>
+              : <button onClick={() => deshacer(x)} style={{ background: "none", color: C.gray, border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12 }}>Deshacer</button>}
+          </div>
+        </div>
+        {abierto === x.id && <ContactoFamilia alumno={al} partes={x.partes} banos={banosAl} periodo={tri} tutores={tutores} remitente={usuario} C={C} />}
+      </div>
+    );
+  };
+  return (
+    <div className="no-print" style={{ background: pendientes.length ? "#FDF0EF" : "#F0FAF7", border: `2px solid ${pendientes.length ? C.salmon : C.teal}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+      <div style={{ fontWeight: 800, color: C.dark, fontSize: 16, marginBottom: 4 }}>
+        🔔 {pendientes.length ? `${pendientes.length} alumno/a(s) con ${UMBRAL_AVISO} o más partes: conviene avisar a su familia` : "Avisos a familias"}
+      </div>
+      <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>
+        Alumnado con {UMBRAL_AVISO} o más partes en {tri.texto}: los que has puesto tú{Object.values(tutores).some(t => t?.tutor === usuario) ? " y los de tu tutoría" : ""}. Cuando avises, pulsa «Ya he avisado». Si luego tiene más partes, volverá a aparecer.
+      </div>
+      {pendientes.length === 0 && <div style={{ fontSize: 13, color: C.teal, fontWeight: 700, marginBottom: hechos.length ? 8 : 0 }}>✅ No tienes avisos pendientes.</div>}
+      {pendientes.map(tarjeta)}
+      {hechos.length > 0 && (
+        <>
+          <button onClick={() => setVerHechos(v => !v)} style={{ background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 13, fontWeight: 700, padding: 0, marginTop: 4 }}>
+            {verHechos ? "▾" : "▸"} Familias ya avisadas ({hechos.length})
+          </button>
+          {verHechos && <div style={{ marginTop: 8 }}>{hechos.map(tarjeta)}</div>}
+        </>
+      )}
+    </div>
+  );
+}
+
+function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usuario = "", partes: partesTodos, banos: banosTodos, ausencias: ausTodas, firmas: firmasTodas, listas: listasTodas, alumnos: alumnosTodos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, onVerParte, C, inpStyle, selStyle, labelStyle }) {
   const [detalle, setDetalle] = useState(null); // { titulo, subtitulo, partes }
   // Profesorado: solo ve los partes que ha puesto y, si es tutor/a, los de su grupo
   const esProfe = modo === "profesor";
@@ -3912,7 +3998,7 @@ function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: parte
   const partes = !esProfe ? partesTodos : ambitoOk === "mios" ? partesTodos.filter(p => p.profesor === usuario) : partesTodos.filter(p => p.curso === ambitoOk);
   const banos = !esProfe ? banosTodos : ambitoOk === "mios" ? banosTodos.filter(b => b.profesor === usuario) : banosTodos.filter(b => b.curso === ambitoOk);
   const ausencias = esProfe ? [] : ausTodas, firmas = esProfe ? [] : firmasTodas, listas = esProfe ? [] : listasTodas;
-  const alumnos = !esProfe ? alumnosTodos : ambitoOk === "mios" ? alumnosTodos.filter(a => partes.some(p => p.alumnoId === a.id)) : alumnosTodos.filter(a => a.curso === ambitoOk);
+  const alumnos = !esProfe ? alumnosTodos : ambitoOk === "mios" ? alumnosTodos.filter(a => partes.some(p => p.alumnoId === a.id) || banos.some(b => b.alumno === a.nombre && b.curso === a.curso)) : alumnosTodos.filter(a => a.curso === ambitoOk);
   const [tipo, setTipo] = useState("dia");
   const [ref, setRef] = useState(isoLocal());
   const [desdeLibre, setDesdeLibre] = useState(isoLocal(sumarDias(new Date(), -14)));
@@ -3961,6 +4047,8 @@ function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: parte
         </div>
       )}
       {detalle && <DetallePartes {...detalle} tutores={tutores} onVerParte={onVerParte} onCerrar={() => setDetalle(null)} C={C} />}
+      {esProfe && setAvisos && <PanelAvisos partes={partesTodos} alumnos={alumnosTodos} banos={banosTodos} usuario={usuario} tutores={tutores} avisos={avisos} setAvisos={setAvisos} C={C}
+        onVerPartes={x => setDetalle({ titulo: `Partes de ${x.alumno} (${x.curso})`, subtitulo: `${trimestreDe().texto[0].toUpperCase()}${trimestreDe().texto.slice(1)} · ${x.ambito === "mios" ? `puestos por ${usuario}` : "tutoría"}`, partes: x.partes })} />}
 
       {/* Selector de periodo */}
       <div className="no-print" style={tarjeta}>
@@ -4133,6 +4221,7 @@ export default function App() {
   const [informes, setInformes]   = useState([]);           // informes descargados
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
+  const [avisosFamilia, setAvisosFamilia] = useState({}); // avisos a familias ya hechos: {id: {n, ts, por}}
   const [parteGrande, setParteGrande] = useState(false); // parte a pantalla completa
   useEffect(() => {
     if (!showParte) return;
@@ -4244,6 +4333,7 @@ export default function App() {
       const cu = await sGet("cuentas"); if (cu) setCuentas(cu);
       const fi = await sGet("firmas_guardia"); if (fi) setFirmas(fi);
       const li = await sGet("listas_guardia"); if (li) setListas(li);
+      const avf = await sGet("avisos_familia"); if (avf) setAvisosFamilia(avf);
       const cuentasActuales = cu || CUENTAS_DEMO;
       const ses = leerSesion();
       // Solo se recupera la sesión si esa persona tiene clave y su cargo permite ese perfil
@@ -4274,6 +4364,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("cuentas", cuentas); }, [cuentas, loading]);
   useEffect(() => { if (!loading) sSet("firmas_guardia", firmas); }, [firmas, loading]);
   useEffect(() => { if (!loading) sSet("listas_guardia", listas); }, [listas, loading]);
+  useEffect(() => { if (!loading) sSet("avisos_familia", avisosFamilia); }, [avisosFamilia, loading]);
   // Cada profesor actúa siempre en su propio nombre
   const identidadFija = !!usuario && profesores.includes(usuario);
   useEffect(() => { if (identidadFija) { setFProfesor(usuario); setAusProfesor(usuario); } }, [usuario, identidadFija]);
@@ -4436,6 +4527,7 @@ export default function App() {
       }} />
   );
 
+  const avisosPendientes = perfil.id === "profesor" && usuario ? alumnosParaAvisar({ partes, usuario, tutores, avisos: avisosFamilia }).lista.filter(x => x.pendiente).length : 0;
   const tabs = perfil.id === "profesor"
     ? moduloProfesor === "alumnos"
       ? [
@@ -4443,7 +4535,7 @@ export default function App() {
           { id: "parte_grupo", label: "👥 Parte de Grupo", color: "#ec4899" },
           { id: "bano",        label: "🚻 Baños", color: "#10b981" },
           { id: "historial",   label: "🗂 Mis Partes", color: "#8b5cf6" },
-          { id: "mis_estadisticas", label: "📈 Estadísticas", color: "#06b6d4" },
+          { id: "mis_estadisticas", label: `📈 Estadísticas${avisosPendientes ? ` · 🔔 ${avisosPendientes}` : ""}`, color: "#06b6d4" },
         ]
       : moduloProfesor === "guardias"
       ? [
@@ -4642,6 +4734,18 @@ export default function App() {
 
       {/* Contenido — centrado con max-width */}
       <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto", padding: "20px 24px" }}>
+
+        {/* Aviso al profesorado: alumnado con 3 o más partes para avisar a su familia */}
+        {perfil.id === "profesor" && avisosPendientes > 0 && tab !== "mis_estadisticas" && (
+          <div role="status" className="no-print" style={{ background: "#FDF0EF", border: `2px solid ${C.salmon}`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ color: C.dark, fontSize: 14 }}>
+              <b>🔔 {avisosPendientes} alumno/a(s) con {UMBRAL_AVISO} o más partes este trimestre.</b>
+              <div style={{ fontSize: 12, color: C.gray }}>Conviene avisar a su familia. Tienes el informe y el correo preparados.</div>
+            </div>
+            <button onClick={() => { setModuloProfesor("alumnos"); setTab("mis_estadisticas"); window.scrollTo(0, 0); }}
+              style={{ background: C.salmon, color: "#fff", border: "none", borderRadius: 10, padding: "10px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>Ver avisos →</button>
+          </div>
+        )}
 
         {/* Ayuda de la pantalla */}
         <AyudaPantalla key={tab} id={tab} C={C} />
@@ -5365,7 +5469,7 @@ export default function App() {
 
         {/* ── Estadísticas e informes del profesorado y tutores ── */}
         {tab === "mis_estadisticas" && (
-          <EstadisticasDocumentos key={usuario} modo="profesor" usuario={usuario} partes={partes.map(completar)} banos={banos} ausencias={[]} firmas={[]} listas={[]}
+          <EstadisticasDocumentos key={usuario} modo="profesor" usuario={usuario} avisos={avisosFamilia} setAvisos={setAvisosFamilia} partes={partes.map(completar)} banos={banos} ausencias={[]} firmas={[]} listas={[]}
             alumnos={alumnos} profesores={profesores} cuadrante={{}} apoyosGuardia={{}} sustitutosGuardia={{}}
             tutores={tutores} onVerParte={p => setShowParte(completar(p))} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} />
         )}
