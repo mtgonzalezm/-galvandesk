@@ -808,7 +808,11 @@ function ComoAvisar({ parte }) {
 function ParteCard({ parte, onVer, onPrint }) {
   const g = gObj(parte.gravedad);
   return (
-    <div style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 10, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderLeft: `4px solid ${g.color}` }}>
+    <div onClick={onVer} role="button" tabIndex={0} title="Pulsa para ver el parte en grande"
+      onKeyDown={e => { if (e.key === "Enter" && e.target === e.currentTarget) onVer(); }}
+      onMouseOver={e => { e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.14)"; }}
+      onMouseOut={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.06)"; }}
+      style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 10, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderLeft: `4px solid ${g.color}`, cursor: "pointer", transition: "box-shadow .15s" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>
@@ -825,8 +829,8 @@ function ParteCard({ parte, onVer, onPrint }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
           <Badge g={parte.gravedad} />
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={onVer} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>👁 Ver</button>
-            <button onClick={onPrint} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨 PDF</button>
+            <button onClick={e => { e.stopPropagation(); onVer(); }} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>👁 Ver</button>
+            <button onClick={e => { e.stopPropagation(); onPrint(); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨 PDF</button>
           </div>
         </div>
       </div>
@@ -3527,13 +3531,15 @@ function csvPeriodo(est, periodo) {
 }
 
 // Barras horizontales sencillas
-function Barras({ datos, color = "#44a194", vacio = "Sin datos en este periodo." }) {
+function Barras({ datos, color = "#44a194", vacio = "Sin datos en este periodo.", onClick }) {
   const max = Math.max(1, ...datos.map(d => d[1]));
   if (!datos.length) return <div style={{ fontSize: 13, color: "#64748b" }}>{vacio}</div>;
   return (
     <div>
-      {datos.map(([k, n]) => (
-        <div key={k} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(60px,1.2fr) 34px", gap: 8, alignItems: "center", marginBottom: 6, fontSize: 12 }}>
+      {datos.map(([k, n, clave]) => (
+        <div key={k} onClick={onClick ? () => onClick(clave ?? k, k) : undefined} role={onClick ? "button" : undefined} title={onClick ? "Pulsa para ver estos partes" : undefined}
+          onMouseOver={onClick ? e => { e.currentTarget.style.background = "#f1f5f9"; } : undefined} onMouseOut={onClick ? e => { e.currentTarget.style.background = "transparent"; } : undefined}
+          style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(60px,1.2fr) 34px", gap: 8, alignItems: "center", marginBottom: 2, padding: "2px 4px", borderRadius: 6, fontSize: 12, cursor: onClick ? "pointer" : "default" }}>
           <div title={k} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#2c4a52" }}>{k}</div>
           <div style={{ background: "#eef2f4", borderRadius: 6, height: 12 }}><div style={{ width: `${(100 * n) / max}%`, background: color, height: "100%", borderRadius: 6 }} /></div>
           <div style={{ textAlign: "right", fontWeight: 700, color: "#2c4a52" }}>{n}</div>
@@ -3543,7 +3549,62 @@ function Barras({ datos, color = "#44a194", vacio = "Sin datos en este periodo."
   );
 }
 
-function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alumnos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, C, inpStyle, selStyle, labelStyle }) {
+// Ventana con el detalle de un conjunto de partes (un día, un grupo, una falta…)
+function DetallePartes({ titulo, subtitulo, partes, tutores, onVerParte, onCerrar, C }) {
+  useEffect(() => { const f = e => { if (e.key === "Escape") onCerrar(); }; window.addEventListener("keydown", f); return () => window.removeEventListener("keydown", f); }, [onCerrar]);
+  const g = { leve: partes.filter(p => p.gravedad === "leve").length, grave: partes.filter(p => p.gravedad === "grave").length, muy_grave: partes.filter(p => p.gravedad === "muy_grave").length };
+  const faltas = contarPor(partes, etiquetaTip);
+  const top = faltas[0];
+  const h3 = { margin: "0 0 10px", color: C.dark, fontSize: 15 };
+  const caja = { background: C.white, borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" };
+  const ordenados = [...partes].sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  return (
+    <div onClick={onCerrar} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 150, display: "flex", alignItems: "stretch", justifyContent: "center", padding: "3vh 2vw" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: C.cream, borderRadius: 16, width: "100%", maxWidth: 1200, overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 2, background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 18 }}>{titulo}</div>
+            {subtitulo && <div style={{ fontSize: 12, opacity: .85 }}>{subtitulo}</div>}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+            {partes.length > 0 && <button onClick={() => pdfInformePartes(ordenados, `${titulo}${subtitulo ? ` · ${subtitulo}` : ""}`, tutores)} style={{ background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>⬇️ PDF</button>}
+            <button onClick={onCerrar} aria-label="Cerrar" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
+          </div>
+        </div>
+        <div style={{ padding: 20 }}>
+          {partes.length === 0 ? <div style={{ ...caja, textAlign: "center", color: C.gray }}>No hay partes.</div> : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 14 }}>
+                {[{ n: partes.length, t: "Partes", c: C.dark }, { n: g.leve, t: "Leves", c: C.teal }, { n: g.grave, t: "Graves", c: C.amber }, { n: g.muy_grave, t: "Muy graves", c: C.salmon }, { n: new Set(partes.map(p => p.alumnoId ?? p.alumno)).size, t: "Alumnos/as", c: C.blue }].map(k => (
+                  <div key={k.t} style={{ ...caja, borderTop: `4px solid ${k.c}`, padding: 12 }}><div style={{ fontSize: 26, fontWeight: 800, color: C.dark }}>{k.n}</div><div style={{ fontSize: 13, fontWeight: 700, color: C.gray }}>{k.t}</div></div>
+                ))}
+              </div>
+              {top && (
+                <div style={{ ...caja, marginBottom: 14, borderLeft: `5px solid ${C.amber}` }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.amber, textTransform: "uppercase", letterSpacing: .5 }}>La falta que más se repite</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: C.dark, marginTop: 4 }}>{top[0]}</div>
+                  <div style={{ fontSize: 13, color: C.gray, marginTop: 2 }}>{top[1]} de {partes.length} partes ({Math.round(100 * top[1] / partes.length)} %)</div>
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 14, marginBottom: 14 }}>
+                <div style={caja}><h3 style={h3}>📑 Motivos (faltas tipificadas)</h3><Barras datos={faltas} color={C.amber} vacio="Sin tipificar." /></div>
+                <div style={caja}><h3 style={h3}>🏫 Por grupo</h3><Barras datos={contarPor(partes, "curso")} /></div>
+                <div style={caja}><h3 style={h3}>🕐 Por hora de clase</h3><Barras datos={HORAS.map(h => [h, partes.filter(p => p.hora === h).length]).filter(([, n]) => n)} color={C.blue} /></div>
+                <div style={caja}><h3 style={h3}>👤 Alumnado</h3><Barras datos={contarPor(partes, p => `${p.alumno} (${p.curso})`).slice(0, 10)} color={C.salmon} /></div>
+                <div style={caja}><h3 style={h3}>👨‍🏫 Profesorado que pone el parte</h3><Barras datos={contarPor(partes, "profesor").slice(0, 10)} color="#8b5cf6" /></div>
+              </div>
+              <h3 style={{ ...h3, marginTop: 6 }}>📋 Los {partes.length} partes <span style={{ fontWeight: 500, fontSize: 12, color: C.gray }}>· pulsa uno para verlo en grande</span></h3>
+              {ordenados.map(p => <ParteCard key={p.id} parte={p} onVer={() => onVerParte(p)} onPrint={() => pdfParte(p)} />)}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alumnos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, onVerParte, C, inpStyle, selStyle, labelStyle }) {
+  const [detalle, setDetalle] = useState(null); // { titulo, subtitulo, partes }
   const [tipo, setTipo] = useState("dia");
   const [ref, setRef] = useState(isoLocal());
   const [desdeLibre, setDesdeLibre] = useState(isoLocal(sumarDias(new Date(), -14)));
@@ -3557,6 +3618,9 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
   const cursos = [...new Set(alumnos.map(a => a.curso))].sort();
   const pct = (a, b) => b ? Math.round(100 * a / b) : null;
   const maxDia = Math.max(1, ...est.porDia.map(d => d.partes));
+  const periodoTxt = periodo.texto[0].toUpperCase() + periodo.texto.slice(1);
+  const abrirDia = f => setDetalle({ titulo: `Partes del ${parseISO(f).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`, partes: est.partes.filter(p => isoLocal(p.ts) === f) });
+  const abrir = (titulo, filtro) => setDetalle({ titulo, subtitulo: periodoTxt, partes: est.partes.filter(filtro) });
 
   const tarjeta = { background: C.white, borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 };
   const h3 = { margin: "0 0 12px", color: C.dark, fontSize: 15 };
@@ -3571,6 +3635,7 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
   return (
     <div>
       <h2 style={{ color: C.dark, marginTop: 0 }}>📈 Estadísticas y documentos</h2>
+      {detalle && <DetallePartes {...detalle} tutores={tutores} onVerParte={onVerParte} onCerrar={() => setDetalle(null)} C={C} />}
 
       {/* Selector de periodo */}
       <div className="no-print" style={tarjeta}>
@@ -3602,14 +3667,14 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
       {/* Cifras principales */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 14 }}>
         {[
-          { n: est.partes.length, t: "Partes", s: `${est.gravedad.leve} leves · ${est.gravedad.grave} graves · ${est.gravedad.muy_grave} muy graves`, c: C.teal },
+          { n: est.partes.length, t: "Partes", s: `${est.gravedad.leve} leves · ${est.gravedad.grave} graves · ${est.gravedad.muy_grave} muy graves`, c: C.teal, click: () => abrir("Todos los partes", () => true) },
           { n: est.alumnosConParte, t: "Alumnos/as con parte", s: est.lectivos.length ? `${(est.partes.length / est.lectivos.length).toFixed(1)} partes por día` : "", c: C.blue },
           { n: est.banos.length, t: "Salidas al baño", s: est.banoMedio ? `${est.banoMedio} min de media · ${est.banosLargos} de más de 10 min` : "", c: "#10b981" },
           { n: est.ausencias.length, t: "Ausencias profesorado", s: `${est.horasAusencia} horas · ${est.profesoresAusentes} profesores/as`, c: C.salmon },
           { n: est.guardiasDebidas ? `${pct(est.guardiasFirmadas, est.guardiasDebidas)} %` : "-", t: "Guardias firmadas", s: `${est.guardiasFirmadas} de ${est.guardiasDebidas}`, c: C.amber },
           { n: est.listasPasadas, t: "Listas en guardia", s: `${est.faltasEnListas} faltas anotadas`, c: "#8b5cf6" },
         ].map(k => (
-          <div key={k.t} style={{ background: C.white, borderRadius: 12, padding: 14, borderTop: `4px solid ${k.c}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+          <div key={k.t} onClick={k.click} title={k.click ? "Pulsa para verlos en detalle" : undefined} style={{ background: C.white, borderRadius: 12, padding: 14, borderTop: `4px solid ${k.c}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", cursor: k.click ? "pointer" : "default" }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: C.dark }}>{k.n}</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{k.t}</div>
             <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{k.s}</div>
@@ -3623,8 +3688,10 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
           <h3 style={h3}>Partes por día</h3>
           <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 140, overflowX: "auto", paddingBottom: 4 }}>
             {est.porDia.map(d => (
-              <div key={d.fecha} title={`${fmtD(parseISO(d.fecha))}: ${d.partes} partes (${d.leve} leves, ${d.grave} graves, ${d.muy_grave} muy graves) · ${d.banos} baños · ${d.ausencias} ausencias`}
-                style={{ flex: "1 0 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+              <div key={d.fecha} title={`${fmtD(parseISO(d.fecha))}: ${d.partes} partes (${d.leve} leves, ${d.grave} graves, ${d.muy_grave} muy graves) · ${d.banos} baños · ${d.ausencias} ausencias. Pulsa para ver el detalle.`}
+                role="button" tabIndex={0} onClick={() => abrirDia(d.fecha)} onKeyDown={e => { if (e.key === "Enter") abrirDia(d.fecha); }}
+                onMouseOver={e => { e.currentTarget.style.background = "#f1f5f9"; }} onMouseOut={e => { e.currentTarget.style.background = "transparent"; }}
+                style={{ flex: "1 0 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%", cursor: "pointer", borderRadius: 6 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: C.dark }}>{d.partes || ""}</div>
                 <div style={{ width: "100%", maxWidth: 34, display: "flex", flexDirection: "column-reverse", height: `${(100 * d.partes) / maxDia}%`, minHeight: d.partes ? 3 : 0, borderRadius: "4px 4px 0 0", overflow: "hidden" }}>
                   <div style={{ flex: d.leve, background: C.teal }} /><div style={{ flex: d.grave, background: C.amber }} /><div style={{ flex: d.muy_grave, background: C.salmon }} />
@@ -3637,16 +3704,16 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
             <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.teal, borderRadius: 2 }} /> Leves</span>
             <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.amber, borderRadius: 2 }} /> Graves</span>
             <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.salmon, borderRadius: 2 }} /> Muy graves</span>
-            <span>Pasa el ratón por una columna para ver baños y ausencias de ese día.</span>
+            <span><b>Pulsa una columna</b> para ver ese día en grande: motivos, faltas que más se repiten y cada parte.</span>
           </div>
         </div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
-        <div style={tarjeta}><h3 style={h3}>🏫 Partes por grupo</h3><Barras datos={est.porGrupo.map(r => [`${r.curso}${r.tutor ? ` · ${r.tutor}` : ""}`, r.total])} /></div>
-        <div style={tarjeta}><h3 style={h3}>🕐 Partes por hora de clase</h3><Barras datos={est.porHora} color={C.blue} /></div>
-        <div style={tarjeta}><h3 style={h3}>👤 Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} /></div>
-        <div style={tarjeta}><h3 style={h3}>📑 Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} /></div>
+        <div style={tarjeta}><h3 style={h3}>🏫 Partes por grupo</h3><Barras datos={est.porGrupo.map(r => [`${r.curso}${r.tutor ? ` · ${r.tutor}` : ""}`, r.total, r.curso])} onClick={c => abrir(`Partes de ${c}`, p => p.curso === c)} /></div>
+        <div style={tarjeta}><h3 style={h3}>🕐 Partes por hora de clase</h3><Barras datos={est.porHora} color={C.blue} onClick={h => abrir(`Partes a ${h}`, p => p.hora === h)} /></div>
+        <div style={tarjeta}><h3 style={h3}>👤 Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} onClick={k => abrir(`Partes de ${k}`, p => `${p.alumno} (${p.curso})` === k)} /></div>
+        <div style={tarjeta}><h3 style={h3}>📑 Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} onClick={k => abrir(k, p => etiquetaTip(p) === k)} /></div>
         <div style={tarjeta}><h3 style={h3}>🚻 Salidas al baño por grupo</h3><Barras datos={est.banosPorGrupo} color="#10b981" /></div>
         <div style={tarjeta}><h3 style={h3}>📢 Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>
       </div>
@@ -3734,6 +3801,12 @@ export default function App() {
   const [informes, setInformes]   = useState([]);           // informes descargados
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
+  const [parteGrande, setParteGrande] = useState(false); // parte a pantalla completa
+  useEffect(() => {
+    if (!showParte) return;
+    const f = e => { if (e.key === "Escape") { e.stopImmediatePropagation(); setShowParte(null); } };
+    window.addEventListener("keydown", f, true); return () => window.removeEventListener("keydown", f, true);
+  }, [showParte]);
   const [showCoordinacion, setShowCoordinacion] = useState(false);
   const [fechaCoordinacion, setFechaCoordinacion] = useState("");
   const [showAlerta, setShowAlerta] = useState(null);
@@ -4961,7 +5034,7 @@ export default function App() {
         {tab === "estadisticas" && (
           <EstadisticasDocumentos partes={partes.map(completar)} banos={banos} ausencias={ausencias} firmas={firmas} listas={listas}
             alumnos={alumnos} profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia}
-            tutores={tutores} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} />
+            tutores={tutores} onVerParte={p => setShowParte(completar(p))} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} />
         )}
 
         {/* ── Informe ── */}
@@ -5178,16 +5251,20 @@ export default function App() {
 
       {/* ── Modal Ver Parte ── */}
       {showParte && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
-          <div style={{ background: C.white, borderRadius: 16, maxWidth: 560, width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div onClick={() => setShowParte(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: parteGrande ? 0 : 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: parteGrande ? 0 : 16, maxWidth: parteGrande ? "none" : 760, width: "100%", height: parteGrande ? "100%" : "auto", maxHeight: parteGrande ? "100%" : "92vh", overflowY: "auto", fontSize: parteGrande ? 18 : 15, zoom: parteGrande ? 1.25 : 1 }}>
+            <div style={{ position: "sticky", top: 0, zIndex: 2, background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: parteGrande ? 0 : "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <div>
                 <div style={{ fontWeight: 700 }}>GalvánDesk · Parte de Incidencia</div>
                 <div style={{ fontSize: 12, opacity: .8 }}>Ref: PARTE-{showParte.id}</div>
               </div>
-              <button onClick={() => setShowParte(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button onClick={() => pdfParte(showParte)} title="Descargar PDF" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨 PDF</button>
+                <button onClick={() => setParteGrande(v => !v)} title={parteGrande ? "Volver al tamaño normal" : "Ver a pantalla completa"} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>{parteGrande ? "🗗 Reducir" : "⛶ Pantalla completa"}</button>
+                <button onClick={() => setShowParte(null)} aria-label="Cerrar" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
+              </div>
             </div>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: 24, maxWidth: parteGrande ? 900 : "none", margin: "0 auto" }}>
               {(() => { const g = gObj(showParte.gravedad); return <div style={{ background: g.bg, border: `2px solid ${g.color}`, borderRadius: 10, padding: 12, marginBottom: 20, textAlign: "center" }}><strong style={{ color: g.color, fontSize: 16 }}>{g.label} — {g.desc}</strong></div>; })()}
               {showParte.esGrupal && <div style={{ background: "#E8F5F3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 12 }}>👥 Parte generado como parte de grupo</div>}
               {[["Alumno", showParte.alumno], ["Curso", showParte.curso], ["Tutor/a del grupo", showParte.tutor || "—"], ["Correo del tutor/a", showParte.tutorEmail || "—"], ["Tipo", showParte.tipo], ["Hora", showParte.hora || "No especificada"], ["Fecha y hora", fmt(showParte.ts)], ["Profesor", showParte.profesor]].map(([k, v]) => (
