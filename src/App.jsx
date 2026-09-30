@@ -465,7 +465,103 @@ function guardarPDF(doc, archivo) {
     doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
     doc.text(`GalvánDesk · IES Enrique Tierno Galván · ${hoy} · Página ${i} de ${n}`, w / 2, h - 8, { align: "center" });
   }
-  doc.save(archivo);
+  // Si el visor está abierto en la página, el informe se ve primero en pantalla
+  if (visor.pdf) visor.pdf({ url: URL.createObjectURL(doc.output("blob")), archivo, paginas: n });
+  else doc.save(archivo);
+}
+
+// ─── Visor en pantalla de informes (PDF) y hojas de cálculo (Excel) ──────────
+const visor = { pdf: null, excel: null };
+const descargarURL = (url, archivo) => { const a = document.createElement("a"); a.href = url; a.download = archivo; document.body.appendChild(a); a.click(); a.remove(); };
+export function VisorDocumentos() {
+  const [pdf, setPdf] = useState(null);     // { url, archivo, paginas }
+  const [excel, setExcel] = useState(null); // { hojas: [{ nombre, cabecera, filas }], archivo, descargar }
+  const [hojaSel, setHojaSel] = useState(0);
+  const [busca, setBusca] = useState("");
+  const marco = useRef(null);
+  useEffect(() => {
+    visor.pdf = d => setPdf(prev => { if (prev) URL.revokeObjectURL(prev.url); return d; });
+    visor.excel = d => { setHojaSel(0); setBusca(""); setExcel(d); };
+    return () => { visor.pdf = null; visor.excel = null; };
+  }, []);
+  const cerrar = () => { if (pdf) URL.revokeObjectURL(pdf.url); setPdf(null); setExcel(null); };
+  useEffect(() => {
+    if (!pdf && !excel) return;
+    const f = e => { if (e.key === "Escape") { e.stopImmediatePropagation(); cerrar(); } };
+    window.addEventListener("keydown", f, true); return () => window.removeEventListener("keydown", f, true);
+  });
+  if (!pdf && !excel) return null;
+  const barra = { position: "sticky", top: 0, zIndex: 2, background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" };
+  const bb = { background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 };
+  const fondo = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 400, display: "flex", alignItems: "stretch", justifyContent: "center", padding: "2vh 2vw", fontFamily: "system-ui,sans-serif" };
+  const caja = { background: C.white, borderRadius: 14, width: "100%", maxWidth: 1200, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" };
+
+  if (pdf) return (
+    <div style={fondo} onClick={cerrar}>
+      <div style={caja} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Vista previa del informe">
+        <div style={barra}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>👁 Vista previa</div>
+            <div style={{ fontSize: 12, opacity: .85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pdf.archivo} · {pdf.paginas} página(s)</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button style={{ ...bb, background: "#fff", color: C.dark }} onClick={() => descargarURL(pdf.url, pdf.archivo)}>⬇️ Descargar PDF</button>
+            <button style={bb} onClick={() => { try { marco.current.contentWindow.focus(); marco.current.contentWindow.print(); } catch { window.open(pdf.url, "_blank"); } }}>🖨 Imprimir</button>
+            <button style={bb} onClick={() => window.open(pdf.url, "_blank")}>↗ Abrir en otra pestaña</button>
+            <button style={bb} onClick={cerrar} aria-label="Cerrar">✕</button>
+          </div>
+        </div>
+        <iframe ref={marco} title="Vista previa del informe" src={pdf.url} style={{ flex: 1, width: "100%", border: "none", background: "#525659", minHeight: "70vh" }} />
+        <div style={{ fontSize: 11, color: C.gray, padding: "6px 14px", background: C.light }}>Si en tu móvil o tablet solo ves la primera página, pulsa «Abrir en otra pestaña».</div>
+      </div>
+    </div>
+  );
+
+  const h = excel.hojas[hojaSel] || excel.hojas[0];
+  const t = busca.trim().toLowerCase();
+  const filas = t ? h.filas.filter(f => f.some(v => String(v ?? "").toLowerCase().includes(t))) : h.filas;
+  const LIMITE = 500;
+  return (
+    <div style={fondo} onClick={cerrar}>
+      <div style={caja} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Vista previa del Excel">
+        <div style={barra}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>👁 Vista previa del Excel</div>
+            <div style={{ fontSize: 12, opacity: .85 }}>{excel.archivo} · {excel.hojas.length} hojas</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{ ...bb, background: "#fff", color: C.dark }} onClick={excel.descargar}>⬇️ Descargar Excel</button>
+            <button style={bb} onClick={cerrar} aria-label="Cerrar">✕</button>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, padding: "10px 14px 0", flexWrap: "wrap", background: C.light, borderBottom: "1px solid #e2e8f0" }}>
+          {excel.hojas.map((x, i) => (
+            <button key={x.nombre} onClick={() => setHojaSel(i)}
+              style={{ padding: "8px 12px", border: "1px solid #e2e8f0", borderBottom: "none", borderRadius: "8px 8px 0 0", background: i === hojaSel ? C.white : "transparent", fontWeight: i === hojaSel ? 800 : 500, color: C.dark, cursor: "pointer", fontSize: 13, marginBottom: -1 }}>
+              {x.nombre} <span style={{ color: C.gray, fontWeight: 500 }}>({x.filas.length})</span>
+            </button>
+          ))}
+        </div>
+        <div style={{ padding: "10px 14px", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <input value={busca} onChange={e => setBusca(e.target.value)} placeholder="🔎 Buscar en esta hoja (nombre, grupo, falta…)" aria-label="Buscar en la hoja"
+            style={{ flex: "1 1 260px", padding: "9px 12px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 14 }} />
+          <span style={{ fontSize: 12, color: C.gray }}>{filas.length} fila(s){filas.length > LIMITE ? ` · se ven las ${LIMITE} primeras; el Excel las tiene todas` : ""}</span>
+        </div>
+        <div style={{ flex: 1, overflow: "auto", padding: "0 14px 14px" }}>
+          {filas.length === 0 ? <div style={{ padding: 30, textAlign: "center", color: C.gray }}>Sin datos.</div> : (
+            <table style={{ borderCollapse: "collapse", fontSize: 12, width: "max-content", minWidth: "100%" }}>
+              <thead><tr>{h.cabecera.map(c => <th key={c} style={{ position: "sticky", top: 0, background: C.dark, color: "#fff", padding: "8px 10px", textAlign: "left", whiteSpace: "nowrap", fontWeight: 700 }}>{c}</th>)}</tr></thead>
+              <tbody>{filas.slice(0, LIMITE).map((f, i) => (
+                <tr key={i} style={{ background: i % 2 ? "#F8F6F0" : C.white }}>
+                  {h.cabecera.map((_, j) => <td key={j} style={{ padding: "6px 10px", borderBottom: "1px solid #eef2f4", maxWidth: 420, whiteSpace: String(f[j] ?? "").length > 60 ? "normal" : "nowrap", verticalAlign: "top", color: C.dark }}>{f[j] ?? ""}</td>)}
+                </tr>
+              ))}</tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 const estiloTabla = { styles: { fontSize: 9, cellPadding: 2, overflow: "linebreak", valign: "top" }, headStyles: { fillColor: OSCURO, textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [248, 246, 240] }, margin: { left: 14, right: 14, bottom: 16 } };
 const textoTipificacion = p => {
@@ -1809,7 +1905,7 @@ const AYUDAS = {
     "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
     "Con ◀ y ▶ pasas al periodo anterior o siguiente; «Hoy» vuelve al actual.",
     "Verás las cifras de partes, baños, ausencias del profesorado, firmas de guardia y listas, y gráficas por día, grupo, hora y alumnado.",
-    "Abajo descargas en PDF las estadísticas, todos los partes, los baños, las ausencias y (si eliges un día) las firmas de guardia. «Todos los datos en Excel» trae una hoja por tema, con nombres, grupos y faltas.",
+    "Abajo tienes los informes: al pulsar se abren en pantalla y desde ahí los descargas o imprimes. «Ver y descargar en Excel» muestra una hoja por tema, con nombres, grupos y faltas.",
     "También puedes sacar los partes de un alumno o de un grupo, o las ausencias de un profesor, solo en esas fechas."] },
   partes: { titulo: "Poner un parte", pasos: [
     "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
@@ -3568,14 +3664,9 @@ function pdfAusencias(ausencias, periodo) {
 // La librería se carga solo al pulsar el botón, para que la aplicación no pese más.
 // No incluye el contacto de las familias (RGPD): solo lo necesario para analizar.
 async function excelPeriodo(est, periodo, tutores = {}, alumnos = [], soloAlumnado = false) {
-  const XLSX = await import("xlsx");
-  const libro = XLSX.utils.book_new();
-  const hoja = (nombre, cabecera, filas, anchos) => {
-    const h = XLSX.utils.aoa_to_sheet([cabecera, ...(filas.length ? filas : [["Sin datos en este periodo"]])]);
-    h["!cols"] = anchos.map(w => ({ wch: w }));
-    h["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, filas.length), c: cabecera.length - 1 } }) };
-    XLSX.utils.book_append_sheet(libro, h, nombre);
-  };
+  // Primero se preparan las hojas; luego se ven en pantalla y/o se descargan
+  const hojas = [];
+  const hoja = (nombre, cabecera, filas, anchos) => hojas.push({ nombre, cabecera, filas, anchos });
   const fecha = d => fmtD(parseISO(d));
   const gLabel = g => ({ leve: "Leve", grave: "Grave", muy_grave: "Muy grave" })[g] || g;
 
@@ -3629,7 +3720,20 @@ async function excelPeriodo(est, periodo, tutores = {}, alumnos = [], soloAlumna
       .map(l => [fecha(l.fecha), l.hora, l.curso, l.profesor, horaCorta(l.ts), (l.ausentes || []).length, (l.ausentes || []).map(x => x.nombre).join(", ")]),
     [11, 9, 10, 22, 11, 11, 60]);
 
-  XLSX.writeFile(libro, `galvandesk-datos-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.xlsx`);
+  const archivo = `galvandesk-datos-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.xlsx`;
+  const descargar = async () => {
+    const XLSX = await import("xlsx");
+    const libro = XLSX.utils.book_new();
+    hojas.forEach(({ nombre, cabecera, filas, anchos }) => {
+      const h = XLSX.utils.aoa_to_sheet([cabecera, ...(filas.length ? filas : [["Sin datos en este periodo"]])]);
+      h["!cols"] = anchos.map(w => ({ wch: w }));
+      h["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, filas.length), c: cabecera.length - 1 } }) };
+      XLSX.utils.book_append_sheet(libro, h, nombre);
+    });
+    XLSX.writeFile(libro, archivo);
+  };
+  if (visor.excel) visor.excel({ hojas, archivo, descargar: () => descargar().catch(() => window.alert("No se ha podido crear el Excel. Inténtalo de nuevo.")) });
+  else await descargar();
 }
 
 // Barras horizontales sencillas
@@ -3789,7 +3893,7 @@ function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C
       <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 2 }}>📨 Contactar con la familia</div>
       <div style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}>✉️ {alumno.email || "sin correo"} · 📱 {alumno.telefono || "sin teléfono"}</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}>📄 Informe para la familia (PDF)</button>
+        <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}>📄 Ver informe para la familia</button>
         <button style={btn} onClick={() => copiar(textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores), "texto")}>{copiado === "texto" ? "✅ Copiado" : "📋 Copiar texto del correo"}</button>
         <button style={btn} disabled={!correos} onClick={() => copiar(correos, "correos")}>{copiado === "correos" ? "✅ Copiado" : "📧 Copiar correos"}</button>
       </div>
@@ -3948,7 +4052,7 @@ function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: parte
       {/* Documentos */}
       <div className="no-print" style={tarjeta}>
         <h3 style={h3}>📄 Documentos de este periodo</h3>
-        <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Todos se descargan en PDF con las fechas elegidas arriba.</div>
+        <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Al pulsar, el informe se abre <b>en pantalla</b>; desde ahí lo descargas o lo imprimes. Usan las fechas elegidas arriba.</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
           <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo, esProfe ? `${ambitoOk === "mios" ? "Partes puestos por" : `Tutoría de ${ambitoOk} ·`} ${usuario}` : "")}>
             📊 Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
@@ -3968,7 +4072,7 @@ function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: parte
             </button>
           )}
           <button style={btnDoc()} onClick={() => excelPeriodo(est, periodo, tutores, alumnos, esProfe).catch(() => window.alert("No se ha podido crear el Excel. Comprueba la conexión e inténtalo de nuevo."))}>
-            📥 Todos los datos en Excel<span style={sub}>{esProfe ? "Partes con alumno, grupo, falta y profesor; resumen por alumno, por grupo y baños" : "Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas"}</span>
+            📥 Ver y descargar en Excel<span style={sub}>{esProfe ? "Partes con alumno, grupo, falta y profesor; resumen por alumno, por grupo y baños" : "Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas"}</span>
           </button>
         </div>
 
