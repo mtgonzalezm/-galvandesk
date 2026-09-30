@@ -1763,6 +1763,12 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
 // Se abre sola la primera vez que se entra en una pantalla (en ese dispositivo)
 // y después queda recogida en el botón «Cómo se usa».
 const AYUDAS = {
+  mis_estadisticas: { titulo: "Mis estadísticas e informes", pasos: [
+    "Si eres tutor/a, elige «Mi tutoría» para ver todos los partes de tu grupo. Si no, verás los partes que has puesto tú.",
+    "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
+    "Pulsa una columna o una barra para ver esos partes en grande y qué es lo que más se repite.",
+    "En «Partes de un alumno/a», elige al alumno y usa «Contactar con la familia»: informe en PDF, texto del correo ya redactado y sus correos.",
+    "Escribe a la familia desde tu correo del centro, pega el texto y adjunta el PDF."] },
   estadisticas: { titulo: "Estadísticas y documentos", pasos: [
     "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
     "Con ◀ y ▶ pasas al periodo anterior o siguiente; «Hoy» vuelve al actual.",
@@ -3458,9 +3464,9 @@ function estadisticasPeriodo({ desde, hasta, partes, banos, ausencias, firmas, l
 }
 
 // ─── PDF: estadísticas del periodo ───────────────────────────────────────────
-function pdfEstadisticas(est, periodo) {
+function pdfEstadisticas(est, periodo, autor = "") {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = cabeceraPDF(doc, "Estadísticas del centro", `${periodo.texto} · Jefatura de Estudios`);
+  let y = cabeceraPDF(doc, autor ? "Estadísticas de convivencia" : "Estadísticas del centro", `${periodo.texto} · ${autor || "Jefatura de Estudios"}`);
   const tituloSec = t => {
     if (y > 250) { doc.addPage(); y = 20; }
     doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text(t, 14, y); doc.setTextColor(0); y += 3;
@@ -3479,14 +3485,14 @@ function pdfEstadisticas(est, periodo) {
     ["Media de partes por día lectivo", est.lectivos.length ? (est.partes.length / est.lectivos.length).toFixed(1) : "-"],
     ["Salidas al baño", est.banos.length],
     ["   Duración media / salidas de más de 10 min", `${est.banoMedio || "-"} min / ${est.banosLargos}`],
-    ["Ausencias del profesorado", `${est.ausencias.length} (${est.horasAusencia} horas, ${est.profesoresAusentes} profesores/as)`],
+    ...(autor ? [] : [["Ausencias del profesorado", `${est.ausencias.length} (${est.horasAusencia} horas, ${est.profesoresAusentes} profesores/as)`],
     ["Firmas de guardia", `${est.guardiasFirmadas} de ${est.guardiasDebidas} (${pct(est.guardiasFirmadas, est.guardiasDebidas)})`],
-    ["Listas pasadas en guardia / faltas anotadas", `${est.listasPasadas} / ${est.faltasEnListas}`],
+    ["Listas pasadas en guardia / faltas anotadas", `${est.listasPasadas} / ${est.faltasEnListas}`]]),
   ].map(r => r.map(String)), { columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" }, 1: { halign: "center" } } });
   if (est.porDia.length > 1) {
     tituloSec("Evolución por día");
-    tabla(["Día", "Leves", "Graves", "Muy graves", "Partes", "Baños", "Ausencias prof.", "Horas aus."],
-      est.porDia.map(d => [parseISO(d.fecha).toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "2-digit" }), d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia].map(String)),
+    tabla(["Día", "Leves", "Graves", "Muy graves", "Partes", "Baños", ...(autor ? [] : ["Ausencias prof.", "Horas aus."])],
+      est.porDia.map(d => [parseISO(d.fecha).toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "2-digit" }), d.leve, d.grave, d.muy_grave, d.partes, d.banos, ...(autor ? [] : [d.ausencias, d.horasAusencia])].map(String)),
       { styles: { ...estiloTabla.styles, halign: "center" } });
   }
   tituloSec("Partes por grupo y tutoría");
@@ -3499,10 +3505,12 @@ function pdfEstadisticas(est, periodo) {
   tabla(["Tipificación", "Partes"], est.porTipificacion.map(([k, n]) => [k, String(n)]), { columnStyles: { 1: { cellWidth: 20, halign: "center" } } });
   tituloSec("Salidas al baño por grupo");
   tabla(["Grupo", "Salidas"], est.banosPorGrupo.map(([k, n]) => [k, String(n)]));
+  if (!autor) {
   tituloSec("Ausencias del profesorado por motivo");
   tabla(["Motivo", "Ausencias"], est.ausenciasPorMotivo.map(([k, n]) => [k, String(n)]));
   tituloSec("Ausencias por profesor/a");
   tabla(["Profesor/a", "Ausencias"], est.ausenciasPorProfesor.map(([k, n]) => [k, String(n)]));
+  }
   guardarPDF(doc, `estadisticas-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.pdf`);
 }
 
@@ -3523,7 +3531,7 @@ function pdfAusencias(ausencias, periodo) {
 // ─── Excel (.xlsx) con todos los datos del periodo, una hoja por tema ─────────
 // La librería se carga solo al pulsar el botón, para que la aplicación no pese más.
 // No incluye el contacto de las familias (RGPD): solo lo necesario para analizar.
-async function excelPeriodo(est, periodo, tutores = {}, alumnos = []) {
+async function excelPeriodo(est, periodo, tutores = {}, alumnos = [], soloAlumnado = false) {
   const XLSX = await import("xlsx");
   const libro = XLSX.utils.book_new();
   const hoja = (nombre, cabecera, filas, anchos) => {
@@ -3539,13 +3547,13 @@ async function excelPeriodo(est, periodo, tutores = {}, alumnos = []) {
     ["Periodo", periodo.texto], ["Días lectivos", est.lectivos.length],
     ["Partes", est.partes.length], ["Leves", est.gravedad.leve], ["Graves", est.gravedad.grave], ["Muy graves", est.gravedad.muy_grave],
     ["Alumnos/as con parte", est.alumnosConParte], ["Salidas al baño", est.banos.length], ["Duración media del baño (min)", est.banoMedio || ""],
-    ["Ausencias del profesorado", est.ausencias.length], ["Horas de ausencia", est.horasAusencia],
+    ...(soloAlumnado ? [] : [["Ausencias del profesorado", est.ausencias.length], ["Horas de ausencia", est.horasAusencia],
     ["Guardias firmadas", est.guardiasFirmadas], ["Guardias que había que firmar", est.guardiasDebidas],
-    ["Listas pasadas en guardia", est.listasPasadas], ["Faltas anotadas en esas listas", est.faltasEnListas],
+    ["Listas pasadas en guardia", est.listasPasadas], ["Faltas anotadas en esas listas", est.faltasEnListas]]),
   ], [34, 50]);
 
-  hoja("Por día", ["Fecha", "Día", "Partes leves", "Partes graves", "Partes muy graves", "Total partes", "Salidas al baño", "Ausencias profesorado", "Horas de ausencia"],
-    est.porDia.map(d => [fecha(d.fecha), DIAS_ES[parseISO(d.fecha).getDay()], d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia]),
+  hoja("Por día", ["Fecha", "Día", "Partes leves", "Partes graves", "Partes muy graves", "Total partes", "Salidas al baño", ...(soloAlumnado ? [] : ["Ausencias profesorado", "Horas de ausencia"])],
+    est.porDia.map(d => [fecha(d.fecha), DIAS_ES[parseISO(d.fecha).getDay()], d.leve, d.grave, d.muy_grave, d.partes, d.banos, ...(soloAlumnado ? [] : [d.ausencias, d.horasAusencia])]),
     [12, 11, 12, 12, 16, 12, 14, 20, 16]);
 
   hoja("Partes", ["Ref.", "Fecha", "Hora registro", "Hora de clase", "Alumno/a", "Grupo", "Tutor/a", "Correo del tutor/a", "Tipo", "Gravedad", "Falta tipificada", "Normativa", "Profesor/a", "Descripción", "Parte de grupo"],
@@ -3576,11 +3584,11 @@ async function excelPeriodo(est, periodo, tutores = {}, alumnos = []) {
     est.banos.map(b => [fecha(b.ts || b.salida), horaCorta(b.salida || b.ts), b.regreso ? horaCorta(b.regreso) : "Sin regreso", minutosBano(b) ?? "", b.alumno, b.curso, b.profesor || ""]),
     [11, 8, 11, 12, 28, 10, 22]);
 
-  hoja("Ausencias profesorado", ["Fecha", "Día", "Profesor/a", "Motivo", "Horas", "Nº de horas", "Grupo / aula", "Edificio", "Asignatura", "Tarea para el alumnado", "Dónde está la tarea", "Enlace"],
+  if (!soloAlumnado) hoja("Ausencias profesorado", ["Fecha", "Día", "Profesor/a", "Motivo", "Horas", "Nº de horas", "Grupo / aula", "Edificio", "Asignatura", "Tarea para el alumnado", "Dónde está la tarea", "Enlace"],
     est.ausencias.map(a => [fecha(a.fecha), DIAS_ES[parseISO(a.fecha).getDay()], a.profesor, a.motivo || "", (a.horas || []).join(", "), (a.horas || []).length, a.aula || "", a.edificio || "", a.asignatura || "", a.tarea || "", a.ubicacion || "", a.enlace || ""]),
     [11, 10, 22, 16, 26, 10, 12, 8, 16, 50, 22, 30]);
 
-  hoja("Listas de guardia", ["Fecha", "Hora", "Grupo", "Profesor/a de guardia", "Pasada a las", "Nº de faltas", "Alumnado que faltaba"],
+  if (!soloAlumnado) hoja("Listas de guardia", ["Fecha", "Hora", "Grupo", "Profesor/a de guardia", "Pasada a las", "Nº de faltas", "Alumnado que faltaba"],
     est.listas.slice().sort((a, b) => a.fecha.localeCompare(b.fecha) || HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora))
       .map(l => [fecha(l.fecha), l.hora, l.curso, l.profesor, horaCorta(l.ts), (l.ausentes || []).length, (l.ausentes || []).map(x => x.nombre).join(", ")]),
     [11, 9, 10, 22, 11, 11, 60]);
@@ -3661,8 +3669,99 @@ function DetallePartes({ titulo, subtitulo, partes, tutores, onVerParte, onCerra
   );
 }
 
-function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alumnos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, onVerParte, C, inpStyle, selStyle, labelStyle }) {
+// ─── Informe para la familia de un alumno/a (PDF y texto para el correo) ─────
+function datosFamilia(alumno, partes, banos) {
+  const g = gr => partes.filter(p => p.gravedad === gr).length;
+  return { leve: g("leve"), grave: g("grave"), muy_grave: g("muy_grave"), faltas: contarPor(partes, etiquetaTip), banos: banos.length,
+    tutor: partes.find(p => p.tutor)?.tutor || alumno.tutor || "", ordenados: [...partes].sort((a, b) => new Date(a.ts) - new Date(b.ts)) };
+}
+function textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores = {}) {
+  const d = datosFamilia(alumno, partes, banos);
+  const tutor = tutores[alumno.curso]?.tutor || d.tutor;
+  const lineas = d.ordenados.map(p => `• ${fmtD(p.ts)} (${p.hora || "hora no indicada"}) · ${sinEmoji(gObj(p.gravedad)?.label)} · ${etiquetaTip(p) || p.tipo}\n  ${p.descripcion}`).join("\n");
+  const firma = remitente || tutor || "El equipo docente";
+  return `Estimada familia de ${alumno.nombre} (${alumno.curso}):
+
+Les escribimos desde el IES Enrique Tierno Galván para informarles de la convivencia de ${alumno.nombre} durante ${periodo.texto}.
+
+Resumen:
+- Partes: ${partes.length} (${d.leve} leves, ${d.grave} graves y ${d.muy_grave} muy graves)${d.faltas[0] ? `\n- Lo que más se repite: ${d.faltas[0][0]} (${d.faltas[0][1]} ${d.faltas[0][1] === 1 ? "vez" : "veces"})` : ""}
+- Salidas al baño durante las clases: ${d.banos}
+${partes.length ? `\nDetalle:\n${lineas}\n` : "\nNo tiene ningún parte en este periodo.\n"}
+Nos gustaría hablar con ustedes para trabajar juntos. Pueden responder a este correo para concertar una cita.
+
+Un saludo,
+${firma}${tutor && firma !== tutor ? `\n(Tutor/a del grupo: ${tutor})` : tutor ? "\nTutor/a del grupo" : ""}`;
+}
+function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remitente = "") {
+  const d = datosFamilia(alumno, partes, banos);
+  const tutor = tutores[alumno.curso]?.tutor || d.tutor;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const w = doc.internal.pageSize.getWidth();
+  let y = cabeceraPDF(doc, "Informe de convivencia para la familia", periodo.texto[0].toUpperCase() + periodo.texto.slice(1));
+  autoTable(doc, { ...estiloTabla, startY: y, theme: "grid", columnStyles: { 0: { fontStyle: "bold", cellWidth: 48, fillColor: [238, 245, 248] } },
+    body: [["Alumno/a", alumno.nombre], ["Grupo", alumno.curso], ["Tutor/a", tutor || "-"], ["Correo del tutor/a", tutores[alumno.curso]?.email || "-"]].map(r => r.map(sinEmoji)) });
+  y = doc.lastAutoTable.finalY + 8;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text("Resumen", 14, y); doc.setTextColor(0);
+  autoTable(doc, { ...estiloTabla, startY: y + 3, head: [["Partes", "Leves", "Graves", "Muy graves", "Salidas al baño"]],
+    body: [[partes.length, d.leve, d.grave, d.muy_grave, d.banos].map(String)], styles: { ...estiloTabla.styles, halign: "center", fontSize: 11 } });
+  y = doc.lastAutoTable.finalY + 6;
+  if (d.faltas.length) {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Conductas que más se repiten:", 14, y); y += 5;
+    doc.setFont("helvetica", "normal");
+    d.faltas.slice(0, 3).forEach(([k, n]) => { const l = doc.splitTextToSize(`• ${sinEmoji(k)} (${n})`, w - 28); doc.text(l, 14, y); y += l.length * 5; });
+    y += 3;
+  }
+  doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text("Detalle de los partes", 14, y); doc.setTextColor(0);
+  autoTable(doc, { ...estiloTabla, startY: y + 3, head: [["Fecha", "Hora", "Gravedad", "Conducta", "Profesor/a", "Qué ocurrió"]],
+    body: d.ordenados.length ? d.ordenados.map(p => [fmtD(p.ts), p.hora || "-", sinEmoji(gObj(p.gravedad)?.label), etiquetaTip(p) || p.tipo, p.profesor, p.descripcion].map(sinEmoji)) : [["-", "-", "-", "Ningún parte en este periodo", "-", "-"]],
+    columnStyles: { 0: { cellWidth: 19 }, 1: { cellWidth: 15 }, 2: { cellWidth: 18 }, 3: { cellWidth: 45 }, 4: { cellWidth: 26 } } });
+  y = doc.lastAutoTable.finalY + 10;
+  if (y > 240) { doc.addPage(); y = 24; }
+  doc.setFont("helvetica", "normal"); doc.setFontSize(10);
+  const cierre = doc.splitTextToSize("Les enviamos este informe para mantenerles informados y trabajar juntos. Pueden solicitar una reunión con el tutor/a o con Jefatura de Estudios.", w - 28);
+  doc.text(cierre, 14, y); y += cierre.length * 5 + 18;
+  doc.setDrawColor(150); doc.setLineWidth(0.3); doc.line(14, y, 90, y); doc.line(120, y, 196, y);
+  doc.setFontSize(9); doc.setTextColor(...GRIS);
+  doc.text(sinEmoji(remitente || tutor || "Tutor/a"), 14, y + 5); doc.text("Recibí (familia)", 120, y + 5);
+  guardarPDF(doc, `informe-familia-${nombreArchivo(alumno.nombre)}-${periodo.desde}.pdf`);
+}
+
+// Botones para contactar con la familia de un alumno/a
+function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C }) {
+  const [copiado, setCopiado] = useState("");
+  const copiar = async (texto, que) => {
+    try { await navigator.clipboard.writeText(texto); setCopiado(que); setTimeout(() => setCopiado(""), 2000); }
+    catch { window.prompt("Copia el texto:", texto); }
+  };
+  if (!alumno) return null;
+  const correos = [alumno.email, tutores[alumno.curso]?.email].filter(Boolean).join(", ");
+  const btn = { flex: "1 1 150px", padding: "10px 12px", borderRadius: 10, border: `2px solid ${C.teal}`, background: "#F0FAF7", color: C.dark, fontWeight: 700, fontSize: 12, cursor: "pointer" };
+  return (
+    <div style={{ background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 12, marginTop: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 2 }}>📨 Contactar con la familia</div>
+      <div style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}>✉️ {alumno.email || "sin correo"} · 📱 {alumno.telefono || "sin teléfono"}</div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}>📄 Informe para la familia (PDF)</button>
+        <button style={btn} onClick={() => copiar(textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores), "texto")}>{copiado === "texto" ? "✅ Copiado" : "📋 Copiar texto del correo"}</button>
+        <button style={btn} disabled={!correos} onClick={() => copiar(correos, "correos")}>{copiado === "correos" ? "✅ Copiado" : "📧 Copiar correos"}</button>
+      </div>
+      <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>Escribe desde tu correo del centro: pega el texto y adjunta el PDF. «Copiar correos» incluye la familia y el tutor/a.</div>
+    </div>
+  );
+}
+
+function EstadisticasDocumentos({ modo = "jefatura", usuario = "", partes: partesTodos, banos: banosTodos, ausencias: ausTodas, firmas: firmasTodas, listas: listasTodas, alumnos: alumnosTodos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, onVerParte, C, inpStyle, selStyle, labelStyle }) {
   const [detalle, setDetalle] = useState(null); // { titulo, subtitulo, partes }
+  // Profesorado: solo ve los partes que ha puesto y, si es tutor/a, los de su grupo
+  const esProfe = modo === "profesor";
+  const misTutorias = esProfe ? Object.entries(tutores || {}).filter(([, t]) => t?.tutor === usuario).map(([c]) => c).sort() : [];
+  const [ambito, setAmbito] = useState(() => misTutorias[0] || "mios");
+  const ambitoOk = ambito === "mios" || misTutorias.includes(ambito) ? ambito : "mios";
+  const partes = !esProfe ? partesTodos : ambitoOk === "mios" ? partesTodos.filter(p => p.profesor === usuario) : partesTodos.filter(p => p.curso === ambitoOk);
+  const banos = !esProfe ? banosTodos : ambitoOk === "mios" ? banosTodos.filter(b => b.profesor === usuario) : banosTodos.filter(b => b.curso === ambitoOk);
+  const ausencias = esProfe ? [] : ausTodas, firmas = esProfe ? [] : firmasTodas, listas = esProfe ? [] : listasTodas;
+  const alumnos = !esProfe ? alumnosTodos : ambitoOk === "mios" ? alumnosTodos.filter(a => partes.some(p => p.alumnoId === a.id)) : alumnosTodos.filter(a => a.curso === ambitoOk);
   const [tipo, setTipo] = useState("dia");
   const [ref, setRef] = useState(isoLocal());
   const [desdeLibre, setDesdeLibre] = useState(isoLocal(sumarDias(new Date(), -14)));
@@ -3671,7 +3770,7 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
   const [grupoDoc, setGrupoDoc] = useState("");
   const [profDoc, setProfDoc] = useState("");
   const periodo = calcularPeriodo(tipo, ref, desdeLibre, hastaLibre);
-  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  const equipo = { profesores, cuadrante: esProfe ? {} : cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
   const est = estadisticasPeriodo({ ...periodo, partes, banos, ausencias, firmas, listas, equipo, tutores });
   const cursos = [...new Set(alumnos.map(a => a.curso))].sort();
   const pct = (a, b) => b ? Math.round(100 * a / b) : null;
@@ -3688,11 +3787,28 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
   const partesAlumno = est.partes.filter(p => String(p.alumnoId) === alumnoDoc);
   const partesGrupo = est.partes.filter(p => p.curso === grupoDoc);
   const ausProf = est.ausencias.filter(a => a.profesor === profDoc);
-  const nombreAlumno = alumnos.find(a => String(a.id) === alumnoDoc)?.nombre || "";
+  const alumnoObj = alumnos.find(a => String(a.id) === alumnoDoc);
+  const nombreAlumno = alumnoObj?.nombre || "";
+  const banosAlumno = est.banos.filter(b => alumnoObj && b.alumno === alumnoObj.nombre && b.curso === alumnoObj.curso);
 
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>📈 Estadísticas y documentos</h2>
+      <h2 style={{ color: C.dark, marginTop: 0 }}>📈 {esProfe ? "Mis estadísticas e informes" : "Estadísticas y documentos"}</h2>
+      {esProfe && (
+        <div className="no-print" style={{ ...tarjeta, borderLeft: `5px solid ${C.teal}` }}>
+          <label style={labelStyle}>¿Qué partes quieres analizar?</label>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {[...misTutorias.map(c => ({ id: c, txt: `🏫 Mi tutoría: ${c}`, sub: "Todos los partes del grupo, los ponga quien los ponga" })), { id: "mios", txt: "👤 Los partes que he puesto yo", sub: "En todos los grupos a los que doy clase" }].map(o => (
+              <button key={o.id} onClick={() => { setAmbito(o.id); setAlumnoDoc(""); setGrupoDoc(""); }}
+                style={{ flex: "1 1 220px", textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `2px solid ${ambitoOk === o.id ? C.teal : "#e2e8f0"}`, background: ambitoOk === o.id ? "#F0FAF7" : C.white, cursor: "pointer" }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>{o.txt}</div>
+                <div style={{ fontSize: 11, color: C.gray }}>{o.sub}</div>
+              </button>
+            ))}
+          </div>
+          {!misTutorias.length && <div style={{ fontSize: 12, color: C.gray, marginTop: 8 }}>Si eres tutor/a y no aparece tu grupo, pide a Administración que te asigne la tutoría.</div>}
+        </div>
+      )}
       {detalle && <DetallePartes {...detalle} tutores={tutores} onVerParte={onVerParte} onCerrar={() => setDetalle(null)} C={C} />}
 
       {/* Selector de periodo */}
@@ -3728,9 +3844,13 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
           { n: est.partes.length, t: "Partes", s: `${est.gravedad.leve} leves · ${est.gravedad.grave} graves · ${est.gravedad.muy_grave} muy graves`, c: C.teal, click: () => abrir("Todos los partes", () => true) },
           { n: est.alumnosConParte, t: "Alumnos/as con parte", s: est.lectivos.length ? `${(est.partes.length / est.lectivos.length).toFixed(1)} partes por día` : "", c: C.blue },
           { n: est.banos.length, t: "Salidas al baño", s: est.banoMedio ? `${est.banoMedio} min de media · ${est.banosLargos} de más de 10 min` : "", c: "#10b981" },
-          { n: est.ausencias.length, t: "Ausencias profesorado", s: `${est.horasAusencia} horas · ${est.profesoresAusentes} profesores/as`, c: C.salmon },
-          { n: est.guardiasDebidas ? `${pct(est.guardiasFirmadas, est.guardiasDebidas)} %` : "-", t: "Guardias firmadas", s: `${est.guardiasFirmadas} de ${est.guardiasDebidas}`, c: C.amber },
-          { n: est.listasPasadas, t: "Listas en guardia", s: `${est.faltasEnListas} faltas anotadas`, c: "#8b5cf6" },
+          ...(esProfe ? [
+            { n: est.gravedad.grave + est.gravedad.muy_grave, t: "Graves y muy graves", s: "Pulsa para verlos", c: C.salmon, click: () => abrir("Partes graves y muy graves", p => p.gravedad !== "leve") },
+          ] : [
+            { n: est.ausencias.length, t: "Ausencias profesorado", s: `${est.horasAusencia} horas · ${est.profesoresAusentes} profesores/as`, c: C.salmon },
+            { n: est.guardiasDebidas ? `${pct(est.guardiasFirmadas, est.guardiasDebidas)} %` : "-", t: "Guardias firmadas", s: `${est.guardiasFirmadas} de ${est.guardiasDebidas}`, c: C.amber },
+            { n: est.listasPasadas, t: "Listas en guardia", s: `${est.faltasEnListas} faltas anotadas`, c: "#8b5cf6" },
+          ]),
         ].map(k => (
           <div key={k.t} onClick={k.click} title={k.click ? "Pulsa para verlos en detalle" : undefined} style={{ background: C.white, borderRadius: 12, padding: 14, borderTop: `4px solid ${k.c}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", cursor: k.click ? "pointer" : "default" }}>
             <div style={{ fontSize: 26, fontWeight: 800, color: C.dark }}>{k.n}</div>
@@ -3773,7 +3893,9 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
         <div style={tarjeta}><h3 style={h3}>👤 Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} onClick={k => abrir(`Partes de ${k}`, p => `${p.alumno} (${p.curso})` === k)} /></div>
         <div style={tarjeta}><h3 style={h3}>📑 Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} onClick={k => abrir(k, p => etiquetaTip(p) === k)} /></div>
         <div style={tarjeta}><h3 style={h3}>🚻 Salidas al baño por grupo</h3><Barras datos={est.banosPorGrupo} color="#10b981" /></div>
-        <div style={tarjeta}><h3 style={h3}>📢 Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>
+        {esProfe
+          ? <div style={tarjeta}><h3 style={h3}>🚻 Alumnado que más sale al baño</h3><Barras datos={est.banosPorAlumno} color="#10b981" /></div>
+          : <div style={tarjeta}><h3 style={h3}>📢 Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>}
       </div>
 
       {/* Documentos */}
@@ -3781,7 +3903,7 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
         <h3 style={h3}>📄 Documentos de este periodo</h3>
         <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Todos se descargan en PDF con las fechas elegidas arriba.</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
-          <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo)}>
+          <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo, esProfe ? `${ambitoOk === "mios" ? "Partes puestos por" : `Tutoría de ${ambitoOk} ·`} ${usuario}` : "")}>
             📊 Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
           </button>
           <button style={btnDoc(est.partes.length > 0)} disabled={!est.partes.length} onClick={() => pdfInformePartes(est.partes, periodo.texto, tutores)}>
@@ -3790,16 +3912,16 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
           <button style={btnDoc(est.banos.length > 0)} disabled={!est.banos.length} onClick={() => pdfInformeBanos(est.banos, periodo.texto)}>
             🚻 Salidas al baño<span style={sub}>{est.banos.length} salida(s) con hora y duración</span>
           </button>
-          <button style={btnDoc(est.ausencias.length > 0)} disabled={!est.ausencias.length} onClick={() => pdfAusencias(est.ausencias, periodo)}>
+          {!esProfe && <button style={btnDoc(est.ausencias.length > 0)} disabled={!est.ausencias.length} onClick={() => pdfAusencias(est.ausencias, periodo)}>
             📢 Ausencias del profesorado<span style={sub}>{est.ausencias.length} ausencia(s) con horas, grupo y tarea</span>
-          </button>
-          {tipo === "dia" && (
+          </button>}
+          {tipo === "dia" && !esProfe && (
             <button style={btnDoc()} onClick={() => pdfFirmasYListas(periodo.desde, filasFirmasDia(periodo.desde, equipo, firmas), est.listas.slice().sort((a, b) => HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora)))}>
               ✍️ Firmas de guardia y listas<span style={sub}>Quién tenía guardia, quién firmó y las listas pasadas</span>
             </button>
           )}
-          <button style={btnDoc()} onClick={() => excelPeriodo(est, periodo, tutores, alumnos).catch(() => window.alert("No se ha podido crear el Excel. Comprueba la conexión e inténtalo de nuevo."))}>
-            📥 Todos los datos en Excel<span style={sub}>Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas</span>
+          <button style={btnDoc()} onClick={() => excelPeriodo(est, periodo, tutores, alumnos, esProfe).catch(() => window.alert("No se ha podido crear el Excel. Comprueba la conexión e inténtalo de nuevo."))}>
+            📥 Todos los datos en Excel<span style={sub}>{esProfe ? "Partes con alumno, grupo, falta y profesor; resumen por alumno, por grupo y baños" : "Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas"}</span>
           </button>
         </div>
 
@@ -3816,18 +3938,19 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
             <button style={btnDoc(partesAlumno.length > 0)} disabled={!partesAlumno.length} onClick={() => pdfInformePartes(partesAlumno, `${nombreAlumno} · ${periodo.texto}`, tutores)}>
               ⬇️ {alumnoDoc ? `${partesAlumno.length} parte(s) en este periodo` : "Descargar"}
             </button>
+            {alumnoObj && <ContactoFamilia alumno={alumnoObj} partes={partesAlumno} banos={banosAlumno} periodo={periodo} tutores={tutores} remitente={esProfe ? usuario : ""} C={C} />}
           </div>
-          <div>
+          {(!esProfe || ambitoOk === "mios") && <div>
             <label style={labelStyle}>🏫 Partes de un grupo</label>
             <select value={grupoDoc} onChange={e => setGrupoDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
               <option value="">Elige grupo…</option>
-              {cursos.map(c => <option key={c} value={c}>{c}</option>)}
+              {(esProfe ? [...new Set(partes.map(p => p.curso))].sort() : cursos).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <button style={btnDoc(partesGrupo.length > 0)} disabled={!partesGrupo.length} onClick={() => pdfInformePartes(partesGrupo, `Grupo ${grupoDoc} · ${periodo.texto}`, tutores)}>
               ⬇️ {grupoDoc ? `${partesGrupo.length} parte(s) en este periodo` : "Descargar"}
             </button>
-          </div>
-          <div>
+          </div>}
+          {!esProfe && <div>
             <label style={labelStyle}>👨‍🏫 Ausencias de un profesor/a</label>
             <select value={profDoc} onChange={e => setProfDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
               <option value="">Elige profesor/a…</option>
@@ -3836,7 +3959,7 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
             <button style={btnDoc(ausProf.length > 0)} disabled={!ausProf.length} onClick={() => pdfAusencias(ausProf, { ...periodo, texto: `${profDoc} · ${periodo.texto}` })}>
               ⬇️ {profDoc ? `${ausProf.length} ausencia(s) en este periodo` : "Descargar"}
             </button>
-          </div>
+          </div>}
         </div>
         <div style={{ fontSize: 11, color: C.gray, marginTop: 12 }}>Las faltas oficiales de asistencia del alumnado se registran en Raíces; aquí solo aparecen las anotadas en las listas de guardia.</div>
       </div>
@@ -4169,6 +4292,7 @@ export default function App() {
           { id: "parte_grupo", label: "👥 Parte de Grupo", color: "#ec4899" },
           { id: "bano",        label: "🚻 Baños", color: "#10b981" },
           { id: "historial",   label: "🗂 Mis Partes", color: "#8b5cf6" },
+          { id: "mis_estadisticas", label: "📈 Estadísticas", color: "#06b6d4" },
         ]
       : moduloProfesor === "guardias"
       ? [
@@ -5086,6 +5210,13 @@ export default function App() {
                 );
               })}
           </div>
+        )}
+
+        {/* ── Estadísticas e informes del profesorado y tutores ── */}
+        {tab === "mis_estadisticas" && (
+          <EstadisticasDocumentos key={usuario} modo="profesor" usuario={usuario} partes={partes.map(completar)} banos={banos} ausencias={[]} firmas={[]} listas={[]}
+            alumnos={alumnos} profesores={profesores} cuadrante={{}} apoyosGuardia={{}} sustitutosGuardia={{}}
+            tutores={tutores} onVerParte={p => setShowParte(completar(p))} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} />
         )}
 
         {/* ── Estadísticas y documentos por fecha (Jefatura) ── */}
