@@ -229,35 +229,10 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
   const btnPrincipal = { display: "block", width: "100%", padding: "14px 20px", marginTop: 6, background: C.teal, color: "#fff", border: "none", borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700 };
   const enlace = { background: "none", border: "none", color: C.blue, cursor: "pointer", fontSize: 13, fontWeight: 600, marginTop: 14, padding: 0 };
 
-  return (
-    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
-      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
-      <div style={{ background: C.white, borderRadius: 20, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
-        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
-        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
-        <AvisoDemo />
-
-        {paso === "nombre" && (
-          <div style={{ textAlign: "left" }}>
-            {MODO_DEMO && (
-              <button onClick={onCargarEjemplo}
-                style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
-                🧪 Cargar datos de ejemplo (partes, informes, guardias…)
-              </button>
-            )}
-            <label style={lbl} htmlFor="gd-nombre">¿Quién eres?</label>
-            <input id="gd-nombre" type="text" placeholder="Tu nombre" list="lista-profesores" value={nombre} autoComplete="off"
-              onChange={e => { setNombre(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") continuar(); }} style={inp} />
-            <datalist id="lista-profesores">{profesores.map(p => <option key={p} value={p} />)}</datalist>
-            <small style={{ color: C.gray, display: "block", marginBottom: 8 }}>Escribe y elige tu nombre de la lista.</small>
-            {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
-            <button onClick={continuar} style={btnPrincipal}>Continuar</button>
-            {MODO_DEMO && (
-              <div style={{ marginTop: 22, paddingTop: 16, borderTop: `1px dashed ${C.cream}` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 4 }}>Probar la demostración sin clave</div>
-                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>Solo existe en esta versión de prueba. Elige con qué perfil quieres entrar (profesorado ficticio):</div>
+  const accesoDemo = MODO_DEMO ? (
+              <div style={{ background: "#F0FAF7", border: `2px solid ${C.teal}`, borderRadius: 12, padding: "14px 14px 6px", marginBottom: 22 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 4 }}>👉 Para probar la demostración, pulsa uno de estos perfiles</div>
+                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>No hace falta nombre ni clave. Profesorado ficticio.</div>
                 {[
                   { txt: "👨‍🏫 Profesor", sub: `${nombreSugerido || "María Fernández"} · partes, guardias y Galvángram`, accion: () => onEntrar(nombreSugerido || "María Fernández", PERFILES[0]) },
                   { txt: "📊 Jefatura y Dirección", sub: "Ana Jiménez · convivencia, informes, cuadrante de guardias y ausencias", accion: () => onEntrar("Ana Jiménez", PERFILES[1]) },
@@ -270,7 +245,35 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
                   </button>
                 ))}
               </div>
+  ) : null;
+
+  return (
+    <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
+      <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
+      <div style={{ background: C.white, borderRadius: 20, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
+        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
+        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
+        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        <AvisoDemo />
+
+        {paso === "nombre" && (
+          <div style={{ textAlign: "left" }}>
+            {accesoDemo}
+            {MODO_DEMO && (
+              <button onClick={onCargarEjemplo}
+                style={{ width: "100%", background: "#EEF5F8", border: `1px dashed ${C.blue}`, color: C.blue, borderRadius: 10, padding: "10px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600, marginBottom: 20 }}>
+                🧪 Cargar datos de ejemplo (partes, informes, guardias…)
+              </button>
             )}
+            {MODO_DEMO && <div style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}>En el centro, cada docente entrará con su nombre y su clave:</div>}
+            <label style={lbl} htmlFor="gd-nombre">¿Quién eres?</label>
+            <input id="gd-nombre" type="text" placeholder="Tu nombre" list="lista-profesores" value={nombre} autoComplete="off"
+              onChange={e => { setNombre(e.target.value); setError(""); }} onKeyDown={e => { if (e.key === "Enter") continuar(); }} style={inp} />
+            <datalist id="lista-profesores">{profesores.map(p => <option key={p} value={p} />)}</datalist>
+            <small style={{ color: C.gray, display: "block", marginBottom: 8 }}>Escribe y elige tu nombre de la lista.</small>
+            {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
+            <button onClick={continuar} style={btnPrincipal}>Continuar</button>
           </div>
         )}
 
@@ -298,6 +301,12 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             )}
             {error && <div role="alert" style={{ color: "#9f1239", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{error}</div>}
             <button onClick={entrar} style={btnPrincipal}>Entrar</button>
+            {MODO_DEMO && (
+              <button onClick={() => { setError(""); if (permitidos.length === 1) onEntrar(nombre, permitidos[0]); else setPaso("perfil"); }}
+                style={{ display: "block", width: "100%", padding: "12px 20px", marginTop: 10, background: C.cream, color: C.dark, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 14, fontWeight: 700 }}>
+                🧪 Entrar sin clave (solo en la demostración)
+              </button>
+            )}
             {tieneClave && <div style={{ fontSize: 12, color: C.gray, marginTop: 10 }}>¿Has olvidado tu clave? Pide a Administración que la restablezca.</div>}
             <button onClick={() => { setPaso("nombre"); setClave(""); setClave2(""); setError(""); }} style={enlace}>← No soy {nombre}</button>
           </div>
@@ -325,6 +334,7 @@ const AvisoDemo = ({ compacto }) => MODO_DEMO ? (
     ? { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, textAlign: "center", padding: "6px 12px", borderBottom: "1px solid #fbbf24" }
     : { background: "#fef3c7", color: "#92400e", fontSize: 12, fontWeight: 600, borderRadius: 10, padding: "10px 12px", marginBottom: 20, border: "1px solid #fbbf24", lineHeight: 1.4 }}>
     ⚠️ Versión de demostración: no introducir datos reales de alumnos ni familias.
+    {!compacto && <div style={{ marginTop: 6, fontWeight: 500 }}>Para entrar no necesitas clave: pulsa <b>Profesor</b>, <b>Jefatura y Dirección</b> o <b>Administración</b> en el recuadro verde de abajo.</div>}
   </div>
 ) : null;
 
@@ -3525,7 +3535,7 @@ export default function App() {
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias);
     setFirmas(ej.firmas); setListas([]);
     if (ej.sugerido) setUsuario(ej.sugerido);
-    window.alert(`Ejemplo cargado.\n\n• ${conv.partes.length} partes de todas las gravedades, ${conv.alumnos.length} alumnos en ${Object.keys(conv.tutores).length} grupos con su tutor/a, salidas al baño y alertas.\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, entra como ${ej.sugerido} con el perfil Profesor → Guardias.\n• Para verlo como Jefatura, cambia al perfil Jefatura → Guardias & Ausencias.`);
+    window.alert(`Ejemplo cargado.\n\n• ${conv.partes.length} partes de todas las gravedades, ${conv.alumnos.length} alumnos en ${Object.keys(conv.tutores).length} grupos con su tutor/a, salidas al baño y alertas.\n• Ausentes hoy: ${ej.ausentes.filter(Boolean).join(" y ")}.\n• ${ej.sugerido} es sustituto a 2ª hora y hoy le toca entrar. Para verlo, pulsa el botón «Profesor» (entrarás como ${ej.sugerido}) → Guardias.\n• Para verlo como Jefatura, pulsa «Jefatura y Dirección» → Guardias & Ausencias.\n\nNo hace falta nombre ni clave: usa los botones del recuadro verde.`);
   }
 
   function cambiarPerfil(id) {
