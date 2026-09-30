@@ -1671,17 +1671,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
   const [fecha, setFecha] = useState(isoLocal());
   const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
   // Quién tenía que estar en cada zona y quién ha firmado
-  const filas = [];
-  HORAS_GUARDIA.forEach(hora => {
-    profesores.forEach(prof => {
-      const zonaId = cuadrante[`${fecha}|${hora}|${prof}`];
-      if (!zonaId) return;
-      const z = ZONAS_CENTRO.find(z => z.id === zonaId);
-      const sit = situacionZona({ fecha, hora, zonaId, ...equipo });
-      const personas = sit.enZona.map(p => ({ p, firma: firmas.find(f => f.fecha === fecha && f.hora === hora && f.zonaId === zonaId && f.profesor === p) }));
-      filas.push({ hora, zona: z?.label || zonaId, personas, empezada: horaEmpezada(fecha, hora) });
-    });
-  });
+  const filas = filasFirmasDia(fecha, equipo, firmas);
   const debidas = filas.filter(f => f.empezada).flatMap(f => f.personas);
   const firmadas = debidas.filter(x => x.firma).length;
   const listasDia = listas.filter(l => l.fecha === fecha).sort((a, b) => HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora));
@@ -1769,6 +1759,12 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
 // Se abre sola la primera vez que se entra en una pantalla (en ese dispositivo)
 // y después queda recogida en el botón «Cómo se usa».
 const AYUDAS = {
+  estadisticas: { titulo: "Estadísticas y documentos", pasos: [
+    "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
+    "Con ◀ y ▶ pasas al periodo anterior o siguiente; «Hoy» vuelve al actual.",
+    "Verás las cifras de partes, baños, ausencias del profesorado, firmas de guardia y listas, y gráficas por día, grupo, hora y alumnado.",
+    "Abajo descargas en PDF las estadísticas, todos los partes, los baños, las ausencias y (si eliges un día) las firmas de guardia.",
+    "También puedes sacar los partes de un alumno o de un grupo, o las ausencias de un profesor, solo en esas fechas."] },
   partes: { titulo: "Poner un parte", pasos: [
     "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
     "Elige la hora, el tipo y la gravedad, y después la falta tipificada de la lista oficial.",
@@ -3343,6 +3339,386 @@ function GestionAusencias({ ausencias, setAusencias, profesores, C, fmt }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTADÍSTICAS Y DOCUMENTOS POR FECHA (Jefatura)
+// ═══════════════════════════════════════════════════════════════════════════
+// Filas de firmas de guardia de un día (quién tenía que estar en cada zona y quién ha firmado)
+function filasFirmasDia(fecha, { profesores, cuadrante, apoyos = {}, sustitutos = {}, ausencias = [] }, firmas = []) {
+  const filas = [];
+  HORAS_GUARDIA.forEach(hora => {
+    profesores.forEach(prof => {
+      const zonaId = cuadrante[`${fecha}|${hora}|${prof}`];
+      if (!zonaId) return;
+      const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+      const sit = situacionZona({ fecha, hora, zonaId, profesores, cuadrante, apoyos, sustitutos, ausencias });
+      const personas = sit.enZona.map(p => ({ p, firma: firmas.find(f => f.fecha === fecha && f.hora === hora && f.zonaId === zonaId && f.profesor === p) }));
+      filas.push({ hora, zona: z?.label || zonaId, personas, empezada: horaEmpezada(fecha, hora) });
+    });
+  });
+  return filas;
+}
+
+const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+const PERIODOS = [
+  { id: "dia", label: "Día" },
+  { id: "semana", label: "Semana" },
+  { id: "quincena", label: "Quincena" },
+  { id: "mes", label: "Mes" },
+  { id: "rango", label: "Entre fechas" },
+];
+// Devuelve { desde, hasta, texto } (fechas AAAA-MM-DD) del periodo que contiene la fecha de referencia
+function calcularPeriodo(tipo, ref, desdeLibre, hastaLibre) {
+  const d = parseISO(ref);
+  const y = d.getFullYear(), m = d.getMonth();
+  const finMes = new Date(y, m + 1, 0).getDate();
+  const largo = x => parseISO(x).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  if (tipo === "dia") return { desde: isoLocal(d), hasta: isoLocal(d), texto: largo(d) };
+  if (tipo === "semana") {
+    const l = lunesDe(d), v = sumarDias(l, 4);
+    return { desde: isoLocal(l), hasta: isoLocal(v), texto: `Semana del ${fmtD(l)} al ${fmtD(v)}` };
+  }
+  if (tipo === "quincena") {
+    const primera = d.getDate() <= 15;
+    const ini = new Date(y, m, primera ? 1 : 16), fin = new Date(y, m, primera ? 15 : finMes);
+    return { desde: isoLocal(ini), hasta: isoLocal(fin), texto: `${primera ? "1ª" : "2ª"} quincena de ${MESES[m]} de ${y} (${fmtD(ini)} – ${fmtD(fin)})` };
+  }
+  if (tipo === "mes") return { desde: isoLocal(new Date(y, m, 1)), hasta: isoLocal(new Date(y, m, finMes)), texto: `${MESES[m][0].toUpperCase() + MESES[m].slice(1)} de ${y}` };
+  const a = desdeLibre || isoLocal(d), b = hastaLibre || a;
+  const [desde, hasta] = a <= b ? [a, b] : [b, a];
+  return { desde, hasta, texto: desde === hasta ? largo(desde) : `Del ${fmtD(parseISO(desde))} al ${fmtD(parseISO(hasta))}` };
+}
+// Mueve la fecha de referencia al periodo anterior (-1) o siguiente (+1)
+function moverPeriodo(tipo, ref, dir) {
+  const d = parseISO(ref);
+  if (tipo === "dia") { let x = sumarDias(d, dir); while (!esLectivo(x)) x = sumarDias(x, dir); return isoLocal(x); }
+  if (tipo === "semana") return isoLocal(sumarDias(d, 7 * dir));
+  if (tipo === "quincena") {
+    if (d.getDate() <= 15) return isoLocal(dir > 0 ? new Date(d.getFullYear(), d.getMonth(), 16) : new Date(d.getFullYear(), d.getMonth() - 1, 16));
+    return isoLocal(dir > 0 ? new Date(d.getFullYear(), d.getMonth() + 1, 1) : new Date(d.getFullYear(), d.getMonth(), 1));
+  }
+  return isoLocal(new Date(d.getFullYear(), d.getMonth() + dir, 1));
+}
+const diasEntre = (desde, hasta) => { const r = []; for (let x = parseISO(desde); isoLocal(x) <= hasta; x = sumarDias(x, 1)) r.push(isoLocal(x)); return r; };
+const contarPor = (lista, clave) => {
+  const m = {};
+  lista.forEach(x => { const k = typeof clave === "function" ? clave(x) : x[clave]; if (k) m[k] = (m[k] || 0) + 1; });
+  return Object.entries(m).sort((a, b) => b[1] - a[1]);
+};
+const minutosBano = b => b.regreso ? Math.max(1, Math.round((new Date(b.regreso) - new Date(b.salida || b.ts)) / 60000)) : null;
+const etiquetaTip = p => TIPIFICACION[p.gravedad]?.find(t => t.id === p.tipificacion)?.label || "";
+
+// Calcula todas las cifras del periodo
+function estadisticasPeriodo({ desde, hasta, partes, banos, ausencias, firmas, listas, equipo, tutores }) {
+  const enRango = f => f && f >= desde && f <= hasta;
+  const pP = partes.filter(p => enRango(isoLocal(p.ts))).sort((a, b) => new Date(a.ts) - new Date(b.ts));
+  const bP = banos.filter(b => enRango(isoLocal(b.ts || b.salida))).sort((a, b) => new Date(a.ts || a.salida) - new Date(b.ts || b.salida));
+  const aP = ausencias.filter(a => enRango(isoLocal(a.fecha))).sort((a, b) => isoLocal(a.fecha).localeCompare(isoLocal(b.fecha)));
+  const lP = listas.filter(l => enRango(l.fecha));
+  const dias = diasEntre(desde, hasta);
+  const lectivos = dias.filter(esLectivo);
+  let debidas = 0, firmadas = 0;
+  const hoyISO = isoLocal();
+  lectivos.filter(f => f <= hoyISO).forEach(f => {
+    filasFirmasDia(f, equipo, firmas).filter(x => x.empezada).forEach(x => x.personas.forEach(pe => { debidas++; if (pe.firma) firmadas++; }));
+  });
+  const minutos = bP.map(minutosBano).filter(Boolean);
+  const porDia = lectivos.map(f => ({
+    fecha: f,
+    leve: pP.filter(p => isoLocal(p.ts) === f && p.gravedad === "leve").length,
+    grave: pP.filter(p => isoLocal(p.ts) === f && p.gravedad === "grave").length,
+    muy_grave: pP.filter(p => isoLocal(p.ts) === f && p.gravedad === "muy_grave").length,
+    banos: bP.filter(b => isoLocal(b.ts || b.salida) === f).length,
+    ausencias: aP.filter(a => isoLocal(a.fecha) === f).length,
+    horasAusencia: aP.filter(a => isoLocal(a.fecha) === f).reduce((s, a) => s + (a.horas?.length || 0), 0),
+  })).map(d => ({ ...d, partes: d.leve + d.grave + d.muy_grave }));
+  return {
+    partes: pP, banos: bP, ausencias: aP, listas: lP, dias, lectivos, porDia,
+    gravedad: { leve: pP.filter(p => p.gravedad === "leve").length, grave: pP.filter(p => p.gravedad === "grave").length, muy_grave: pP.filter(p => p.gravedad === "muy_grave").length },
+    alumnosConParte: new Set(pP.map(p => p.alumnoId ?? p.alumno)).size,
+    porGrupo: resumenPorGrupo(pP, tutores),
+    porHora: HORAS.map(h => [h, pP.filter(p => p.hora === h).length]).filter(([, n]) => n > 0),
+    porAlumno: contarPor(pP, p => `${p.alumno} (${p.curso})`).slice(0, 10),
+    porTipificacion: contarPor(pP, etiquetaTip).slice(0, 8),
+    porProfesorParte: contarPor(pP, "profesor").slice(0, 10),
+    banosPorGrupo: contarPor(bP, "curso"),
+    banosPorAlumno: contarPor(bP, b => `${b.alumno} (${b.curso})`).slice(0, 10),
+    banoMedio: minutos.length ? Math.round(minutos.reduce((a, b) => a + b, 0) / minutos.length) : 0,
+    banosLargos: minutos.filter(m => m > 10).length,
+    ausenciasPorMotivo: contarPor(aP, "motivo"),
+    ausenciasPorProfesor: contarPor(aP, "profesor"),
+    horasAusencia: aP.reduce((s, a) => s + (a.horas?.length || 0), 0),
+    profesoresAusentes: new Set(aP.map(a => a.profesor)).size,
+    guardiasDebidas: debidas, guardiasFirmadas: firmadas,
+    listasPasadas: lP.length, faltasEnListas: lP.reduce((s, l) => s + (l.ausentes?.length || 0), 0),
+  };
+}
+
+// ─── PDF: estadísticas del periodo ───────────────────────────────────────────
+function pdfEstadisticas(est, periodo) {
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  let y = cabeceraPDF(doc, "Estadísticas del centro", `${periodo.texto} · Jefatura de Estudios`);
+  const tituloSec = t => {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text(t, 14, y); doc.setTextColor(0); y += 3;
+  };
+  const tabla = (head, body, extra = {}) => {
+    autoTable(doc, { ...estiloTabla, startY: y, head: [head], body: body.length ? body.map(r => r.map(sinEmoji)) : [[...head.map((_, i) => i === 0 ? "Sin datos en este periodo" : "")]], ...extra });
+    y = doc.lastAutoTable.finalY + 9;
+  };
+  const pct = (a, b) => b ? `${Math.round(100 * a / b)} %` : "-";
+  tituloSec("Resumen");
+  tabla(["Indicador", "Valor"], [
+    ["Días lectivos del periodo", est.lectivos.length],
+    ["Partes (total)", est.partes.length],
+    ["   Leves / Graves / Muy graves", `${est.gravedad.leve} / ${est.gravedad.grave} / ${est.gravedad.muy_grave}`],
+    ["Alumnos/as con algún parte", est.alumnosConParte],
+    ["Media de partes por día lectivo", est.lectivos.length ? (est.partes.length / est.lectivos.length).toFixed(1) : "-"],
+    ["Salidas al baño", est.banos.length],
+    ["   Duración media / salidas de más de 10 min", `${est.banoMedio || "-"} min / ${est.banosLargos}`],
+    ["Ausencias del profesorado", `${est.ausencias.length} (${est.horasAusencia} horas, ${est.profesoresAusentes} profesores/as)`],
+    ["Firmas de guardia", `${est.guardiasFirmadas} de ${est.guardiasDebidas} (${pct(est.guardiasFirmadas, est.guardiasDebidas)})`],
+    ["Listas pasadas en guardia / faltas anotadas", `${est.listasPasadas} / ${est.faltasEnListas}`],
+  ].map(r => r.map(String)), { columnStyles: { 0: { cellWidth: 110, fontStyle: "bold" }, 1: { halign: "center" } } });
+  if (est.porDia.length > 1) {
+    tituloSec("Evolución por día");
+    tabla(["Día", "Leves", "Graves", "Muy graves", "Partes", "Baños", "Ausencias prof.", "Horas aus."],
+      est.porDia.map(d => [parseISO(d.fecha).toLocaleDateString("es-ES", { weekday: "short", day: "2-digit", month: "2-digit" }), d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia].map(String)),
+      { styles: { ...estiloTabla.styles, halign: "center" } });
+  }
+  tituloSec("Partes por grupo y tutoría");
+  tabla(["Grupo", "Tutor/a", "Leves", "Graves", "Muy graves", "Total"], est.porGrupo.map(r => [r.curso, r.tutor || "-", r.leve, r.grave, r.muy_grave, r.total].map(String)));
+  tituloSec("Partes por hora de clase");
+  tabla(["Hora", "Partes"], est.porHora.map(([h, n]) => [h, String(n)]));
+  tituloSec("Alumnado con más partes");
+  tabla(["Alumno/a", "Partes"], est.porAlumno.map(([k, n]) => [k, String(n)]));
+  tituloSec("Faltas más frecuentes");
+  tabla(["Tipificación", "Partes"], est.porTipificacion.map(([k, n]) => [k, String(n)]), { columnStyles: { 1: { cellWidth: 20, halign: "center" } } });
+  tituloSec("Salidas al baño por grupo");
+  tabla(["Grupo", "Salidas"], est.banosPorGrupo.map(([k, n]) => [k, String(n)]));
+  tituloSec("Ausencias del profesorado por motivo");
+  tabla(["Motivo", "Ausencias"], est.ausenciasPorMotivo.map(([k, n]) => [k, String(n)]));
+  tituloSec("Ausencias por profesor/a");
+  tabla(["Profesor/a", "Ausencias"], est.ausenciasPorProfesor.map(([k, n]) => [k, String(n)]));
+  guardarPDF(doc, `estadisticas-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.pdf`);
+}
+
+// ─── PDF: ausencias del profesorado ──────────────────────────────────────────
+function pdfAusencias(ausencias, periodo) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  let y = cabeceraPDF(doc, "Ausencias del profesorado", `${periodo.texto} · Jefatura de Estudios`);
+  const horas = ausencias.reduce((s, a) => s + (a.horas?.length || 0), 0);
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+  doc.text(`Total: ${ausencias.length} ausencias · ${horas} horas lectivas · ${new Set(ausencias.map(a => a.profesor)).size} profesores/as`, 14, y);
+  autoTable(doc, { ...estiloTabla, startY: y + 4,
+    head: [["Fecha", "Profesor/a", "Motivo", "Horas", "Grupo / aula", "Asignatura", "Tarea para el alumnado", "Dónde está la tarea"]],
+    body: ausencias.length ? ausencias.map(a => [fmtD(parseISO(a.fecha)), a.profesor, a.motivo, (a.horas || []).join(", "), a.aula || "-", a.asignatura || "-", a.tarea || "-", [a.ubicacion, a.enlace].filter(Boolean).join(" · ") || "-"].map(sinEmoji)) : [["-", "No hay ausencias en este periodo", "", "", "", "", "", ""]],
+    columnStyles: { 0: { cellWidth: 22 }, 1: { cellWidth: 34 }, 2: { cellWidth: 26 }, 3: { cellWidth: 30 }, 4: { cellWidth: 24 }, 5: { cellWidth: 26 }, 7: { cellWidth: 34 } } });
+  guardarPDF(doc, `ausencias-profesorado-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.pdf`);
+}
+
+// ─── CSV (se abre en Excel) con los datos del periodo día a día ──────────────
+function csvPeriodo(est, periodo) {
+  const filas = [["Fecha", "Partes leves", "Partes graves", "Partes muy graves", "Total partes", "Salidas al baño", "Ausencias profesorado", "Horas de ausencia"],
+    ...est.porDia.map(d => [fmtD(parseISO(d.fecha)), d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia])];
+  const csv = "﻿" + filas.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const a = document.createElement("a"); a.href = url; a.download = `datos-por-dia-${periodo.desde}-a-${periodo.hasta}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// Barras horizontales sencillas
+function Barras({ datos, color = "#44a194", vacio = "Sin datos en este periodo." }) {
+  const max = Math.max(1, ...datos.map(d => d[1]));
+  if (!datos.length) return <div style={{ fontSize: 13, color: "#64748b" }}>{vacio}</div>;
+  return (
+    <div>
+      {datos.map(([k, n]) => (
+        <div key={k} style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(60px,1.2fr) 34px", gap: 8, alignItems: "center", marginBottom: 6, fontSize: 12 }}>
+          <div title={k} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#2c4a52" }}>{k}</div>
+          <div style={{ background: "#eef2f4", borderRadius: 6, height: 12 }}><div style={{ width: `${(100 * n) / max}%`, background: color, height: "100%", borderRadius: 6 }} /></div>
+          <div style={{ textAlign: "right", fontWeight: 700, color: "#2c4a52" }}>{n}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alumnos, profesores, cuadrante, apoyosGuardia, sustitutosGuardia, tutores, C, inpStyle, selStyle, labelStyle }) {
+  const [tipo, setTipo] = useState("dia");
+  const [ref, setRef] = useState(isoLocal());
+  const [desdeLibre, setDesdeLibre] = useState(isoLocal(sumarDias(new Date(), -14)));
+  const [hastaLibre, setHastaLibre] = useState(isoLocal());
+  const [alumnoDoc, setAlumnoDoc] = useState("");
+  const [grupoDoc, setGrupoDoc] = useState("");
+  const [profDoc, setProfDoc] = useState("");
+  const periodo = calcularPeriodo(tipo, ref, desdeLibre, hastaLibre);
+  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  const est = estadisticasPeriodo({ ...periodo, partes, banos, ausencias, firmas, listas, equipo, tutores });
+  const cursos = [...new Set(alumnos.map(a => a.curso))].sort();
+  const pct = (a, b) => b ? Math.round(100 * a / b) : null;
+  const maxDia = Math.max(1, ...est.porDia.map(d => d.partes));
+
+  const tarjeta = { background: C.white, borderRadius: 12, padding: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", marginBottom: 14 };
+  const h3 = { margin: "0 0 12px", color: C.dark, fontSize: 15 };
+  const btnDoc = (activo = true) => ({ display: "block", width: "100%", textAlign: "left", padding: "11px 14px", borderRadius: 10, border: `2px solid ${activo ? C.teal : "#e2e8f0"}`, background: activo ? "#F0FAF7" : "#f8fafc", color: activo ? C.dark : C.gray, cursor: activo ? "pointer" : "not-allowed", fontWeight: 700, fontSize: 13 });
+  const sub = { display: "block", fontWeight: 500, fontSize: 11, color: C.gray, marginTop: 2 };
+
+  const partesAlumno = est.partes.filter(p => String(p.alumnoId) === alumnoDoc);
+  const partesGrupo = est.partes.filter(p => p.curso === grupoDoc);
+  const ausProf = est.ausencias.filter(a => a.profesor === profDoc);
+  const nombreAlumno = alumnos.find(a => String(a.id) === alumnoDoc)?.nombre || "";
+
+  return (
+    <div>
+      <h2 style={{ color: C.dark, marginTop: 0 }}>📈 Estadísticas y documentos</h2>
+
+      {/* Selector de periodo */}
+      <div className="no-print" style={tarjeta}>
+        <label style={labelStyle}>¿De qué periodo?</label>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+          {PERIODOS.map(p => (
+            <button key={p.id} onClick={() => setTipo(p.id)}
+              style={{ padding: "8px 14px", borderRadius: 20, border: `2px solid ${tipo === p.id ? C.teal : "#e2e8f0"}`, background: tipo === p.id ? C.teal : C.white, color: tipo === p.id ? "#fff" : C.dark, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {tipo === "rango" ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+            <div><label style={{ fontSize: 12, color: C.gray }}>Desde</label><input type="date" value={desdeLibre} onChange={e => setDesdeLibre(e.target.value)} style={inpStyle} /></div>
+            <div><label style={{ fontSize: 12, color: C.gray }}>Hasta</label><input type="date" value={hastaLibre} onChange={e => setHastaLibre(e.target.value)} style={inpStyle} /></div>
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <button onClick={() => setRef(moverPeriodo(tipo, ref, -1))} aria-label="Periodo anterior" style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid #e2e8f0`, background: C.white, cursor: "pointer", fontWeight: 700 }}>◀</button>
+            <input type="date" value={ref} onChange={e => setRef(e.target.value || isoLocal())} style={{ ...inpStyle, width: "auto", flex: "1 1 160px", marginBottom: 0 }} aria-label="Fecha" />
+            <button onClick={() => setRef(moverPeriodo(tipo, ref, 1))} aria-label="Periodo siguiente" style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid #e2e8f0`, background: C.white, cursor: "pointer", fontWeight: 700 }}>▶</button>
+            <button onClick={() => setRef(isoLocal())} style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: C.cream, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Hoy</button>
+          </div>
+        )}
+        <div style={{ marginTop: 12, fontSize: 14, fontWeight: 700, color: C.blue }}>📅 {periodo.texto[0].toUpperCase() + periodo.texto.slice(1)} · {est.lectivos.length} día(s) lectivo(s)</div>
+      </div>
+
+      {/* Cifras principales */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 14 }}>
+        {[
+          { n: est.partes.length, t: "Partes", s: `${est.gravedad.leve} leves · ${est.gravedad.grave} graves · ${est.gravedad.muy_grave} muy graves`, c: C.teal },
+          { n: est.alumnosConParte, t: "Alumnos/as con parte", s: est.lectivos.length ? `${(est.partes.length / est.lectivos.length).toFixed(1)} partes por día` : "", c: C.blue },
+          { n: est.banos.length, t: "Salidas al baño", s: est.banoMedio ? `${est.banoMedio} min de media · ${est.banosLargos} de más de 10 min` : "", c: "#10b981" },
+          { n: est.ausencias.length, t: "Ausencias profesorado", s: `${est.horasAusencia} horas · ${est.profesoresAusentes} profesores/as`, c: C.salmon },
+          { n: est.guardiasDebidas ? `${pct(est.guardiasFirmadas, est.guardiasDebidas)} %` : "-", t: "Guardias firmadas", s: `${est.guardiasFirmadas} de ${est.guardiasDebidas}`, c: C.amber },
+          { n: est.listasPasadas, t: "Listas en guardia", s: `${est.faltasEnListas} faltas anotadas`, c: "#8b5cf6" },
+        ].map(k => (
+          <div key={k.t} style={{ background: C.white, borderRadius: 12, padding: 14, borderTop: `4px solid ${k.c}`, boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 26, fontWeight: 800, color: C.dark }}>{k.n}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{k.t}</div>
+            <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{k.s}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Evolución por día */}
+      {est.porDia.length > 1 && (
+        <div style={tarjeta}>
+          <h3 style={h3}>Partes por día</h3>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 140, overflowX: "auto", paddingBottom: 4 }}>
+            {est.porDia.map(d => (
+              <div key={d.fecha} title={`${fmtD(parseISO(d.fecha))}: ${d.partes} partes (${d.leve} leves, ${d.grave} graves, ${d.muy_grave} muy graves) · ${d.banos} baños · ${d.ausencias} ausencias`}
+                style={{ flex: "1 0 22px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: C.dark }}>{d.partes || ""}</div>
+                <div style={{ width: "100%", maxWidth: 34, display: "flex", flexDirection: "column-reverse", height: `${(100 * d.partes) / maxDia}%`, minHeight: d.partes ? 3 : 0, borderRadius: "4px 4px 0 0", overflow: "hidden" }}>
+                  <div style={{ flex: d.leve, background: C.teal }} /><div style={{ flex: d.grave, background: C.amber }} /><div style={{ flex: d.muy_grave, background: C.salmon }} />
+                </div>
+                <div style={{ fontSize: 10, color: C.gray, marginTop: 3 }}>{parseISO(d.fecha).getDate()}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 14, fontSize: 11, color: C.gray, marginTop: 8, flexWrap: "wrap" }}>
+            <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.teal, borderRadius: 2 }} /> Leves</span>
+            <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.amber, borderRadius: 2 }} /> Graves</span>
+            <span><span style={{ display: "inline-block", width: 10, height: 10, background: C.salmon, borderRadius: 2 }} /> Muy graves</span>
+            <span>Pasa el ratón por una columna para ver baños y ausencias de ese día.</span>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
+        <div style={tarjeta}><h3 style={h3}>🏫 Partes por grupo</h3><Barras datos={est.porGrupo.map(r => [`${r.curso}${r.tutor ? ` · ${r.tutor}` : ""}`, r.total])} /></div>
+        <div style={tarjeta}><h3 style={h3}>🕐 Partes por hora de clase</h3><Barras datos={est.porHora} color={C.blue} /></div>
+        <div style={tarjeta}><h3 style={h3}>👤 Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} /></div>
+        <div style={tarjeta}><h3 style={h3}>📑 Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} /></div>
+        <div style={tarjeta}><h3 style={h3}>🚻 Salidas al baño por grupo</h3><Barras datos={est.banosPorGrupo} color="#10b981" /></div>
+        <div style={tarjeta}><h3 style={h3}>📢 Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>
+      </div>
+
+      {/* Documentos */}
+      <div className="no-print" style={tarjeta}>
+        <h3 style={h3}>📄 Documentos de este periodo</h3>
+        <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Todos se descargan en PDF con las fechas elegidas arriba.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
+          <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo)}>
+            📊 Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
+          </button>
+          <button style={btnDoc(est.partes.length > 0)} disabled={!est.partes.length} onClick={() => pdfInformePartes(est.partes, periodo.texto, tutores)}>
+            📋 Todos los partes<span style={sub}>{est.partes.length} parte(s) con su detalle y resumen por grupo</span>
+          </button>
+          <button style={btnDoc(est.banos.length > 0)} disabled={!est.banos.length} onClick={() => pdfInformeBanos(est.banos, periodo.texto)}>
+            🚻 Salidas al baño<span style={sub}>{est.banos.length} salida(s) con hora y duración</span>
+          </button>
+          <button style={btnDoc(est.ausencias.length > 0)} disabled={!est.ausencias.length} onClick={() => pdfAusencias(est.ausencias, periodo)}>
+            📢 Ausencias del profesorado<span style={sub}>{est.ausencias.length} ausencia(s) con horas, grupo y tarea</span>
+          </button>
+          {tipo === "dia" && (
+            <button style={btnDoc()} onClick={() => pdfFirmasYListas(periodo.desde, filasFirmasDia(periodo.desde, equipo, firmas), est.listas.slice().sort((a, b) => HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora)))}>
+              ✍️ Firmas de guardia y listas<span style={sub}>Quién tenía guardia, quién firmó y las listas pasadas</span>
+            </button>
+          )}
+          <button style={btnDoc(est.porDia.length > 0)} disabled={!est.porDia.length} onClick={() => csvPeriodo(est, periodo)}>
+            📥 Datos día a día (Excel)<span style={sub}>Archivo CSV para hacer tus propias gráficas</span>
+          </button>
+        </div>
+
+        <div style={{ borderTop: `1px dashed ${C.cream}`, marginTop: 16, paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
+          <div>
+            <label style={labelStyle}>👤 Partes de un alumno/a</label>
+            <select value={alumnoDoc} onChange={e => setAlumnoDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
+              <option value="">Elige alumno/a…</option>
+              {[...alumnos].sort((a, b) => a.curso.localeCompare(b.curso) || a.nombre.localeCompare(b.nombre)).map(a => {
+                const n = est.partes.filter(p => p.alumnoId === a.id).length;
+                return <option key={a.id} value={String(a.id)}>{a.nombre} ({a.curso}){n ? ` · ${n}` : ""}</option>;
+              })}
+            </select>
+            <button style={btnDoc(partesAlumno.length > 0)} disabled={!partesAlumno.length} onClick={() => pdfInformePartes(partesAlumno, `${nombreAlumno} · ${periodo.texto}`, tutores)}>
+              ⬇️ {alumnoDoc ? `${partesAlumno.length} parte(s) en este periodo` : "Descargar"}
+            </button>
+          </div>
+          <div>
+            <label style={labelStyle}>🏫 Partes de un grupo</label>
+            <select value={grupoDoc} onChange={e => setGrupoDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
+              <option value="">Elige grupo…</option>
+              {cursos.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button style={btnDoc(partesGrupo.length > 0)} disabled={!partesGrupo.length} onClick={() => pdfInformePartes(partesGrupo, `Grupo ${grupoDoc} · ${periodo.texto}`, tutores)}>
+              ⬇️ {grupoDoc ? `${partesGrupo.length} parte(s) en este periodo` : "Descargar"}
+            </button>
+          </div>
+          <div>
+            <label style={labelStyle}>👨‍🏫 Ausencias de un profesor/a</label>
+            <select value={profDoc} onChange={e => setProfDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
+              <option value="">Elige profesor/a…</option>
+              {[...profesores].sort().map(p => { const n = est.ausencias.filter(a => a.profesor === p).length; return <option key={p} value={p}>{p}{n ? ` · ${n}` : ""}</option>; })}
+            </select>
+            <button style={btnDoc(ausProf.length > 0)} disabled={!ausProf.length} onClick={() => pdfAusencias(ausProf, { ...periodo, texto: `${profDoc} · ${periodo.texto}` })}>
+              ⬇️ {profDoc ? `${ausProf.length} ausencia(s) en este periodo` : "Descargar"}
+            </button>
+          </div>
+        </div>
+        <div style={{ fontSize: 11, color: C.gray, marginTop: 12 }}>Las faltas oficiales de asistencia del alumnado se registran en Raíces; aquí solo aparecen las anotadas en las listas de guardia.</div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [perfil, setPerfil]       = useState(null);
   const [usuario, setUsuario]     = useState(null);
@@ -3680,6 +4056,7 @@ export default function App() {
           { id: "bano_live",    label: "🚻 Baños", color: "#06b6d4" },
           { id: "alertas",      label: `🔔${alertasNoLeidas > 0 ? ` (${alertasNoLeidas})` : ""} Alertas`, color: "#ec4899" },
           { id: "informe",      label: "📤 Informe", color: "#10b981" },
+          { id: "estadisticas", label: "📈 Estadísticas", color: "#8b5cf6" },
         ]
       : moduloJefatura === "guardias"
       ? [
@@ -3688,6 +4065,7 @@ export default function App() {
           { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
           { id: "ausencias_jef", label: "📢 Ausencias de Profesores", color: "#10b981" },
           { id: "firmas_jef",    label: "✍️ Firmas y listas", color: "#06b6d4" },
+          { id: "estadisticas",  label: "📈 Estadísticas", color: "#8b5cf6" },
         ]
       : [] // Galvángram no tiene tabs adicionales
     : [
@@ -4577,6 +4955,13 @@ export default function App() {
                 );
               })}
           </div>
+        )}
+
+        {/* ── Estadísticas y documentos por fecha (Jefatura) ── */}
+        {tab === "estadisticas" && (
+          <EstadisticasDocumentos partes={partes.map(completar)} banos={banos} ausencias={ausencias} firmas={firmas} listas={listas}
+            alumnos={alumnos} profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia}
+            tutores={tutores} C={C} inpStyle={inpStyle} selStyle={selStyle} labelStyle={labelStyle} />
         )}
 
         {/* ── Informe ── */}
