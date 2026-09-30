@@ -3723,7 +3723,7 @@ Les escribimos desde el IES Enrique Tierno Galván para informarles de la conviv
 Resumen:
 - Partes: ${partes.length} (${d.leve} leves, ${d.grave} graves y ${d.muy_grave} muy graves)${d.faltas[0] ? `\n- Lo que más se repite: ${d.faltas[0][0]} (${d.faltas[0][1]} ${d.faltas[0][1] === 1 ? "vez" : "veces"})` : ""}
 - Salidas al baño durante las clases: ${d.banos}
-${partes.length ? `\nDetalle:\n${lineas}\n` : "\nNo tiene ningún parte en este periodo.\n"}
+${partes.length ? `\nDetalle de los partes:\n${lineas}\n` : "\nNo tiene ningún parte en este periodo.\n"}${banos.length ? `\nSalidas al baño durante las clases:\n${[...banos].sort((a, b) => new Date(a.salida || a.ts) - new Date(b.salida || b.ts)).map(b => `• ${fmtD(b.salida || b.ts)} · salió a las ${horaCorta(b.salida || b.ts)}${b.regreso ? `, volvió a las ${horaCorta(b.regreso)} (${minutosBano(b)} min)` : ""}${b.profesor ? ` · con ${b.profesor}` : ""}`).join("\n")}\n` : ""}
 Nos gustaría hablar con ustedes para trabajar juntos. Pueden responder a este correo para concertar una cita.
 
 Un saludo,
@@ -3752,7 +3752,18 @@ function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remiten
   autoTable(doc, { ...estiloTabla, startY: y + 3, head: [["Fecha", "Hora", "Gravedad", "Conducta", "Profesor/a", "Qué ocurrió"]],
     body: d.ordenados.length ? d.ordenados.map(p => [fmtD(p.ts), p.hora || "-", sinEmoji(gObj(p.gravedad)?.label), etiquetaTip(p) || p.tipo, p.profesor, p.descripcion].map(sinEmoji)) : [["-", "-", "-", "Ningún parte en este periodo", "-", "-"]],
     columnStyles: { 0: { cellWidth: 19 }, 1: { cellWidth: 15 }, 2: { cellWidth: 18 }, 3: { cellWidth: 45 }, 4: { cellWidth: 26 } } });
-  y = doc.lastAutoTable.finalY + 10;
+  y = doc.lastAutoTable.finalY + 8;
+  if (banos.length) {
+    if (y > 250) { doc.addPage(); y = 24; }
+    const ordB = [...banos].sort((a, b) => new Date(a.salida || a.ts) - new Date(b.salida || b.ts));
+    const mins = ordB.map(minutosBano).filter(Boolean);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO);
+    doc.text(`Salidas al baño durante las clases (${banos.length}${mins.length ? ` · ${Math.round(mins.reduce((a, b) => a + b, 0) / mins.length)} min de media` : ""})`, 14, y); doc.setTextColor(0);
+    autoTable(doc, { ...estiloTabla, startY: y + 3, head: [["Fecha", "Salida", "Regreso", "Minutos fuera", "Con el profesor/a"]],
+      body: ordB.map(b => [fmtD(b.salida || b.ts), horaCorta(b.salida || b.ts), b.regreso ? horaCorta(b.regreso) : "Sin anotar", minutosBano(b) ?? "-", b.profesor || "-"].map(v => sinEmoji(String(v)))),
+      didParseCell: c => { if (c.section === "body" && c.column.index === 3 && Number(c.cell.raw) > 10) { c.cell.styles.textColor = [180, 83, 9]; c.cell.styles.fontStyle = "bold"; } } });
+    y = doc.lastAutoTable.finalY + 8;
+  }
   if (y > 240) { doc.addPage(); y = 24; }
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   const cierre = doc.splitTextToSize("Les enviamos este informe para mantenerles informados y trabajar juntos. Pueden solicitar una reunión con el tutor/a o con Jefatura de Estudios.", w - 28);
