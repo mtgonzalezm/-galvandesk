@@ -1897,7 +1897,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
 const AYUDAS = {
   mis_estadisticas: { titulo: "Mis estadísticas e informes", pasos: [
     "Arriba verás los avisos: alumnado con 3 o más partes este trimestre (los tuyos y, si eres tutor/a, los de tu grupo). Pulsa «Avisar a la familia» y después «Ya he avisado».",
-    "Si eres tutor/a, elige «Mi tutoría» para ver todos los partes de tu grupo. Si no, verás los partes que has puesto tú y el alumnado que sale al baño en tus clases.",
+    "Arriba eliges cómo mirar: «Como tutor/a» (todos los partes de tu grupo; solo si tienes tutoría) o «Como profesor/a: mis partes» (los que has puesto tú y el alumnado que sale al baño en tus clases).",
     "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
     "Pulsa una columna o una barra para ver esos partes en grande y qué es lo que más se repite.",
     "En «Partes de un alumno/a», elige al alumno y usa «Contactar con la familia»: informe en PDF, texto del correo ya redactado y sus correos.",
@@ -4035,15 +4035,20 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
         <div className="no-print" style={{ ...tarjeta, borderLeft: `5px solid ${C.teal}` }}>
           <label style={labelStyle}>¿Qué partes quieres analizar?</label>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {[...misTutorias.map(c => ({ id: c, txt: `🏫 Mi tutoría: ${c}`, sub: "Todos los partes del grupo, los ponga quien los ponga" })), { id: "mios", txt: "👤 Los partes que he puesto yo", sub: "En todos los grupos a los que doy clase" }].map(o => (
-              <button key={o.id} onClick={() => { setAmbito(o.id); setAlumnoDoc(""); setGrupoDoc(""); }}
-                style={{ flex: "1 1 220px", textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `2px solid ${ambitoOk === o.id ? C.teal : "#e2e8f0"}`, background: ambitoOk === o.id ? "#F0FAF7" : C.white, cursor: "pointer" }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>{o.txt}</div>
+            {[
+              ...(misTutorias.length
+                ? misTutorias.map(c => ({ id: c, txt: `🏫 Como tutor/a: ${c}`, sub: "Todos los partes de tu grupo, los ponga quien los ponga" }))
+                : [{ id: "sin-tutoria", txt: "🏫 Como tutor/a", sub: "No tienes ninguna tutoría asignada", off: true }]),
+              { id: "mios", txt: "👤 Como profesor/a: mis partes", sub: "Los partes que has puesto y el alumnado que sale al baño en tus clases" },
+            ].map(o => (
+              <button key={o.id} disabled={o.off} onClick={() => { setAmbito(o.id); setAlumnoDoc(""); setGrupoDoc(""); }}
+                style={{ flex: "1 1 220px", textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `2px solid ${ambitoOk === o.id ? C.teal : "#e2e8f0"}`, background: o.off ? "#f8fafc" : ambitoOk === o.id ? "#F0FAF7" : C.white, cursor: o.off ? "not-allowed" : "pointer", opacity: o.off ? .65 : 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>{ambitoOk === o.id ? "✔ " : ""}{o.txt}</div>
                 <div style={{ fontSize: 11, color: C.gray }}>{o.sub}</div>
               </button>
             ))}
           </div>
-          {!misTutorias.length && <div style={{ fontSize: 12, color: C.gray, marginTop: 8 }}>Si eres tutor/a y no aparece tu grupo, pide a Administración que te asigne la tutoría.</div>}
+          {!misTutorias.length && <div style={{ fontSize: 12, color: C.gray, marginTop: 8 }}>Estás viendo tus partes como profesor/a. Si eres tutor/a y no aparece tu grupo, pide a Administración que te asigne la tutoría.{MODO_DEMO ? " En la demostración, para verlo como tutor/a pulsa «Salir» y entra con el botón «Tutor/a de un grupo»." : ""}</div>}
         </div>
       )}
       {detalle && <DetallePartes {...detalle} tutores={tutores} onVerParte={onVerParte} onCerrar={() => setDetalle(null)} C={C} />}
