@@ -1767,7 +1767,7 @@ const AYUDAS = {
     "Elige el periodo: un día, una semana, una quincena, un mes o dos fechas concretas.",
     "Con ◀ y ▶ pasas al periodo anterior o siguiente; «Hoy» vuelve al actual.",
     "Verás las cifras de partes, baños, ausencias del profesorado, firmas de guardia y listas, y gráficas por día, grupo, hora y alumnado.",
-    "Abajo descargas en PDF las estadísticas, todos los partes, los baños, las ausencias y (si eliges un día) las firmas de guardia.",
+    "Abajo descargas en PDF las estadísticas, todos los partes, los baños, las ausencias y (si eliges un día) las firmas de guardia. «Todos los datos en Excel» trae una hoja por tema, con nombres, grupos y faltas.",
     "También puedes sacar los partes de un alumno o de un grupo, o las ausencias de un profesor, solo en esas fechas."] },
   partes: { titulo: "Poner un parte", pasos: [
     "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
@@ -3520,14 +3520,72 @@ function pdfAusencias(ausencias, periodo) {
   guardarPDF(doc, `ausencias-profesorado-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.pdf`);
 }
 
-// ─── CSV (se abre en Excel) con los datos del periodo día a día ──────────────
-function csvPeriodo(est, periodo) {
-  const filas = [["Fecha", "Partes leves", "Partes graves", "Partes muy graves", "Total partes", "Salidas al baño", "Ausencias profesorado", "Horas de ausencia"],
-    ...est.porDia.map(d => [fmtD(parseISO(d.fecha)), d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia])];
-  const csv = "﻿" + filas.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(";")).join("\r\n");
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const a = document.createElement("a"); a.href = url; a.download = `datos-por-dia-${periodo.desde}-a-${periodo.hasta}.csv`;
-  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+// ─── Excel (.xlsx) con todos los datos del periodo, una hoja por tema ─────────
+// La librería se carga solo al pulsar el botón, para que la aplicación no pese más.
+// No incluye el contacto de las familias (RGPD): solo lo necesario para analizar.
+async function excelPeriodo(est, periodo, tutores = {}, alumnos = []) {
+  const XLSX = await import("xlsx");
+  const libro = XLSX.utils.book_new();
+  const hoja = (nombre, cabecera, filas, anchos) => {
+    const h = XLSX.utils.aoa_to_sheet([cabecera, ...(filas.length ? filas : [["Sin datos en este periodo"]])]);
+    h["!cols"] = anchos.map(w => ({ wch: w }));
+    h["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, filas.length), c: cabecera.length - 1 } }) };
+    XLSX.utils.book_append_sheet(libro, h, nombre);
+  };
+  const fecha = d => fmtD(parseISO(d));
+  const gLabel = g => ({ leve: "Leve", grave: "Grave", muy_grave: "Muy grave" })[g] || g;
+
+  hoja("Resumen", ["Indicador", "Valor"], [
+    ["Periodo", periodo.texto], ["Días lectivos", est.lectivos.length],
+    ["Partes", est.partes.length], ["Leves", est.gravedad.leve], ["Graves", est.gravedad.grave], ["Muy graves", est.gravedad.muy_grave],
+    ["Alumnos/as con parte", est.alumnosConParte], ["Salidas al baño", est.banos.length], ["Duración media del baño (min)", est.banoMedio || ""],
+    ["Ausencias del profesorado", est.ausencias.length], ["Horas de ausencia", est.horasAusencia],
+    ["Guardias firmadas", est.guardiasFirmadas], ["Guardias que había que firmar", est.guardiasDebidas],
+    ["Listas pasadas en guardia", est.listasPasadas], ["Faltas anotadas en esas listas", est.faltasEnListas],
+  ], [34, 50]);
+
+  hoja("Por día", ["Fecha", "Día", "Partes leves", "Partes graves", "Partes muy graves", "Total partes", "Salidas al baño", "Ausencias profesorado", "Horas de ausencia"],
+    est.porDia.map(d => [fecha(d.fecha), DIAS_ES[parseISO(d.fecha).getDay()], d.leve, d.grave, d.muy_grave, d.partes, d.banos, d.ausencias, d.horasAusencia]),
+    [12, 11, 12, 12, 16, 12, 14, 20, 16]);
+
+  hoja("Partes", ["Ref.", "Fecha", "Hora registro", "Hora de clase", "Alumno/a", "Grupo", "Tutor/a", "Correo del tutor/a", "Tipo", "Gravedad", "Falta tipificada", "Normativa", "Profesor/a", "Descripción", "Parte de grupo"],
+    est.partes.map(p => [`PARTE-${p.id}`, fecha(p.ts), horaCorta(p.ts), p.hora || "", p.alumno, p.curso, tutorDeParte(p, tutores), p.tutorEmail || tutores[p.curso]?.email || "",
+      p.tipo || "", gLabel(p.gravedad), etiquetaTip(p), p.gravedad === "leve" ? "Plan de Convivencia" : "Decreto 32/2019 CAM", p.profesor || "", p.descripcion || "", p.esGrupal ? "Sí" : "No"]),
+    [12, 11, 8, 10, 28, 10, 20, 28, 16, 10, 50, 18, 20, 60, 8]);
+
+  // Una fila por alumno con parte o salida al baño en el periodo
+  const claves = new Map();
+  [...est.partes, ...est.banos].forEach(x => { const k = `${x.alumno}|${x.curso}`; if (!claves.has(k)) claves.set(k, { alumno: x.alumno, curso: x.curso }); });
+  const filasAlumno = [...claves.values()].map(({ alumno, curso }) => {
+    const pa = est.partes.filter(p => p.alumno === alumno && p.curso === curso);
+    const ba = est.banos.filter(b => b.alumno === alumno && b.curso === curso);
+    const cuenta = g => pa.filter(p => p.gravedad === g).length;
+    const faltaTop = contarPor(pa, etiquetaTip)[0];
+    const tutor = tutores[curso]?.tutor || alumnos.find(a => a.nombre === alumno)?.tutor || "";
+    return [alumno, curso, tutor, cuenta("leve"), cuenta("grave"), cuenta("muy_grave"), pa.length, faltaTop ? faltaTop[0] : "", ba.length,
+      pa.length ? fecha(pa.reduce((m, p) => p.ts > m ? p.ts : m, pa[0].ts)) : ""];
+  }).sort((a, b) => b[6] - a[6] || b[8] - a[8] || a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]));
+  hoja("Por alumno", ["Alumno/a", "Grupo", "Tutor/a", "Leves", "Graves", "Muy graves", "Total partes", "Falta más repetida", "Salidas al baño", "Último parte"],
+    filasAlumno, [28, 10, 20, 7, 7, 10, 11, 50, 13, 12]);
+
+  hoja("Por grupo", ["Grupo", "Tutor/a", "Correo del tutor/a", "Leves", "Graves", "Muy graves", "Total partes", "Salidas al baño"],
+    est.porGrupo.map(r => [r.curso, r.tutor || "", r.email || "", r.leve, r.grave, r.muy_grave, r.total, est.banos.filter(b => b.curso === r.curso).length]),
+    [10, 22, 28, 7, 7, 10, 11, 13]);
+
+  hoja("Baños", ["Fecha", "Salida", "Regreso", "Minutos fuera", "Alumno/a", "Grupo", "Autorizado por"],
+    est.banos.map(b => [fecha(b.ts || b.salida), horaCorta(b.salida || b.ts), b.regreso ? horaCorta(b.regreso) : "Sin regreso", minutosBano(b) ?? "", b.alumno, b.curso, b.profesor || ""]),
+    [11, 8, 11, 12, 28, 10, 22]);
+
+  hoja("Ausencias profesorado", ["Fecha", "Día", "Profesor/a", "Motivo", "Horas", "Nº de horas", "Grupo / aula", "Edificio", "Asignatura", "Tarea para el alumnado", "Dónde está la tarea", "Enlace"],
+    est.ausencias.map(a => [fecha(a.fecha), DIAS_ES[parseISO(a.fecha).getDay()], a.profesor, a.motivo || "", (a.horas || []).join(", "), (a.horas || []).length, a.aula || "", a.edificio || "", a.asignatura || "", a.tarea || "", a.ubicacion || "", a.enlace || ""]),
+    [11, 10, 22, 16, 26, 10, 12, 8, 16, 50, 22, 30]);
+
+  hoja("Listas de guardia", ["Fecha", "Hora", "Grupo", "Profesor/a de guardia", "Pasada a las", "Nº de faltas", "Alumnado que faltaba"],
+    est.listas.slice().sort((a, b) => a.fecha.localeCompare(b.fecha) || HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora))
+      .map(l => [fecha(l.fecha), l.hora, l.curso, l.profesor, horaCorta(l.ts), (l.ausentes || []).length, (l.ausentes || []).map(x => x.nombre).join(", ")]),
+    [11, 9, 10, 22, 11, 11, 60]);
+
+  XLSX.writeFile(libro, `galvandesk-datos-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.xlsx`);
 }
 
 // Barras horizontales sencillas
@@ -3740,8 +3798,8 @@ function EstadisticasDocumentos({ partes, banos, ausencias, firmas, listas, alum
               ✍️ Firmas de guardia y listas<span style={sub}>Quién tenía guardia, quién firmó y las listas pasadas</span>
             </button>
           )}
-          <button style={btnDoc(est.porDia.length > 0)} disabled={!est.porDia.length} onClick={() => csvPeriodo(est, periodo)}>
-            📥 Datos día a día (Excel)<span style={sub}>Archivo CSV para hacer tus propias gráficas</span>
+          <button style={btnDoc()} onClick={() => excelPeriodo(est, periodo, tutores, alumnos).catch(() => window.alert("No se ha podido crear el Excel. Comprueba la conexión e inténtalo de nuevo."))}>
+            📥 Todos los datos en Excel<span style={sub}>Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas</span>
           </button>
         </div>
 
