@@ -182,10 +182,16 @@ const CARGOS = [
   { id: "direccion",  label: "Dirección",            perfiles: ["profesor", "jefatura", "admin"] },
   { id: "secretaria", label: "Secretaría",           perfiles: ["profesor", "admin"] },
   { id: "tic",        label: "Coordinación TIC",     perfiles: ["profesor", "admin"] },
+  { id: "orientacion", label: "Orientación",         perfiles: ["profesor", "jefatura"] },
 ];
 // Cargos de ejemplo (profesorado ficticio); el resto es Profesor/a
-const CUENTAS_DEMO = { "Luis García": { cargo: "direccion" }, "Ana Jiménez": { cargo: "jefatura" }, "Elena Vega": { cargo: "tic" } };
-const cargoDe = (cuentas, nombre) => CARGOS.find(c => c.id === (cuentas?.[nombre]?.cargo || "profesor")) || CARGOS[0];
+const CUENTAS_DEMO = { "Luis García": { cargos: ["profesor", "direccion"] }, "Ana Jiménez": { cargos: ["profesor", "jefatura"] }, "Elena Vega": { cargos: ["profesor", "tic"] } };
+// Una persona puede tener varios cargos a la vez (p. ej. Profesor/a + Coordinación TIC)
+const cargosIds = cuenta => { const l = cuenta?.cargos?.length ? cuenta.cargos : [cuenta?.cargo || "profesor"]; return ["profesor", ...l.filter(c => c !== "profesor" && CARGOS.some(x => x.id === c))]; };
+const cargoDe = (cuentas, nombre) => {
+  const ids = cargosIds(cuentas?.[nombre]); const lista = ids.map(id => CARGOS.find(c => c.id === id));
+  return { id: ids[ids.length - 1], ids, label: lista.map(c => c.label).join(" · "), perfiles: [...new Set(lista.flatMap(c => c.perfiles))] };
+};
 const perfilesPermitidos = (cuentas, nombre) => PERFILES.filter(p => cargoDe(cuentas, nombre).perfiles.includes(p.id));
 const MIN_CLAVE = 6;
 // Las claves nunca se guardan tal cual: solo su huella SHA-256 (requiere conexión segura HTTPS).
@@ -457,7 +463,7 @@ function Ti({ children, tam = 20 }) {
 // Icono de cada perfil de acceso y desplegable con iconos para cambiar de perfil
 const PERFIL_ICONO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", admin: "cargo-administracion" };
 const sinEmoji1 = t => iconoDe(t).resto;
-function SelectorPerfil({ perfiles, actual, onCambiar }) {
+function SelectorPerfil({ perfiles, actual, onCambiar, cargos = "" }) {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
@@ -476,6 +482,7 @@ function SelectorPerfil({ perfiles, actual, onCambiar }) {
       </button>
       {abierto && (
         <div role="listbox" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 12px 30px rgba(0,0,0,0.2)", padding: 6, zIndex: 300, minWidth: 240 }}>
+          {cargos && <div style={{ padding: "6px 10px 8px", fontSize: 11, color: "#64748b", borderBottom: "1px solid #eef2f4", marginBottom: 4, maxWidth: 280 }}>Tus cargos: <b style={{ color: "#2C4A52" }}>{cargos}</b></div>}
           {perfiles.map(p => (
             <button key={p.id} role="option" aria-selected={p.id === a.id} onClick={() => { setAbierto(false); onCambiar(p.id); }}
               style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 10px", border: "none", borderRadius: 8, background: p.id === a.id ? "#E8F5F3" : "transparent", color: "#2C4A52", cursor: "pointer", fontSize: 14, fontWeight: p.id === a.id ? 700 : 500 }}>
@@ -3302,7 +3309,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
 // ═══════════════════════════════════════════════════════════════════════════
 // GALVÁNGRAM - MENSAJERÍA RÁPIDA
 // ═══════════════════════════════════════════════════════════════════════════
-const ICONO_CARGO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", direccion: "cargo-direccion", secretaria: "cargo-secretaria", tic: "cargo-tic" };
+const ICONO_CARGO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", direccion: "cargo-direccion", secretaria: "cargo-secretaria", tic: "cargo-tic", orientacion: "tutor" };
 const ICONO_MENSAJE = { "Alumno enfermo": "alumno-enfermo", "Emergencia": "emergencia", "Urgencia en aula": "emergencia", "Falta material": "falta-material",
   "Alumno derivado": "alumno-derivado", "Cambio de guardia": "sustituto", "Falta un profesor": "profe-ausente", "Reunión importante": "eventos" };
 function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C, inpStyle, selStyle, labelStyle }) {
@@ -4889,7 +4896,7 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          {perfilesPermitidos(cuentas, usuario).length > 1 && <SelectorPerfil perfiles={perfilesPermitidos(cuentas, usuario)} actual={perfil} onCambiar={cambiarPerfil} />}
+          {perfilesPermitidos(cuentas, usuario).length > 1 && <SelectorPerfil perfiles={perfilesPermitidos(cuentas, usuario)} actual={perfil} onCambiar={cambiarPerfil} cargos={cargoDe(cuentas, usuario).label} />}
           <button onClick={salir} 
             onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
@@ -5868,14 +5875,14 @@ export default function App() {
             <Card style={{ padding: 0, overflow: "hidden" }}>
               <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="profesorado" tam={30} />{profesores.length} profesor(es)</div>
               <div style={{ padding: "10px 20px", fontSize: 12, color: C.gray, borderBottom: `1px solid ${C.cream}` }}>
-                El cargo decide a qué perfiles puede entrar cada persona: Profesor/a solo al de profesor; Jefatura de Estudios también a Jefatura; Dirección a los tres; Secretaría y Coordinación TIC también a Administración.
+                Marca todos los cargos de cada persona (puede tener varios: por ejemplo Profesor/a + Coordinación TIC + Jefatura). Los cargos deciden a qué perfiles entra: Jefatura y Orientación abren «Jefatura y Dirección»; Dirección abre también Administración; Secretaría y Coordinación TIC abren Administración. Cambia de perfil en cualquier momento desde el botón de arriba a la derecha.
               </div>
               {profesores.map((p, i) => {
                 const cuenta = cuentas[p] || {};
                 return (
                   <div key={p} style={{ padding: "10px 20px", borderBottom: `1px solid ${C.cream}`, fontSize: 14, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ minWidth: 160, display: "flex", alignItems: "center", gap: 10 }}>
-                      <Icono nombre={ICONO_CARGO[cuenta.cargo || "profesor"] || "cargo-profesor"} tam={40} />
+                      <Icono nombre={ICONO_CARGO[cargoDe(cuentas, p).id] || "cargo-profesor"} tam={40} />
                       <div>
                         <div style={{ fontWeight: 600, color: C.dark }}>{p}{p === usuario ? " (tú)" : ""}</div>
                         <input type="email" aria-label={`Correo de ${p}`} placeholder={MODO_DEMO ? correoDemo(p) : "correo@educa.madrid.org"} value={cuenta.email || ""}
@@ -5885,16 +5892,24 @@ export default function App() {
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <select aria-label={`Cargo de ${p}`} value={cuenta.cargo || "profesor"}
-                        onChange={e => {
-                          const nuevo = e.target.value;
-                          if (p === usuario && !CARGOS.find(c => c.id === nuevo).perfiles.includes("admin") &&
-                              !window.confirm("Vas a quitarte el acceso a Administración. ¿Continuar?")) return;
-                          setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), cargo: nuevo } }));
-                        }}
-                        style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 13 }}>
-                        {CARGOS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                      </select>
+                      <div role="group" aria-label={`Cargos de ${p}`} style={{ display: "flex", gap: 6, flexWrap: "wrap", maxWidth: 520 }}>
+                        {CARGOS.map(c => {
+                          const ids = cargosIds(cuenta); const on = ids.includes(c.id); const fijo = c.id === "profesor";
+                          return (
+                            <button key={c.id} disabled={fijo} aria-pressed={on} title={fijo ? "Todo el personal docente es profesor/a" : on ? "Quitar este cargo" : "Añadir este cargo"}
+                              onClick={() => {
+                                const nuevos = on ? ids.filter(x => x !== c.id) : [...ids, c.id];
+                                if (p === usuario && !nuevos.some(id => CARGOS.find(x => x.id === id).perfiles.includes("admin")) &&
+                                    !window.confirm("Vas a quitarte el acceso a Administración. ¿Continuar?")) return;
+                                setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), cargos: nuevos, cargo: undefined } }));
+                              }}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 10px 3px 4px", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: fijo ? "default" : "pointer",
+                                border: `2px solid ${on ? C.teal : "#d1d5db"}`, background: on ? "#E8F5F3" : "#fff", color: on ? C.dark : C.gray, opacity: fijo ? 0.85 : 1 }}>
+                              <Icono nombre={ICONO_CARGO[c.id]} tam={22} />{on ? "✓ " : "+ "}{c.label}
+                            </button>
+                          );
+                        })}
+                      </div>
                       {cuenta.clave && (
                         <button onClick={() => { if (window.confirm(`¿Restablecer la clave de ${p}? La próxima vez que entre tendrá que crear una nueva.`)) setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), clave: null } })); }}
                           style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}><Icono nombre="sin-clave" tam={20} />Restablecer clave</button>
