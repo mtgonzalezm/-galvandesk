@@ -300,7 +300,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
         <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
         <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
         <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>{APP}</h1>
-        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
+        <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Todo lo que importa en tu aula</p>
         <AvisoDemo />
         {globoBienvenida}
 
