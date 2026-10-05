@@ -3185,6 +3185,8 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
 // ═══════════════════════════════════════════════════════════════════════════
 // GALVÁNGRAM - MENSAJERÍA RÁPIDA
 // ═══════════════════════════════════════════════════════════════════════════
+const ICONO_MENSAJE = { "Alumno enfermo": "alumno-enfermo", "Emergencia": "emergencia", "Urgencia en aula": "emergencia", "Falta material": "falta-material",
+  "Alumno derivado": "alumno-derivado", "Cambio de guardia": "sustituto", "Falta un profesor": "profe-ausente", "Reunión importante": "eventos" };
 function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C, inpStyle, selStyle, labelStyle }) {
   const [destinatario, setDestinatario] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("");
@@ -3253,7 +3255,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
             cursor: "pointer",
             fontSize: 14
           }}>
-          ✉️ Enviar Mensaje
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="mensaje-enviar" tam={28} />Enviar Mensaje</span>
         </button>
         <button 
           onClick={() => setTab("historial")}
@@ -3268,7 +3270,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
             fontSize: 14,
             position: "relative"
           }}>
-          📜 Historial
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="historial" tam={28} />Historial</span>
           {mensajesNoLeidos > 0 && (
             <div style={{ position: "absolute", top: 0, right: 0, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
               {mensajesNoLeidos}
@@ -3281,7 +3283,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
       {tab === "enviar" && (
         <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Destinatario</label>
+            <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="selecciona-profesor" tam={30} />Destinatario</label>
             <select value={destinatario} onChange={e => setDestinatario(e.target.value)} style={selStyle}>
               <option value="">— Selecciona profesor —</option>
               {profesores.filter(p => p !== usuario).map(p => (
@@ -3291,7 +3293,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
           </div>
           
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Tipo de Mensaje</label>
+            <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="mensajes" tam={30} />Tipo de Mensaje</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {mensajesPredefinidos.map(m => (
                 <button
@@ -3306,16 +3308,16 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
                     cursor: "pointer",
                     fontSize: 12,
                     fontWeight: tipoMensaje === m.id ? 600 : 400,
-                    textAlign: "left"
+                    textAlign: "left", display: "flex", alignItems: "center", gap: 10
                   }}>
-                  {m.label}
+                  <Icono nombre={ICONO_MENSAJE[m.label] || "mensajes"} tam={34} />{m.label}
                 </button>
               ))}
             </div>
           </div>
           
           <div style={{ marginBottom: 16 }}>
-            <label style={labelStyle}>Mensaje Personalizado</label>
+            <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="mensaje-personalizado" tam={30} />Mensaje Personalizado</label>
             <textarea 
               value={mensajePersonalizado}
               onChange={e => setMensajePersonalizado(e.target.value)}
@@ -3337,7 +3339,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
               fontSize: 14,
               cursor: "pointer"
             }}>
-            📤 Enviar Mensaje
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 10 }}><Icono nombre="boton-enviar" tam={28} />Enviar Mensaje</span>
           </button>
         </div>
       )}
@@ -3347,7 +3349,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
         <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
           {mensajes.length === 0 ? (
             <div style={{ textAlign: "center", color: C.gray, padding: 40 }}>
-              <div style={{ fontSize: 48, marginBottom: 10 }}>💬</div>
+              <Icono nombre="mensajes" tam={72} style={{ margin: "0 auto 10px" }} />
               <div>Sin mensajes</div>
             </div>
           ) : (
