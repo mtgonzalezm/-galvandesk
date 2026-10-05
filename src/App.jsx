@@ -297,9 +297,8 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
     <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif", padding: 20 }}>
       <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
       <div style={{ background: C.white, borderRadius: 20, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
-        <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
+        <h1 style={{ margin: "0 0 6px" }}><img src="/logo-rumboaula.png" alt={APP} style={{ width: 260, maxWidth: "100%", height: "auto", display: "block", margin: "0 auto" }} /></h1>
         <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
-        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>{APP}</h1>
         <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Todo lo que importa en tu aula</p>
         <AvisoDemo />
         {globoBienvenida}
@@ -4610,7 +4609,7 @@ export default function App() {
             ↩️
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="gd-logo" style={{ fontSize: 26 }}>🏫</span>
+            <img className="gd-logo" src="/icono-rumboaula.png" alt="" style={{ width: 36, height: 36, background: "rgba(255,255,255,0.92)", borderRadius: 10, padding: 3 }} />
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .5 }}>{APP}</div>
               <div style={{ fontSize: 11, opacity: .8 }}>{CENTRO} · {perfil.label}</div>
