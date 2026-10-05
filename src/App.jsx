@@ -442,7 +442,7 @@ function ConIcono({ texto, tam = 24, gap = 8 }) {
 
 
 // Icono pequeño dentro de un texto, y texto que cambia sus emojis por iconos
-const EMOJI_EN_TEXTO = { "⚠️": "aviso", "⚠": "aviso", "🛡️": "titular", "🛡": "titular", "👥": "apoyo", "🔁": "sustituto", "📚": "deberes", "🏫": "aula", "👤": "titular", "📍": "edificio", "📌": "material", "✍️": "firmar", "✍": "firmar", "📋": "pasar-lista", "🕐": "hora-reloj", "⏰": "hora-reloj", "📅": "fecha-hora", "📝": "ejercicios" };
+const EMOJI_EN_TEXTO = { "⚠️": "aviso", "⚠": "aviso", "🛡️": "titular", "🛡": "titular", "👥": "apoyo", "🔁": "sustituto", "📚": "deberes", "🏫": "aula", "👤": "titular", "📍": "edificio", "📌": "material", "✍️": "firmar", "✍": "firmar", "📋": "pasar-lista", "🕐": "hora-reloj", "⏰": "hora-reloj", "📅": "fecha-hora", "📝": "ejercicios", "📞": "profe-ausente", "📢": "profe-ausente", "🚻": "banos", "🔄": "guardias", "🔔": "alertas" };
 const Ic = ({ n, tam = 20 }) => <img src={`/iconos/${n}.png`} alt="" width={tam} height={tam} style={{ width: tam, height: tam, borderRadius: Math.round(tam * 0.22), display: "inline-block", verticalAlign: "middle", margin: "0 4px 2px 0" }} />;
 const RE_EMOJI_TEXTO = new RegExp("(" + Object.keys(EMOJI_EN_TEXTO).sort((a, b) => b.length - a.length).map(e => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\s?", "u");
 function partirEmojis(texto, tam) {
@@ -580,12 +580,12 @@ export function VisorDocumentos() {
       <div style={caja} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Vista previa del informe">
         <div style={barra}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>👁 Vista previa</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}><Ic n="buscar" tam={20} />Vista previa</div>
             <div style={{ fontSize: 12, opacity: .85, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pdf.archivo} · {pdf.paginas} página(s)</div>
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button style={{ ...bb, background: "#fff", color: C.dark }} onClick={() => descargarURL(pdf.url, pdf.archivo)}>⬇️ Descargar PDF</button>
-            <button style={bb} onClick={() => { try { marco.current.contentWindow.focus(); marco.current.contentWindow.print(); } catch { window.open(pdf.url, "_blank"); } }}>🖨 Imprimir</button>
+            <button style={bb} onClick={() => { try { marco.current.contentWindow.focus(); marco.current.contentWindow.print(); } catch { window.open(pdf.url, "_blank"); } }}><Ic n="informe" tam={20} />Imprimir</button>
             <button style={bb} onClick={() => window.open(pdf.url, "_blank")}>↗ Abrir en otra pestaña</button>
             <button style={bb} onClick={cerrar} aria-label="Cerrar">✕</button>
           </div>
@@ -605,7 +605,7 @@ export function VisorDocumentos() {
       <div style={caja} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Vista previa del Excel">
         <div style={barra}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 16 }}>👁 Vista previa del Excel</div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}><Ic n="buscar" tam={20} />Vista previa del Excel</div>
             <div style={{ fontSize: 12, opacity: .85 }}>{excel.archivo} · {excel.hojas.length} hojas</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -792,21 +792,21 @@ function PrintParte({ parte, onClose }) {
           const fuente = grav === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM";
           return (
             <div style={{ margin: "10px 0", padding: "10px 14px", background: "#EEF5F8", borderRadius: 8, border: `1px solid ${C.blue}`, fontSize: 13 }}>
-              <span style={{ fontWeight: 700, color: C.blue }}>⚖️ Tipificación normativa </span>
+              <span style={{ fontWeight: 700, color: C.blue }}><Ic n="tipificacion" tam={20} />Tipificación normativa </span>
               <span style={{ color: C.gray, fontSize: 11 }}>({fuente})</span>
               <div style={{ marginTop: 4, color: C.dark }}>{tipObj?.label}</div>
             </div>
           );
         })()}
-        {parte.esGrupal && <div style={{ marginTop: 8, background: "#e8f5f3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600 }}>👥 Parte generado como parte de grupo</div>}
+        {parte.esGrupal && <div style={{ marginTop: 8, background: "#e8f5f3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600 }}><Ic n="grupos" tam={20} />Parte generado como parte de grupo</div>}
         <div style={{ marginTop: 20 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>Descripción del incidente:</div>
           <div style={{ background: C.light, padding: 16, borderRadius: 8, fontSize: 14, lineHeight: 1.7, border: `1px solid #e5e7eb` }}>{parte.descripcion}</div>
         </div>
         <div style={{ background: "#EEF5F8", padding: 16, borderRadius: 8, marginTop: 20, fontSize: 14 }}>
           <div style={{ fontWeight: 700, marginBottom: 8, color: C.blue }}>📬 Contacto familia</div>
-          <div>✉️ {parte.email}</div>
-          <div style={{ marginTop: 4 }}>📱 {parte.telefono}</div>
+          <div><Ic n="mensaje-enviar" tam={20} />{parte.email}</div>
+          <div style={{ marginTop: 4 }}><Ic n="selecciona-profesor" tam={20} />{parte.telefono}</div>
         </div>
         <div style={{ display: "flex", gap: 40, marginTop: 50 }}>
           {["Firma del Profesor", "Firma Jefatura de Estudios", "Firma del Alumno/a"].map(f => (
@@ -888,7 +888,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
               </tbody>
             </table>
           </div>
-          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px" }}>📋 Detalle de los partes</div>
+          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px" }}><Ic n="partes" tam={20} />Detalle de los partes</div>
           <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
@@ -997,7 +997,7 @@ function ComoAvisar({ parte }) {
   const btn = { border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 };
   return (
     <div style={{ marginTop: 14, background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 14, textAlign: "left" }}>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 14, marginBottom: 6 }}>📨 Cómo avisar a la familia y a Jefatura</div>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 14, marginBottom: 6 }}><Ic n="mensaje-enviar" tam={20} />Cómo avisar a la familia y a Jefatura</div>
       <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.55 }}>
         Escribe un correo desde tu cuenta del centro a la familia y a Jefatura (con el tutor/a en copia) y elige una de estas dos formas:
         <ol style={{ margin: "6px 0 10px", paddingLeft: 20 }}>
@@ -1028,10 +1028,10 @@ function ParteCard({ parte, onVer, onPrint }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 15, color: C.dark }}>
             {parte.alumno}
-            {parte.esGrupal && <span style={{ fontSize: 11, background: "#e8f5f3", color: C.teal, borderRadius: 6, padding: "2px 8px", marginLeft: 6 }}>👥 grupal</span>}
+            {parte.esGrupal && <span style={{ fontSize: 11, background: "#e8f5f3", color: C.teal, borderRadius: 6, padding: "2px 8px", marginLeft: 6 }}><Ic n="grupos" tam={20} />grupal</span>}
           </div>
           <div style={{ fontSize: 12, color: C.gray, marginTop: 3 }}>
-            📚 {parte.curso}{parte.tutor ? ` (tutor/a: ${parte.tutor})` : ""} · {parte.tipo} · ⏰ {parte.hora || "—"} · 📅 {fmt(parte.ts)} · 👤 {parte.profesor}
+            <Ic n="aula" tam={20} />{parte.curso}{parte.tutor ? ` (tutor/a: ${parte.tutor})` : ""} · {parte.tipo} · <Ic n="hora-reloj" tam={18} />{parte.hora || "—"} · <Ic n="fecha-hora" tam={18} />{fmt(parte.ts)} · <Ic n="cargo-profesor" tam={18} />{parte.profesor}
           </div>
           <div style={{ fontSize: 13, marginTop: 6, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {parte.descripcion}
@@ -1040,8 +1040,8 @@ function ParteCard({ parte, onVer, onPrint }) {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
           <Badge g={parte.gravedad} />
           <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={e => { e.stopPropagation(); onVer(); }} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>👁 Ver</button>
-            <button onClick={e => { e.stopPropagation(); onPrint(); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨 PDF</button>
+            <button onClick={e => { e.stopPropagation(); onVer(); }} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}><Ic n="buscar" tam={20} />Ver</button>
+            <button onClick={e => { e.stopPropagation(); onPrint(); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}><Ic n="informe" tam={20} />PDF</button>
           </div>
         </div>
       </div>
@@ -1091,17 +1091,17 @@ function InformesGuardados({ informes, setInformes, partes, banos, tutores, C })
   }
   return (
     <div style={{ background: C.white, borderRadius: 14, padding: 18, marginTop: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🗂 Informes guardados</div>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}><Ic n="documentos" tam={20} />Informes guardados</div>
       <div style={{ fontSize: 12, color: C.gray, margin: "4px 0 12px" }}>Cada informe descargado queda aquí anotado con sus partes, para volver a sacarlo igual.</div>
       {informes.map(inf => (
         <div key={inf.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderTop: `1px solid ${C.cream}`, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14, color: C.dark }}>{inf.tipo === "banos" ? "🚻 Salidas al baño" : "📋 Partes"} · {inf.total} registro{inf.total !== 1 ? "s" : ""}</div>
+            <div style={{ fontWeight: 600, fontSize: 14, color: C.dark }}><Ti tam={20}>{inf.tipo === "banos" ? "🚻 Salidas al baño" : "📋 Partes"}</Ti> · {inf.total} registro{inf.total !== 1 ? "s" : ""}</div>
             <div style={{ fontSize: 12, color: C.gray }}>{fmt(inf.ts)} · {inf.autor || "—"}{inf.filtrosTexto ? ` · ${inf.filtrosTexto}` : " · Sin filtros"}</div>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={() => descargar(inf)} style={{ background: "#E8F5F3", color: C.teal, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700, fontSize: 12 }}>⬇️ PDF</button>
-            <button aria-label="Quitar del historial" onClick={() => { if (window.confirm("¿Quitar este informe del historial? Los partes no se borran.")) setInformes(prev => prev.filter(x => x.id !== inf.id)); }} style={{ background: "#f3f4f6", color: C.gray, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}>🗑</button>
+            <button aria-label="Quitar del historial" onClick={() => { if (window.confirm("¿Quitar este informe del historial? Los partes no se borran.")) setInformes(prev => prev.filter(x => x.id !== inf.id)); }} style={{ background: "#f3f4f6", color: C.gray, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12 }}><Ic n="eliminar" tam={20} /></button>
           </div>
         </div>
       ))}
@@ -1268,7 +1268,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
       {subTab === "lista" && (
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
-            <div style={{ fontWeight: 600, color: C.dark }}>👤 {alumnos.length} alumno(s) en el sistema</div>
+            <div style={{ fontWeight: 600, color: C.dark }}><Ic n="por-alumno" tam={20} />{alumnos.length} alumno(s) en el sistema</div>
             {alumnos.length > 0 && (
               confirmarBorrado
                 ? <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1276,7 +1276,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
                   <Btn onClick={() => { setAlumnos([]); setConfirmarBorrado(false); }} color={C.salmon} style={{ padding: "6px 14px", fontSize: 13 }}>Sí, borrar</Btn>
                   <Btn onClick={() => setConfirmarBorrado(false)} color={C.gray} style={{ padding: "6px 14px", fontSize: 13 }}>Cancelar</Btn>
                 </div>
-                : <button onClick={() => setConfirmarBorrado(true)} style={{ background: "#FDF0EF", color: C.salmon, border: `1px solid ${C.salmon}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>🗑 Limpiar lista (nuevo curso)</button>
+                : <button onClick={() => setConfirmarBorrado(true)} style={{ background: "#FDF0EF", color: C.salmon, border: `1px solid ${C.salmon}`, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}><Ic n="eliminar" tam={20} />Limpiar lista (nuevo curso)</button>
             )}
           </div>
           <Card style={{ padding: 0, overflow: "hidden" }}>
@@ -1408,9 +1408,9 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
       </button>
       <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, borderRadius: "14px 14px 0 0", padding: "20px 24px", color: "#fff" }}>
         <div style={{ fontSize: 11, opacity: .7, letterSpacing: 1, marginBottom: 4 }}>PLAN DE GUARDIA · {CENTRO.toUpperCase()}</div>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>👤 {verPlan.profesorAusente}</div>
+        <div style={{ fontSize: 20, fontWeight: 800 }}><Ic n="por-alumno" tam={20} />{verPlan.profesorAusente}</div>
         <div style={{ fontSize: 13, opacity: .85, marginTop: 4 }}>
-          📅 {verPlan.multidia ? `${fmtD(verPlan.fecha)} → ${fmtD(verPlan.fechaFin)}` : fmtD(verPlan.fecha)} · {verPlan.motivo}
+          <Ic n="fecha-hora" tam={20} />{verPlan.multidia ? `${fmtD(verPlan.fecha)} → ${fmtD(verPlan.fechaFin)}` : fmtD(verPlan.fecha)} · {verPlan.motivo}
         </div>
         {verPlan.nota && <div style={{ fontSize: 12, opacity: .75, marginTop: 4, fontStyle: "italic" }}>{verPlan.nota}</div>}
       </div>
@@ -1420,22 +1420,22 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
           <div key={i} style={{ borderRadius: 12, border: `1px solid #e5e7eb`, marginBottom: 10, overflow: "hidden" }}>
             {/* Cabecera hora */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 16px", background: C.cream }}>
-              <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}>⏰ {h.hora}</div>
+              <div style={{ fontWeight: 700, color: C.dark, fontSize: 14 }}><Ic n="hora-reloj" tam={20} />{h.hora}</div>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {h.curso && <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 600 }}>🏫 {h.curso}</span>}
-                {h.materia && <span style={{ background: C.amberBg, color: C.amber, borderRadius: 6, padding: "2px 10px", fontSize: 12 }}>📚 {h.materia}</span>}
+                {h.curso && <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 6, padding: "2px 10px", fontSize: 12, fontWeight: 600 }}><Ic n="por-curso" tam={20} />{h.curso}</span>}
+                {h.materia && <span style={{ background: C.amberBg, color: C.amber, borderRadius: 6, padding: "2px 10px", fontSize: 12 }}><Ic n="aula" tam={20} />{h.materia}</span>}
                 {h.modulo && <span style={{ background: "#E8F5F3", color: C.teal, borderRadius: 6, padding: "2px 10px", fontSize: 12 }}>🏢 {h.modulo}</span>}
               </div>
             </div>
             {/* Cuerpo */}
             <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 13 }}>
               <div>
-                <div style={{ color: C.gray, fontWeight: 600, marginBottom: 4 }}>🔄 Profesor de guardia</div>
+                <div style={{ color: C.gray, fontWeight: 600, marginBottom: 4 }}><Ic n="guardias" tam={20} />Profesor de guardia</div>
                 <div style={{ color: C.dark, fontWeight: 700 }}>{h.profesorGuardia || <span style={{ color: "#f87171" }}>⚠ Sin asignar</span>}</div>
-                {h.zona && <div style={{ color: C.gray, marginTop: 2 }}>📍 {h.zona}</div>}
+                {h.zona && <div style={{ color: C.gray, marginTop: 2 }}><Ic n="edificio" tam={20} />{h.zona}</div>}
               </div>
               <div>
-                <div style={{ color: C.gray, fontWeight: 600, marginBottom: 4 }}>📋 Tarea para los alumnos</div>
+                <div style={{ color: C.gray, fontWeight: 600, marginBottom: 4 }}><Ic n="partes" tam={20} />Tarea para los alumnos</div>
                 <div style={{ color: C.dark }}>{h.tarea || <span style={{ color: C.gray, fontStyle: "italic" }}>Sin tarea especificada</span>}</div>
                 {h.materialDetalle && <div style={{ color: C.gray, marginTop: 2, fontSize: 12 }}>📎 {h.materialDetalle}</div>}
               </div>
@@ -1491,7 +1491,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
           {/* PASO 1 inline */}
           {paso === 1 && (
             <Card>
-              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}>📅 Fecha de la ausencia</div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}><Ic n="fecha-hora" tam={20} />Fecha de la ausencia</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:16 }}>
                 <div>
                   <label style={labelStyle}>Fecha de inicio</label>
@@ -1515,7 +1515,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                 <textarea value={pgNota} onChange={e => setPgNota(e.target.value)} rows={2} placeholder="Observaciones generales sobre la ausencia…" style={{ ...inpStyle, resize:"vertical" }} />
               </div>
               <div style={{ background:"#EEF5F8", borderRadius:8, padding:"10px 14px", fontSize:12, color:C.blue, marginTop:12 }}>
-                💡 Si la ausencia abarca varios días, el plan se aplicará a todas las fechas del periodo seleccionado.
+                <Ic n="como-exportar" tam={20} />Si la ausencia abarca varios días, el plan se aplicará a todas las fechas del periodo seleccionado.
               </div>
             </Card>
           )}
@@ -1523,7 +1523,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
           {/* PASO 2 inline */}
           {paso === 2 && (
             <Card>
-              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}>👤 Profesor ausente y horas afectadas</div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:16 }}><Ic n="por-alumno" tam={20} />Profesor ausente y horas afectadas</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
                 <div>
                   <label style={labelStyle}>Profesor ausente *</label>
@@ -1540,7 +1540,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                 </div>
               </div>
               <div style={{ marginBottom:8 }}>
-                <label style={{ ...labelStyle, marginBottom:10 }}>⏰ Horas afectadas * <span style={{ color:C.gray, fontWeight:400, fontSize:12 }}>— Selecciona todas las que apliquen</span></label>
+                <label style={{ ...labelStyle, marginBottom:10 }}><Ic n="hora-reloj" tam={20} />Horas afectadas * <span style={{ color:C.gray, fontWeight:400, fontSize:12 }}>— Selecciona todas las que apliquen</span></label>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
                   {HORAS.map(h => {
                     const sel = pgHoras.includes(h);
@@ -1564,10 +1564,10 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
           {/* PASO 3 inline */}
           {paso === 3 && (
             <div>
-              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}>🏫 Aula, módulo y tarea por hora</div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}><Ic n="por-curso" tam={20} />Aula, módulo y tarea por hora</div>
               {pgHoras.map(h => (
                 <Card key={h} style={{ borderLeft:`4px solid ${C.blue}`, marginBottom:12 }}>
-                  <div style={{ fontWeight:700, color:C.blue, fontSize:15, marginBottom:12 }}>⏰ {conTramo(h)}</div>
+                  <div style={{ fontWeight:700, color:C.blue, fontSize:15, marginBottom:12 }}><Ic n="hora-reloj" tam={20} />{conTramo(h)}</div>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12, marginBottom:12 }}>
                     <div>
                       <label style={labelStyle}>Grupo / Clase *</label>
@@ -1589,7 +1589,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                     </div>
                   </div>
                   <div style={{ marginBottom:10 }}>
-                    <label style={labelStyle}>📋 Tarea / Actividad para los alumnos</label>
+                    <label style={labelStyle}><Ic n="partes" tam={20} />Tarea / Actividad para los alumnos</label>
                     <textarea value={pgTareaHora[h] || ""} onChange={e => setTareaHora(h, e.target.value)} rows={2} placeholder="Ej: Ejercicios pág. 45 del libro · Lectura silenciosa · Repaso tema 3…" style={{ ...inpStyle, resize:"vertical" }} />
                   </div>
                   <div>
@@ -1609,14 +1609,14 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
           {/* PASO 4 inline */}
           {paso === 4 && (
             <div>
-              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}>🔄 Asignación de profesores de guardia</div>
+              <div style={{ fontWeight:700, color:C.dark, fontSize:16, marginBottom:14 }}><Ic n="horario" tam={24} />Asignación de profesores de guardia</div>
               {pgHoras.map(h => (
                 <Card key={h} style={{ borderLeft:`4px solid ${C.teal}`, marginBottom:12 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12, flexWrap:"wrap", gap:8 }}>
-                    <div style={{ fontWeight:700, color:C.teal, fontSize:15 }}>⏰ {conTramo(h)}</div>
+                    <div style={{ fontWeight:700, color:C.teal, fontSize:15 }}><Ic n="hora-reloj" tam={20} />{conTramo(h)}</div>
                     {pgCursoHora[h] && (
                       <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                        <span style={{ background:"#EEF5F8", color:C.blue, borderRadius:6, padding:"3px 10px", fontSize:12, fontWeight:600 }}>🏫 {pgCursoHora[h]}</span>
+                        <span style={{ background:"#EEF5F8", color:C.blue, borderRadius:6, padding:"3px 10px", fontSize:12, fontWeight:600 }}><Ic n="por-curso" tam={20} />{pgCursoHora[h]}</span>
                         {pgMateriaHora[h] && <span style={{ background:C.cream, color:C.dark, borderRadius:6, padding:"3px 10px", fontSize:12 }}>{pgMateriaHora[h]}</span>}
                         {pgModuloEdificio[h] && <span style={{ background:"#E8F5F3", color:C.teal, borderRadius:6, padding:"3px 10px", fontSize:12 }}>🏢 {pgModuloEdificio[h]}</span>}
                       </div>
@@ -1624,14 +1624,14 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                   </div>
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
                     <div>
-                      <label style={labelStyle}>👤 Profesor de guardia *</label>
+                      <label style={labelStyle}><Ic n="por-alumno" tam={20} />Profesor de guardia *</label>
                       <select value={pgGuardiaHora[h] || ""} onChange={e => setGuardiaHora(h, e.target.value)} style={selStyle}>
                         <option value="">— Seleccionar —</option>
                         {profesores.filter(p => p !== pgProfesor).map(p => <option key={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label style={labelStyle}>📍 Zona de guardia</label>
+                      <label style={labelStyle}><Ic n="edificio" tam={20} />Zona de guardia</label>
                       <select value={pgZonaHora[h] || ""} onChange={e => setZonaHora(h, e.target.value)} style={selStyle}>
                         <option value="">— Seleccionar zona —</option>
                         {ZONAS_GUARDIA.map(z => <option key={z}>{z}</option>)}
@@ -1645,7 +1645,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                   )}
                   {pgTareaHora[h] && (
                     <div style={{ marginTop:8, background:"#FFF8E8", borderRadius:6, padding:"6px 12px", fontSize:12, color:"#92400e" }}>
-                      📋 Tarea: {pgTareaHora[h]}
+                      <Ic n="partes" tam={20} />Tarea: {pgTareaHora[h]}
                     </div>
                   )}
                 </Card>
@@ -1677,7 +1677,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
         {/* Panel derecho — Historial de planes */}
         <div>
           <div style={{ fontWeight: 700, color: C.dark, fontSize: 14, marginBottom: 10 }}>
-            📋 Planes guardados ({planesGuardia.length})
+            <Ic n="partes" tam={20} />Planes guardados ({planesGuardia.length})
           </div>
           {planesGuardia.length === 0
             ? <div style={{ background: C.white, borderRadius: 12, padding: 20, textAlign: "center", color: C.gray, fontSize: 13, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
@@ -1688,9 +1688,9 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                 style={{ background: C.white, borderRadius: 12, padding: 14, marginBottom: 8, cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", borderLeft: `4px solid ${C.blue}`, transition: "box-shadow .15s" }}
                 onMouseOver={e => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.12)"}
                 onMouseOut={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.05)"}>
-                <div style={{ fontWeight: 700, color: C.dark, fontSize: 13 }}>👤 {p.profesorAusente}</div>
+                <div style={{ fontWeight: 700, color: C.dark, fontSize: 13 }}><Ic n="por-alumno" tam={20} />{p.profesorAusente}</div>
                 <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>
-                  📅 {p.multidia ? `${fmtD(p.fecha)} → ${fmtD(p.fechaFin)}` : fmtD(p.fecha)}
+                  <Ic n="fecha-hora" tam={20} />{p.multidia ? `${fmtD(p.fecha)} → ${fmtD(p.fechaFin)}` : fmtD(p.fecha)}
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
                   <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 6, padding: "2px 8px", fontSize: 11 }}>{p.horas.length} hora(s)</span>
@@ -1851,7 +1851,7 @@ function PasarLista({ curso, alumnos, existente, onGuardar, onCerrar, C }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 120, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 16, width: "min(460px, 100%)", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "14px 18px", borderRadius: "16px 16px 0 0", position: "sticky", top: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 16 }}>📋 Pasar lista · {curso}</div>
+          <div style={{ fontWeight: 700, fontSize: 16 }}><Ic n="partes" tam={20} />Pasar lista · {curso}</div>
           <div style={{ fontSize: 12, opacity: .85 }}>Marca solo a quien falta. {grupo.length} alumnos.</div>
         </div>
         <div style={{ padding: 12 }}>
@@ -1915,7 +1915,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
         ))}
       </div>
       <div style={{ background: C.white, borderRadius: 12, marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-        <div style={{ background: C.dark, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}>✍️ Firmas de guardia · {parseISO(fecha).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
+        <div style={{ background: C.dark, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}><Ic n="firmar" tam={20} />Firmas de guardia · {parseISO(fecha).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
         {filas.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: C.gray }}>No hay guardias en el cuadrante para esta fecha.</div> : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, minWidth: 560 }}>
@@ -1946,7 +1946,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
         )}
       </div>
       <div style={{ background: C.white, borderRadius: 12, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-        <div style={{ background: C.blue, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}>📋 Listas pasadas en guardia</div>
+        <div style={{ background: C.blue, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}><Ic n="partes" tam={20} />Listas pasadas en guardia</div>
         {listasDia.length === 0 ? <div style={{ padding: 24, textAlign: "center", color: C.gray }}>No se ha pasado ninguna lista este día.</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead><tr style={{ background: C.light }}>
@@ -2427,7 +2427,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                           {a.horas.join(", ")} - {a.asignatura || "Clase"}
                         </div>
                         <div style={{ fontSize: 12 }}>
-                          <Ti tam={20}>👤 {a.profesor} · 🏫 Aula {a.aula || "?"} {a.asignatura ? `· 📚 ${a.asignatura}` : ""}</Ti>
+                          <Ti tam={20}><Ic n="por-alumno" tam={20} />{a.profesor} · 🏫 Aula {a.aula || "?"} {a.asignatura ? `· 📚 ${a.asignatura}` : ""}</Ti>
                         </div>
                         {a.tarea && <div style={{ fontSize: 12, marginTop: 4 }}>✏️ Tarea: {a.tarea}</div>}
                       </div>
@@ -2691,7 +2691,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                             <div style={{ fontWeight: 600, color: "#d97706", fontSize: 12, marginBottom: 8 }}><Ic n="aviso" tam={22} />AUSENCIAS A CUBRIR:</div>
                             {g.ausencias.map((a, i) => (
                               <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginBottom: 8, borderLeft: `3px solid #fbbf24` }}>
-                                <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>👤 {a.profesor}</div>
+                                <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}><Ic n="por-alumno" tam={20} />{a.profesor}</div>
                                 {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong><Ic n="deberes" tam={22} />Asignatura:</strong> {a.asignatura}</div>}
                                 {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong><Ic n="aula" tam={22} />Aula:</strong> {a.aula}</div>}
                                 {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>✏️ Tarea:</strong> {a.tarea}</div>}
@@ -2825,7 +2825,7 @@ function NotificarAusencia({ usuario, modoJefatura = false, profesores, ausencia
         </div>
         <button onClick={enviar} disabled={!ausProfesor || !ausFecha || ausHoras.length === 0}
           style={{ width:"100%", padding:14, borderRadius:10, border:"none", background:(!ausProfesor||!ausFecha||ausHoras.length===0)?"#94a3b8":C.salmon, color:"#fff", fontWeight:700, fontSize:15, cursor:(!ausProfesor||!ausFecha||ausHoras.length===0)?"not-allowed":"pointer" }}>
-          {modoJefatura ? "📞 Registrar la ausencia" : "📢 Notificar Ausencia a Jefatura"}
+          <Ti tam={22}>{modoJefatura ? "📞 Registrar la ausencia" : "📢 Notificar Ausencia a Jefatura"}</Ti>
         </button>
       </div>
       {misAusencias.length > 0 && (
@@ -2833,13 +2833,13 @@ function NotificarAusencia({ usuario, modoJefatura = false, profesores, ausencia
           <h3 style={{ color:C.dark }}>Mis ausencias notificadas</h3>
           {misAusencias.map(a => (
             <div key={a.id} style={{ background:C.white, borderRadius:10, padding:14, marginBottom:10, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", borderLeft:`4px solid ${C.salmon}` }}>
-              <div style={{ fontWeight:700, color:C.dark }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
+              <div style={{ fontWeight:700, color:C.dark }}><Ic n="fecha-hora" tam={20} />{new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
               <div style={{ fontSize:13, color:C.gray, marginTop:4 }}>Horas: {a.horas.join(", ")}</div>
-              {a.aula && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>🏫 Aula: {a.aula}</div>}
-              {a.asignatura && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📚 Asignatura: {a.asignatura}</div>}
-              {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 Tarea: {a.tarea}</div>}
+              {a.aula && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}><Ic n="por-curso" tam={20} />Aula: {a.aula}</div>}
+              {a.asignatura && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}><Ic n="aula" tam={20} />Asignatura: {a.asignatura}</div>}
+              {a.tarea && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}><Ic n="ejercicios" tam={20} />Tarea: {a.tarea}</div>}
               {a.enlace && <div style={{ fontSize:13, color:C.blue, marginTop:4, background:"#EEF5F8", borderRadius:6, padding:"6px 10px" }}>🔗 <a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color:C.blue, textDecoration:"underline" }}>Ver recursos</a></div>}
-              {a.ubicacion && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}>📍 Ubicación: {a.ubicacion}</div>}
+              {a.ubicacion && <div style={{ fontSize:13, color:C.dark, marginTop:4, background:C.light, borderRadius:6, padding:"6px 10px" }}><Ic n="edificio" tam={20} />Ubicación: {a.ubicacion}</div>}
               <div style={{ fontSize:11, color:C.gray, marginTop:4 }}>Notificado el {fmt(a.ts)}</div>
             </div>
           ))}
@@ -2912,7 +2912,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
       
       {/* SELECTOR DE PROFESOR */}
       <div style={{ background:C.white, borderRadius:12, padding:20, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-        <label style={{ ...labelStyle, fontSize: 16, fontWeight: 700, marginBottom: 10, display: "block" }}>👤 Seleccionar Profesor para Configurar su Cuadrante</label>
+        <label style={{ ...labelStyle, fontSize: 16, fontWeight: 700, marginBottom: 10, display: "block" }}><Ic n="por-alumno" tam={20} />Seleccionar Profesor para Configurar su Cuadrante</label>
         <select value={profesorSel} onChange={e => setQProf(e.target.value)} style={{ ...selStyle, fontSize: 14, padding: "10px 12px" }}>
           <option value="">— Elige un profesor —</option>
           {profesores.map(p => <option key={p} value={p}>{p}</option>)}
@@ -2922,7 +2922,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
       {/* SI NO HAY PROFESOR: MENSAJE */}
       {!profesorSel && (
         <div style={{ background:C.white, borderRadius:12, padding:40, textAlign:"center", boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>👤</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}><Ic n="por-alumno" tam={20} /></div>
           <div style={{ fontSize: 18, fontWeight: 600, color: C.dark, marginBottom: 8 }}>Por favor, selecciona un profesor</div>
           <div style={{ fontSize: 14, color: C.gray }}>Para configurar su cuadrante de guardias de 15 días</div>
         </div>
@@ -2937,13 +2937,13 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
             <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
               <button onClick={() => setQInicio(isoLocal(sumarDias(inicio, -14)))} style={{ background: C.cream, border: "1px solid #ddd", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.dark }}>← Quincena anterior</button>
               <button onClick={() => setQInicio(isoLocal(sumarDias(inicio, 14)))} style={{ background: C.cream, border: "1px solid #ddd", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.dark }}>Quincena siguiente →</button>
-              <button onClick={copiarQuincenaAnterior} style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.blue }}>📋 Copiar de la quincena anterior</button>
+              <button onClick={copiarQuincenaAnterior} style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, color: C.blue }}><Ic n="partes" tam={20} />Copiar de la quincena anterior</button>
             </div>
             {dias.length > 0 && <div style={{ fontSize: 12, color: C.gray, marginTop: 6 }}>Del {dias[0].fecha.toLocaleDateString("es-ES")} al {dias[dias.length - 1].fecha.toLocaleDateString("es-ES")}</div>}
           </div>
           
-          <div style={{ fontWeight:700, color:C.dark, marginBottom:4, fontSize:14 }}>📅 Cuadrante: <strong>{profesorSel}</strong></div>
-          <div style={{ fontSize:12, color:C.gray, marginBottom:8 }}>En cada guardia: <strong>📍 zona</strong> del titular, <strong>👥 apoyo</strong> y <strong>🔁 sustituto</strong> (entra si falta el titular o el apoyo). Máximo {MAX_GUARDIAS_DIA} guardias por profesor y día; entre paréntesis, las que ya tiene ese día.</div>
+          <div style={{ fontWeight:700, color:C.dark, marginBottom:4, fontSize:14 }}><Ic n="fecha-hora" tam={20} />Cuadrante: <strong>{profesorSel}</strong></div>
+          <div style={{ fontSize:12, color:C.gray, marginBottom:8 }}>En cada guardia: <strong><Ic n="edificio" tam={20} />zona</strong> del titular, <strong><Ic n="grupos" tam={20} />apoyo</strong> y <strong><Ic n="sustituto" tam={20} />sustituto</strong> (entra si falta el titular o el apoyo). Máximo {MAX_GUARDIAS_DIA} guardias por profesor y día; entre paréntesis, las que ya tiene ese día.</div>
           {(() => {
             const incompletas = dias.reduce((n, d) => n + HORAS_GUARDIA.filter(h => { const z = cuadrante[`${d.key}|${h}|${profesorSel}`]; const k = `${d.key}|${h}|${z}`; return z && (!apoyosGuardia[k] || !sustitutosGuardia[k]); }).length, 0);
             return incompletas > 0
@@ -3094,14 +3094,14 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
         <input type="date" value={fechaCoordinacion} onChange={e => setFechaCoordinacion(e.target.value)} style={inpStyle} />
         {fechaCoordinacion && (
           <div style={{ marginTop: 10, fontSize: 13, color: C.gray }}>
-            📅 {parseISO(fechaCoordinacion).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            <Ic n="fecha-hora" tam={20} />{parseISO(fechaCoordinacion).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
           </div>
         )}
       </div>
       
       {!fechaCoordinacion ? (
         <div style={{ background: C.white, borderRadius: 12, padding: 40, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}><Ic n="fecha-hora" tam={20} /></div>
           <div style={{ fontSize: 16, fontWeight: 600, color: C.dark }}>Selecciona una fecha</div>
           <div style={{ fontSize: 13, color: C.gray, marginTop: 8 }}>Para ver el cuadrante de guardias y ausencias de ese día</div>
         </div>
@@ -3109,7 +3109,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
         <>
           {/* CUADRANTE DE GUARDIAS */}
           <div style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}>🛡️ Cuadrante de Guardias - {parseISO(fechaCoordinacion).toLocaleDateString("es-ES")}</div>
+            <div style={{ fontWeight: 700, color: C.dark, marginBottom: 14, fontSize: 14 }}><Ic n="titular" tam={20} />Cuadrante de Guardias - {parseISO(fechaCoordinacion).toLocaleDateString("es-ES")}</div>
             
             {Object.keys(guardiasEdificios).length === 0 ? (
               <div style={{ color: C.gray, fontSize: 13, padding: 20, textAlign: "center" }}>
@@ -3175,18 +3175,18 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
                   
                   return (
                     <div key={idx} style={{ background: "#FFF8E8", borderRadius: 8, padding: 12, borderLeft: "4px solid #fbbf24" }}>
-                      <div style={{ fontWeight: 600, color: "#d97706", marginBottom: 8 }}>👤 {a.profesor} <span style={{ fontSize: 11, color: "#666" }}>({a.motivo})</span></div>
+                      <div style={{ fontWeight: 600, color: "#d97706", marginBottom: 8 }}><Ic n="por-alumno" tam={20} />{a.profesor} <span style={{ fontSize: 11, color: "#666" }}>({a.motivo})</span></div>
                       
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10, fontSize: 12 }}>
                         <div>
-                          <div style={{ color: "#555", marginBottom: 4 }}>🕐 <strong>Horas:</strong> {a.horas.join(", ")}</div>
-                          {a.aula && <div style={{ color: "#555", marginBottom: 4 }}>🏫 <strong>Aula:</strong> {a.aula}</div>}
-                          {a.asignatura && <div style={{ color: "#555", marginBottom: 4 }}>📚 <strong>Asignatura:</strong> {a.asignatura}</div>}
+                          <div style={{ color: "#555", marginBottom: 4 }}><Ic n="hora-reloj" tam={20} /><strong>Horas:</strong> {a.horas.join(", ")}</div>
+                          {a.aula && <div style={{ color: "#555", marginBottom: 4 }}><Ic n="por-curso" tam={20} /><strong>Aula:</strong> {a.aula}</div>}
+                          {a.asignatura && <div style={{ color: "#555", marginBottom: 4 }}><Ic n="aula" tam={20} /><strong>Asignatura:</strong> {a.asignatura}</div>}
                         </div>
                         <div>
                           {a.edificio && <div style={{ color: "#555", marginBottom: 4 }}>🏢 <strong>Edificio:</strong> {a.edificio}</div>}
                           {a.tarea && <div style={{ color: "#555", marginBottom: 4 }}>✏️ <strong>Tarea:</strong> {a.tarea}</div>}
-                          {a.ubicacion && <div style={{ color: "#555", marginBottom: 4 }}>📍 <strong>Material:</strong> {a.ubicacion}</div>}
+                          {a.ubicacion && <div style={{ color: "#555", marginBottom: 4 }}><Ic n="edificio" tam={20} /><strong>Material:</strong> {a.ubicacion}</div>}
                         </div>
                       </div>
                       
@@ -3195,7 +3195,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
                         {guardiaEdificio ? (
                           <div style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>
                             ✅ <strong>CUBRE:</strong> {guardiaEdificio.profesor} (Guardia {guardiaEdificio.zona})
-                            {guardiaEdificio.apoyo && <div style={{ fontSize: 11, marginTop: 4, color: C.blue }}>👥 Apoyo disponible: {guardiaEdificio.apoyo}</div>}
+                            {guardiaEdificio.apoyo && <div style={{ fontSize: 11, marginTop: 4, color: C.blue }}><Ic n="grupos" tam={20} />Apoyo disponible: {guardiaEdificio.apoyo}</div>}
                           </div>
                         ) : (
                           <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>
@@ -3472,7 +3472,7 @@ function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia
       ) : porHora.map(({ hora, items }) => (
         <div key={hora} style={{ background:C.white, borderRadius:12, marginBottom:12, boxShadow:"0 2px 8px rgba(0,0,0,0.06)", overflow:"hidden" }}>
           <div style={{ background:hora==="Recreo"?C.blue:C.dark, color:"#fff", padding:"10px 16px", fontWeight:700, fontSize:14 }}>
-            {hora==="Recreo"?"🏃 ":"⏰ "}{conTramo(hora)}
+            <Ic n={hora==="Recreo" ? "guardias" : "hora-reloj"} tam={22} />{conTramo(hora)}
           </div>
           <table style={{ width:"100%", borderCollapse:"collapse" }}>
             <thead><tr style={{ background:C.light }}>
@@ -3553,14 +3553,14 @@ function GestionAusencias({ ausencias, setAusencias, profesores, C, fmt }) {
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
               <div>
                 <div style={{ fontWeight:700, color:C.dark, fontSize:15 }}>
-                  👨‍🏫 {a.profesor}
+                  <Ic n="cargo-profesor" tam={20} />{a.profesor}
                   {!a.leida && <span style={{ marginLeft:8, fontSize:11, background:C.salmon, color:"#fff", borderRadius:6, padding:"2px 8px" }}>Sin leer</span>}
                 </div>
-                <div style={{ fontSize:13, color:C.gray, marginTop:3 }}>📅 {new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
-                <div style={{ fontSize:13, color:C.dark, marginTop:3 }}>⏰ Horas: <strong>{a.horas.join(", ")}</strong></div>
-                {a.tarea && <div style={{ fontSize:13, marginTop:6, background:C.light, borderRadius:6, padding:"6px 10px" }}>📝 {a.tarea}</div>}
+                <div style={{ fontSize:13, color:C.gray, marginTop:3 }}><Ic n="fecha-hora" tam={20} />{new Date(a.fecha).toLocaleDateString("es-ES")} · {a.motivo}</div>
+                <div style={{ fontSize:13, color:C.dark, marginTop:3 }}><Ic n="hora-reloj" tam={20} />Horas: <strong>{a.horas.join(", ")}</strong></div>
+                {a.tarea && <div style={{ fontSize:13, marginTop:6, background:C.light, borderRadius:6, padding:"6px 10px" }}><Ic n="ejercicios" tam={20} />{a.tarea}</div>}
               </div>
-              <div style={{ fontSize:11, color:C.gray, whiteSpace:"nowrap", textAlign:"right" }}>Notificado: {fmt(a.ts)}{a.registradaPor && <div>📞 Registrada por {a.registradaPor}</div>}</div>
+              <div style={{ fontSize:11, color:C.gray, whiteSpace:"nowrap", textAlign:"right" }}>Notificado: {fmt(a.ts)}{a.registradaPor && <div><Ic n="profe-ausente" tam={20} />Registrada por {a.registradaPor}</div>}</div>
             </div>
           </div>
         ))
@@ -3881,13 +3881,13 @@ function DetallePartes({ titulo, subtitulo, partes, tutores, onVerParte, onCerra
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 14, marginBottom: 14 }}>
-                <div style={caja}><h3 style={h3}>📑 Motivos (faltas tipificadas)</h3><Barras datos={faltas} color={C.amber} vacio="Sin tipificar." /></div>
-                <div style={caja}><h3 style={h3}>🏫 Por grupo</h3><Barras datos={contarPor(partes, "curso")} /></div>
-                <div style={caja}><h3 style={h3}>🕐 Por hora de clase</h3><Barras datos={HORAS.map(h => [h, partes.filter(p => p.hora === h).length]).filter(([, n]) => n)} color={C.blue} /></div>
-                <div style={caja}><h3 style={h3}>👤 Alumnado</h3><Barras datos={contarPor(partes, p => `${p.alumno} (${p.curso})`).slice(0, 10)} color={C.salmon} /></div>
-                <div style={caja}><h3 style={h3}>👨‍🏫 Profesorado que pone el parte</h3><Barras datos={contarPor(partes, "profesor").slice(0, 10)} color="#8b5cf6" /></div>
+                <div style={caja}><h3 style={h3}><Ic n="tipificacion" tam={20} />Motivos (faltas tipificadas)</h3><Barras datos={faltas} color={C.amber} vacio="Sin tipificar." /></div>
+                <div style={caja}><h3 style={h3}><Ic n="por-curso" tam={20} />Por grupo</h3><Barras datos={contarPor(partes, "curso")} /></div>
+                <div style={caja}><h3 style={h3}><Ic n="hora-reloj" tam={20} />Por hora de clase</h3><Barras datos={HORAS.map(h => [h, partes.filter(p => p.hora === h).length]).filter(([, n]) => n)} color={C.blue} /></div>
+                <div style={caja}><h3 style={h3}><Ic n="por-alumno" tam={20} />Alumnado</h3><Barras datos={contarPor(partes, p => `${p.alumno} (${p.curso})`).slice(0, 10)} color={C.salmon} /></div>
+                <div style={caja}><h3 style={h3}><Ic n="cargo-profesor" tam={20} />Profesorado que pone el parte</h3><Barras datos={contarPor(partes, "profesor").slice(0, 10)} color="#8b5cf6" /></div>
               </div>
-              <h3 style={{ ...h3, marginTop: 6 }}>📋 Los {partes.length} partes <span style={{ fontWeight: 500, fontSize: 12, color: C.gray }}>· pulsa uno para verlo en grande</span></h3>
+              <h3 style={{ ...h3, marginTop: 6 }}><Ic n="partes" tam={20} />Los {partes.length} partes <span style={{ fontWeight: 500, fontSize: 12, color: C.gray }}>· pulsa uno para verlo en grande</span></h3>
               {ordenados.map(p => <ParteCard key={p.id} parte={p} onVer={() => onVerParte(p)} onPrint={() => pdfParte(p)} />)}
             </>
           )}
@@ -3978,10 +3978,10 @@ function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C
   const btn = { flex: "1 1 150px", padding: "10px 12px", borderRadius: 10, border: `2px solid ${C.teal}`, background: "#F0FAF7", color: C.dark, fontWeight: 700, fontSize: 12, cursor: "pointer" };
   return (
     <div style={{ background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 12, marginTop: 10 }}>
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 2 }}>📨 Contactar con la familia</div>
-      <div style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}>✉️ {alumno.email || "sin correo"} · 📱 {alumno.telefono || "sin teléfono"}</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.dark, marginBottom: 2 }}><Ic n="mensaje-enviar" tam={20} />Contactar con la familia</div>
+      <div style={{ fontSize: 12, color: C.gray, marginBottom: 8 }}><Ic n="mensaje-enviar" tam={20} />{alumno.email || "sin correo"} · 📱 {alumno.telefono || "sin teléfono"}</div>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}>📄 Ver informe para la familia</button>
+        <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}><Ic n="informe" tam={20} />Ver informe para la familia</button>
         <button style={btn} onClick={() => copiar(textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores), "texto")}>{copiado === "texto" ? "✅ Copiado" : "📋 Copiar texto del correo"}</button>
         <button style={btn} disabled={!correos} onClick={() => copiar(correos, "correos")}>{copiado === "correos" ? "✅ Copiado" : "📧 Copiar correos"}</button>
       </div>
@@ -4042,8 +4042,8 @@ function PanelAvisos({ partes, alumnos, banos, usuario, tutores, avisos, setAvis
             </div>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <button onClick={() => onVerPartes(x)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>👁 Ver partes</button>
-            <button onClick={() => setAbierto(abierto === x.id ? null : x.id)} style={{ background: "#FFFBEB", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>📨 Avisar a la familia</button>
+            <button onClick={() => onVerPartes(x)} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}><Ic n="buscar" tam={20} />Ver partes</button>
+            <button onClick={() => setAbierto(abierto === x.id ? null : x.id)} style={{ background: "#FFFBEB", color: "#92400e", border: "1px solid #fcd34d", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}><Ic n="mensaje-enviar" tam={20} />Avisar a la familia</button>
             {x.pendiente
               ? <button onClick={() => marcar(x)} style={{ background: C.teal, color: "#fff", border: "none", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>✅ Ya he avisado</button>
               : <button onClick={() => deshacer(x)} style={{ background: "none", color: C.gray, border: "1px solid #e2e8f0", borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12 }}>Deshacer</button>}
@@ -4056,7 +4056,7 @@ function PanelAvisos({ partes, alumnos, banos, usuario, tutores, avisos, setAvis
   return (
     <div className="no-print" style={{ background: pendientes.length ? "#FDF0EF" : "#F0FAF7", border: `2px solid ${pendientes.length ? C.salmon : C.teal}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
       <div style={{ fontWeight: 800, color: C.dark, fontSize: 16, marginBottom: 4 }}>
-        🔔 {pendientes.length ? `${pendientes.length} alumno/a(s) con ${UMBRAL_AVISO} o más partes: conviene avisar a su familia` : "Avisos a familias"}
+        <Ic n="alertas" tam={20} />{pendientes.length ? `${pendientes.length} alumno/a(s) con ${UMBRAL_AVISO} o más partes: conviene avisar a su familia` : "Avisos a familias"}
       </div>
       <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>
         Alumnado con {UMBRAL_AVISO} o más partes en {tri.texto}: los que has puesto tú{Object.values(tutores).some(t => t?.tutor === usuario) ? " y los de tu tutoría" : ""}. Cuando avises, pulsa «Ya he avisado». Si luego tiene más partes, volverá a aparecer.
@@ -4166,7 +4166,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
             <button onClick={() => setRef(isoLocal())} style={{ padding: "10px 14px", borderRadius: 10, border: "none", background: C.cream, cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Hoy</button>
           </div>
         )}
-        <div style={{ marginTop: 12, fontSize: 14, fontWeight: 700, color: C.blue }}>📅 {periodo.texto[0].toUpperCase() + periodo.texto.slice(1)} · {est.lectivos.length} día(s) lectivo(s)</div>
+        <div style={{ marginTop: 12, fontSize: 14, fontWeight: 700, color: C.blue }}><Ic n="fecha-hora" tam={20} />{periodo.texto[0].toUpperCase() + periodo.texto.slice(1)} · {est.lectivos.length} día(s) lectivo(s)</div>
       </div>
 
       {/* Cifras principales */}
@@ -4219,46 +4219,46 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 14 }}>
-        <div style={tarjeta}><h3 style={h3}>🏫 Partes por grupo</h3><Barras datos={est.porGrupo.map(r => [`${r.curso}${r.tutor ? ` · ${r.tutor}` : ""}`, r.total, r.curso])} onClick={c => abrir(`Partes de ${c}`, p => p.curso === c)} /></div>
-        <div style={tarjeta}><h3 style={h3}>🕐 Partes por hora de clase</h3><Barras datos={est.porHora} color={C.blue} onClick={h => abrir(`Partes a ${h}`, p => p.hora === h)} /></div>
-        <div style={tarjeta}><h3 style={h3}>👤 Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} onClick={k => abrir(`Partes de ${k}`, p => `${p.alumno} (${p.curso})` === k)} /></div>
-        <div style={tarjeta}><h3 style={h3}>📑 Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} onClick={k => abrir(k, p => etiquetaTip(p) === k)} /></div>
-        <div style={tarjeta}><h3 style={h3}>🚻 Salidas al baño por grupo</h3><Barras datos={est.banosPorGrupo} color="#10b981" /></div>
+        <div style={tarjeta}><h3 style={h3}><Ic n="por-curso" tam={20} />Partes por grupo</h3><Barras datos={est.porGrupo.map(r => [`${r.curso}${r.tutor ? ` · ${r.tutor}` : ""}`, r.total, r.curso])} onClick={c => abrir(`Partes de ${c}`, p => p.curso === c)} /></div>
+        <div style={tarjeta}><h3 style={h3}><Ic n="hora-reloj" tam={20} />Partes por hora de clase</h3><Barras datos={est.porHora} color={C.blue} onClick={h => abrir(`Partes a ${h}`, p => p.hora === h)} /></div>
+        <div style={tarjeta}><h3 style={h3}><Ic n="por-alumno" tam={20} />Alumnado con más partes</h3><Barras datos={est.porAlumno} color={C.salmon} onClick={k => abrir(`Partes de ${k}`, p => `${p.alumno} (${p.curso})` === k)} /></div>
+        <div style={tarjeta}><h3 style={h3}><Ic n="tipificacion" tam={20} />Faltas más frecuentes</h3><Barras datos={est.porTipificacion} color={C.amber} onClick={k => abrir(k, p => etiquetaTip(p) === k)} /></div>
+        <div style={tarjeta}><h3 style={h3}><Ic n="banos" tam={20} />Salidas al baño por grupo</h3><Barras datos={est.banosPorGrupo} color="#10b981" /></div>
         {esProfe
-          ? <div style={tarjeta}><h3 style={h3}>🚻 Alumnado que más sale al baño</h3><Barras datos={est.banosPorAlumno} color="#10b981" /></div>
-          : <div style={tarjeta}><h3 style={h3}>📢 Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>}
+          ? <div style={tarjeta}><h3 style={h3}><Ic n="banos" tam={20} />Alumnado que más sale al baño</h3><Barras datos={est.banosPorAlumno} color="#10b981" /></div>
+          : <div style={tarjeta}><h3 style={h3}><Ic n="profe-ausente" tam={20} />Ausencias del profesorado por motivo</h3><Barras datos={est.ausenciasPorMotivo} color="#8b5cf6" /></div>}
       </div>
 
       {/* Documentos */}
       <div className="no-print" style={tarjeta}>
-        <h3 style={h3}>📄 Documentos de este periodo</h3>
+        <h3 style={h3}><Ic n="informe" tam={20} />Documentos de este periodo</h3>
         <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Al pulsar, el informe se abre <b>en pantalla</b>; desde ahí lo descargas o lo imprimes. Usan las fechas elegidas arriba.</div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
           <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo, esProfe ? `${ambitoOk === "mios" ? "Partes puestos por" : `Tutoría de ${ambitoOk} ·`} ${usuario}` : "")}>
-            📊 Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
+            <Ic n="dashboard" tam={20} />Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
           </button>
           <button style={btnDoc(est.partes.length > 0)} disabled={!est.partes.length} onClick={() => pdfInformePartes(est.partes, periodo.texto, tutores)}>
-            📋 Todos los partes<span style={sub}>{est.partes.length} parte(s) con su detalle y resumen por grupo</span>
+            <Ic n="partes" tam={20} />Todos los partes<span style={sub}>{est.partes.length} parte(s) con su detalle y resumen por grupo</span>
           </button>
           <button style={btnDoc(est.banos.length > 0)} disabled={!est.banos.length} onClick={() => pdfInformeBanos(est.banos, periodo.texto)}>
-            🚻 Salidas al baño<span style={sub}>{est.banos.length} salida(s) con hora y duración</span>
+            <Ic n="banos" tam={20} />Salidas al baño<span style={sub}>{est.banos.length} salida(s) con hora y duración</span>
           </button>
           {!esProfe && <button style={btnDoc(est.ausencias.length > 0)} disabled={!est.ausencias.length} onClick={() => pdfAusencias(est.ausencias, periodo)}>
-            📢 Ausencias del profesorado<span style={sub}>{est.ausencias.length} ausencia(s) con horas, grupo y tarea</span>
+            <Ic n="profe-ausente" tam={20} />Ausencias del profesorado<span style={sub}>{est.ausencias.length} ausencia(s) con horas, grupo y tarea</span>
           </button>}
           {tipo === "dia" && !esProfe && (
             <button style={btnDoc()} onClick={() => pdfFirmasYListas(periodo.desde, filasFirmasDia(periodo.desde, equipo, firmas), est.listas.slice().sort((a, b) => HORAS.indexOf(a.hora) - HORAS.indexOf(b.hora)))}>
-              ✍️ Firmas de guardia y listas<span style={sub}>Quién tenía guardia, quién firmó y las listas pasadas</span>
+              <Ic n="firmar" tam={20} />Firmas de guardia y listas<span style={sub}>Quién tenía guardia, quién firmó y las listas pasadas</span>
             </button>
           )}
           <button style={btnDoc()} onClick={() => excelPeriodo(est, periodo, tutores, alumnos, esProfe).catch(() => window.alert("No se ha podido crear el Excel. Comprueba la conexión e inténtalo de nuevo."))}>
-            📥 Ver y descargar en Excel<span style={sub}>{esProfe ? "Partes con alumno, grupo, falta y profesor; resumen por alumno, por grupo y baños" : "Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas"}</span>
+            <Ic n="importar" tam={20} />Ver y descargar en Excel<span style={sub}>{esProfe ? "Partes con alumno, grupo, falta y profesor; resumen por alumno, por grupo y baños" : "Partes con alumno, grupo, tutor, falta y profesor; por alumno, por grupo, baños, ausencias y listas"}</span>
           </button>
         </div>
 
         <div style={{ borderTop: `1px dashed ${C.cream}`, marginTop: 16, paddingTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 14 }}>
           <div>
-            <label style={labelStyle}>👤 Partes de un alumno/a</label>
+            <label style={labelStyle}><Ic n="por-alumno" tam={20} />Partes de un alumno/a</label>
             <select value={alumnoDoc} onChange={e => setAlumnoDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
               <option value="">Elige alumno/a…</option>
               {[...alumnos].sort((a, b) => a.curso.localeCompare(b.curso) || a.nombre.localeCompare(b.nombre)).map(a => {
@@ -4272,7 +4272,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
             {alumnoObj && <ContactoFamilia alumno={alumnoObj} partes={partesAlumno} banos={banosAlumno} periodo={periodo} tutores={tutores} remitente={esProfe ? usuario : ""} C={C} />}
           </div>
           {(!esProfe || ambitoOk === "mios") && <div>
-            <label style={labelStyle}>🏫 Partes de un grupo</label>
+            <label style={labelStyle}><Ic n="por-curso" tam={20} />Partes de un grupo</label>
             <select value={grupoDoc} onChange={e => setGrupoDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
               <option value="">Elige grupo…</option>
               {(esProfe ? [...new Set(partes.map(p => p.curso))].sort() : cursos).map(c => <option key={c} value={c}>{c}</option>)}
@@ -4282,7 +4282,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
             </button>
           </div>}
           {!esProfe && <div>
-            <label style={labelStyle}>👨‍🏫 Ausencias de un profesor/a</label>
+            <label style={labelStyle}><Ic n="cargo-profesor" tam={20} />Ausencias de un profesor/a</label>
             <select value={profDoc} onChange={e => setProfDoc(e.target.value)} style={{ ...selStyle, marginBottom: 8 }}>
               <option value="">Elige profesor/a…</option>
               {[...profesores].sort().map(p => { const n = est.ausencias.filter(a => a.profesor === p).length; return <option key={p} value={p}>{p}{n ? ` · ${n}` : ""}</option>; })}
@@ -4596,7 +4596,7 @@ export default function App() {
   if (loading) return (
     <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif" }}>
       <div style={{ color: "#fff", textAlign: "center" }}>
-        <div style={{ fontSize: 52 }}>🏫</div>
+        <div style={{ fontSize: 52 }}><Ic n="por-curso" tam={20} /></div>
         <div style={{ fontSize: 18, fontWeight: 600, marginTop: 12 }}>Cargando {APP}…</div>
       </div>
     </div>
@@ -4828,7 +4828,7 @@ export default function App() {
         {perfil.id === "profesor" && avisosPendientes > 0 && tab !== "mis_estadisticas" && (
           <div role="status" className="no-print" style={{ background: "#FDF0EF", border: `2px solid ${C.salmon}`, borderRadius: 12, padding: "12px 16px", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
             <div style={{ color: C.dark, fontSize: 14 }}>
-              <b>🔔 {avisosPendientes} alumno/a(s) con {UMBRAL_AVISO} o más partes este trimestre.</b>
+              <b><Ic n="alertas" tam={20} />{avisosPendientes} alumno/a(s) con {UMBRAL_AVISO} o más partes este trimestre.</b>
               <div style={{ fontSize: 12, color: C.gray }}>Conviene avisar a su familia. Tienes el informe y el correo preparados.</div>
             </div>
             <button onClick={() => { setModuloProfesor("alumnos"); setTab("mis_estadisticas"); window.scrollTo(0, 0); }}
@@ -4899,7 +4899,7 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <strong style={{ color: C.teal }}>✅ Parte generado · {fmt(parteGenerado.ts)}</strong>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => setShowParte(completar(parteGenerado))} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>👁 Ver</button>
+                    <button onClick={() => setShowParte(completar(parteGenerado))} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}><Ic n="buscar" tam={20} />Ver</button>
                   </div>
                 </div>
                 <ComoAvisar parte={completar(parteGenerado)} />
@@ -4926,7 +4926,7 @@ export default function App() {
               {alumnoSel && (
                 <div style={{ background: C.cream, borderRadius: 8, padding: 12, margin: "8px 0 16px", fontSize: 13, border: `1px solid #ddd` }}>
                   <div><strong>Curso:</strong> {alumnoSel.curso} | <strong>Tutor:</strong> {alumnoSel.tutor}</div>
-                  <div style={{ marginTop: 4 }}>✉️ {alumnoSel.email} · 📱 {alumnoSel.telefono}</div>
+                  <div style={{ marginTop: 4 }}><Ic n="mensaje-enviar" tam={20} />{alumnoSel.email} · 📱 {alumnoSel.telefono}</div>
                   {partesLeves(alumnoSel.id) >= 3 && <div style={{ marginTop: 6, color: C.salmon, fontWeight: 600 }}>⚠️ Acumulación: {partesLeves(alumnoSel.id)} partes leves</div>}
                   <div style={{ marginTop: 2, color: C.gray }}>Total partes: {partesDeAlumno(alumnoSel.id).length}</div>
                 </div>
@@ -4973,7 +4973,7 @@ export default function App() {
             {grupoGenerado && <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}><strong style={{ color: C.teal }}>✅ {grupoGenerado.total} partes generados para {grupoGenerado.curso} · {fmt(grupoGenerado.ts)}</strong></Card>}
             <Card>
               <div style={{ marginBottom: 16 }}>
-                <label style={labelStyle}>🏫 Seleccionar curso / grupo</label>
+                <label style={labelStyle}><Ic n="por-curso" tam={20} />Seleccionar curso / grupo</label>
                 <select value={gCurso} onChange={e => { setGCurso(e.target.value); setGExcluidos([]); }} style={selStyle}>
                   <option value="">— Selecciona un curso —</option>
                   {cursos.map(c => <option key={c}>{c}</option>)}
@@ -4985,7 +4985,7 @@ export default function App() {
                 return (
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <label style={{ ...labelStyle, marginBottom: 0 }}>👤 Alumnos <span style={{ color: C.gray, fontWeight: 400 }}>({activos.length} de {grupo.length})</span></label>
+                      <label style={{ ...labelStyle, marginBottom: 0 }}><Ic n="por-alumno" tam={20} />Alumnos <span style={{ color: C.gray, fontWeight: 400 }}>({activos.length} de {grupo.length})</span></label>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button onClick={() => setGExcluidos(grupo.map(a => a.id))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Excluir todos</button>
                         <button onClick={() => setGExcluidos([])} style={{ background: "#E8F5F3", color: C.teal, border: "none", borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Incluir todos</button>
@@ -5030,7 +5030,7 @@ export default function App() {
                 <textarea value={gDesc} onChange={e => setGDesc(e.target.value)} rows={4} placeholder="Describe el comportamiento del grupo…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <Btn onClick={crearParteGrupo} disabled={!gCurso || !gDesc.trim()} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                👥 Generar Parte para {gCurso ? `${alumnos.filter(a => a.curso === gCurso && !gExcluidos.includes(a.id)).length} alumnos de ${gCurso}` : "el grupo"}
+                <Ic n="grupos" tam={20} />Generar Parte para {gCurso ? `${alumnos.filter(a => a.curso === gCurso && !gExcluidos.includes(a.id)).length} alumnos de ${gCurso}` : "el grupo"}
               </Btn>
             </Card>
           </div>
@@ -5113,7 +5113,7 @@ export default function App() {
                 <div><label style={labelStyle}><ConIcono texto="⏰ Hora de la guardia" tam={30} /></label><select value={guHora} onChange={e => setGuHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
                 <div><label style={labelStyle}>🏢 Módulo</label><select value={guModulo} onChange={e => setGuModulo(e.target.value)} style={selStyle}>{MODULOS.map(m => <option key={m}>{m}</option>)}</select></div>
                 <div><label style={labelStyle}>🏫 Curso</label><select value={guCurso} onChange={e => setGuCurso(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{cursos.map(c => <option key={c}>{c}</option>)}</select></div>
-                <div><label style={labelStyle}>📚 Materia</label><input value={guMateria} onChange={e => setGuMateria(e.target.value)} placeholder="Ej: Matemáticas" style={inpStyle} /></div>
+                <div><label style={labelStyle}><Ic n="aula" tam={20} />Materia</label><input value={guMateria} onChange={e => setGuMateria(e.target.value)} placeholder="Ej: Matemáticas" style={inpStyle} /></div>
                 <div><label style={labelStyle}>🔄 Profesor de guardia</label><select value={guProfesorGuardia} onChange={e => setGuProfesorGuardia(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{profesores.filter(p => p !== guProfesorAusente).map(p => <option key={p}>{p}</option>)}</select></div>
                 <div><label style={labelStyle}>❓ Motivo de ausencia</label><select value={guMotivo} onChange={e => setGuMotivo(e.target.value)} style={selStyle}>{MOTIVOS.map(m => <option key={m}>{m}</option>)}</select></div>
               </div>
@@ -5122,7 +5122,7 @@ export default function App() {
                 <textarea value={guMaterial} onChange={e => setGuMaterial(e.target.value)} rows={3} placeholder="Describe el material o tarea…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <Btn onClick={crearGuardia} disabled={!guProfesorAusente || !guCurso || !guProfesorGuardia} color={C.blue} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                🔄 Registrar Guardia
+                <Ic n="guardias" tam={20} />Registrar Guardia
               </Btn>
             </Card>
           </div>
@@ -5182,16 +5182,16 @@ export default function App() {
             <h2 style={{color: C.dark, marginTop: 0, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="dashboard" tam={44} />Estado General</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 24 }}>
               {[
-                { label: "Total Partes", value: partes.length,                                              color: C.dark,   emoji: "📋" },
-                { label: "Leves",        value: partes.filter(p => p.gravedad === "leve").length,           color: C.teal,   emoji: "🟡" },
-                { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "⚠️" },
-                { label: "Muy Graves",   value: partes.filter(p => p.gravedad === "muy_grave").length,      color: C.salmon, emoji: "🔴" },
-                { label: "Fuera Ahora",  value: banoActivos.length,                                         color: C.blue,   emoji: "🚻" },
-                { label: "Profes ausentes hoy", value: new Set(ausencias.filter(a => isoLocal(a.fecha) === isoLocal()).map(a => a.profesor)).size, color: "#7c3aed",emoji: "🔄" },
-                { label: "Alertas",      value: alertasNoLeidas,                                             color: C.salmon, emoji: "🔔" },
+                { label: "Total Partes", value: partes.length,                                              color: C.dark,   emoji: "📋", ic: "partes" },
+                { label: "Leves",        value: partes.filter(p => p.gravedad === "leve").length,           color: C.teal,   emoji: "🟡", ic: "leve" },
+                { label: "Graves",       value: partes.filter(p => p.gravedad === "grave").length,          color: C.amber,  emoji: "⚠️", ic: "grave" },
+                { label: "Muy Graves",   value: partes.filter(p => p.gravedad === "muy_grave").length,      color: C.salmon, emoji: "🔴", ic: "muy-grave" },
+                { label: "Fuera Ahora",  value: banoActivos.length,                                         color: C.blue,   emoji: "🚻", ic: "banos" },
+                { label: "Profes ausentes hoy", value: new Set(ausencias.filter(a => isoLocal(a.fecha) === isoLocal()).map(a => a.profesor)).size, color: "#7c3aed",emoji: "🔄", ic: "profe-ausente" },
+                { label: "Alertas",      value: alertasNoLeidas,                                             color: C.salmon, emoji: "🔔", ic: "alertas" },
               ].map(s => (
                 <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
-                  <div style={{ fontSize: 32 }}>{s.emoji}</div>
+                  <Icono nombre={s.ic} tam={52} style={{ margin: "0 auto" }} />
                   <div style={{ fontSize: 28, fontWeight: 800, color: s.color, marginTop: 8 }}>{s.value}</div>
                   <div style={{ fontSize: 12, color: C.gray, marginTop: 8, fontWeight: 500 }}>{s.label}</div>
                 </div>
@@ -5204,9 +5204,9 @@ export default function App() {
                 if (!pC.length) return null;
                 return (
                   <div key={c} style={{ padding: "12px 20px", borderBottom: `1px solid ${C.cream}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontWeight: 700, color: C.dark }}>🏫 {c} <span style={{ color: C.gray, fontWeight: 400, fontSize: 13 }}>— {pC.length} parte(s)</span></div>
+                    <div style={{ fontWeight: 700, color: C.dark }}><Ic n="por-curso" tam={20} />{c} <span style={{ color: C.gray, fontWeight: 400, fontSize: 13 }}>— {pC.length} parte(s)</span></div>
                     <div style={{ display: "flex", gap: 6 }}>
-                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Icono nombre={g === "muy_grave" ? "muy-grave" : g} tam={18} />×{n}</span>; })}
                     </div>
                   </div>
                 );
@@ -5222,7 +5222,7 @@ export default function App() {
                     {partesLeves(a.id) >= 3 && <span style={{ marginLeft: 8, background: "#FFF0CC", color: "#b45309", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>⚠️ Acumulación</span>}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                    {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Icono nombre={g === "muy_grave" ? "muy-grave" : g} tam={18} />×{n}</span>; })}
                     <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>Total: {partesDeAlumno(a.id).length}</span>
                   </div>
                 </div>
@@ -5244,7 +5244,7 @@ export default function App() {
                   <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div style={{ fontWeight: 700, fontSize: 16 }}>{curso}</div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 10px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                      {["leve", "grave", "muy_grave"].map(g => { const n = pC.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 10px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Icono nombre={g === "muy_grave" ? "muy-grave" : g} tam={18} />×{n}</span>; })}
                       <span style={{ background: "rgba(255,255,255,0.2)", borderRadius: 8, padding: "2px 10px", fontSize: 13 }}>Total: {pC.length}</span>
                     </div>
                   </div>
@@ -5258,16 +5258,16 @@ export default function App() {
                           <div style={{ padding: "10px 20px", background: C.cream, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: 600, fontSize: 14, color: C.dark }}>{a.nombre}</span>
                             <div style={{ display: "flex", gap: 6 }}>
-                              {["leve", "grave", "muy_grave"].map(g => { const n = pA.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                              {["leve", "grave", "muy_grave"].map(g => { const n = pA.filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "2px 8px", fontSize: 11, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Icono nombre={g === "muy_grave" ? "muy-grave" : g} tam={18} />×{n}</span>; })}
                             </div>
                           </div>
                           {pA.map(p => (
                             <div key={p.id} style={{ padding: "8px 20px 8px 36px", fontSize: 13, borderBottom: `1px solid ${C.cream}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                              <span style={{ color: "#374151" }}>📅 {fmt(p.ts)} · {p.hora} · {p.tipo}{p.esGrupal ? " · grupal" : ""}</span>
+                              <span style={{ color: "#374151" }}><Ic n="fecha-hora" tam={20} />{fmt(p.ts)} · {p.hora} · {p.tipo}{p.esGrupal ? " · grupal" : ""}</span>
                               <div style={{ display: "flex", gap: 6 }}>
                                 <Badge g={p.gravedad} />
                                 <button onClick={() => setShowParte(completar(p))} style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Ver</button>
-                                <button onClick={() => pdfParte(completar(p))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🖨</button>
+                                <button onClick={() => pdfParte(completar(p))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 6, padding: "2px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}><Ic n="informe" tam={20} /></button>
                               </div>
                             </div>
                           ))}
@@ -5298,7 +5298,7 @@ export default function App() {
                       <div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: C.dark }}>{al.nombre}</div>
                         <div style={{ color: C.gray, fontSize: 14, marginTop: 4 }}>{al.curso} · Tutor: {al.tutor}</div>
-                        <div style={{ fontSize: 13, marginTop: 4 }}>✉️ {al.email} · 📱 {al.telefono}</div>
+                        <div style={{ fontSize: 13, marginTop: 4 }}><Ic n="mensaje-enviar" tam={20} />{al.email} · 📱 {al.telefono}</div>
                       </div>
                       <div style={{ textAlign: "right" }}>
                         <div style={{ fontSize: 32, fontWeight: 800, color: C.dark }}>{pAl.length}</div>
@@ -5329,7 +5329,7 @@ export default function App() {
                         {partesLeves(a.id) >= 3 && <span style={{ marginLeft: 8, background: "#FFF0CC", color: "#b45309", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 600 }}>⚠️</span>}
                       </div>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700 }}>{gv.label.split(" ")[0]} ×{n}</span>; })}
+                        {["leve", "grave", "muy_grave"].map(g => { const n = partesDeAlumno(a.id).filter(p => p.gravedad === g).length; if (!n) return null; const gv = gObj(g); return <span key={g} style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 8px", fontSize: 12, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><Icono nombre={g === "muy_grave" ? "muy-grave" : g} tam={18} />×{n}</span>; })}
                         <span style={{ background: "#EEF5F8", color: C.blue, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700 }}>{partesDeAlumno(a.id).length}</span>
                         <span style={{ color: C.gray, fontSize: 16 }}>›</span>
                       </div>
@@ -5346,7 +5346,7 @@ export default function App() {
           <div>
             <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="partes" tam={44} />Todos los Partes</h2>
             <Card>
-              <div style={{ fontWeight: 600, color: C.dark, marginBottom: 10 }}>🔍 Filtros</div>
+              <div style={{ fontWeight: 600, color: C.dark, marginBottom: 10 }}><Ic n="buscar" tam={20} />Filtros</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
                 <select value={filtCurso} onChange={e => { setFiltCurso(e.target.value); setFiltAlumno(""); }} style={{ ...selStyle, padding: "8px 12px", fontSize: 13 }}><option value="">Todos los cursos</option>{cursos.map(c => <option key={c}>{c}</option>)}</select>
                 <select value={filtAlumno} onChange={e => setFiltAlumno(e.target.value)} style={{ ...selStyle, padding: "8px 12px", fontSize: 13 }}><option value="">Todos los alumnos</option>{alumnos.filter(a => !filtCurso || a.curso === filtCurso).map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}</select>
@@ -5381,11 +5381,11 @@ export default function App() {
               ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>Sin guardias registradas</Card>
               : guardias.map(g => (
                 <Card key={g.id} style={{ borderLeft: `4px solid ${C.blue}` }}>
-                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>🔄 {g.hora} · {g.modulo} · {g.curso}{g.materia && ` · ${g.materia}`}</div>
-                  <div style={{ fontSize: 13, color: C.gray, marginTop: 4 }}>📅 {fmt(g.ts)}</div>
+                  <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}><Ic n="guardias" tam={20} />{g.hora} · {g.modulo} · {g.curso}{g.materia && ` · ${g.materia}`}</div>
+                  <div style={{ fontSize: 13, color: C.gray, marginTop: 4 }}><Ic n="fecha-hora" tam={20} />{fmt(g.ts)}</div>
                   <div style={{ fontSize: 13, marginTop: 6 }}><span style={{ color: C.salmon, fontWeight: 600 }}>Ausente:</span> {g.profesorAusente} <span style={{ color: C.gray, marginLeft: 8 }}>({g.motivo})</span></div>
                   <div style={{ fontSize: 13, marginTop: 2 }}><span style={{ color: C.teal, fontWeight: 600 }}>Guardia:</span> {g.profesorGuardia}</div>
-                  {g.material && <div style={{ fontSize: 13, marginTop: 4, background: C.cream, borderRadius: 6, padding: "6px 10px" }}>📝 Material: {g.material}</div>}
+                  {g.material && <div style={{ fontSize: 13, marginTop: 4, background: C.cream, borderRadius: 6, padding: "6px 10px" }}><Ic n="ejercicios" tam={20} />Material: {g.material}</div>}
                 </Card>
               ))}
           </div>
@@ -5466,7 +5466,7 @@ export default function App() {
             <div style={{ marginBottom: 14 }}>
               <button onClick={() => { setRegistroTelefono(v => !v); setAusProfesor(""); }}
                 style={{ background: registroTelefono ? "#f3f4f6" : C.salmon, color: registroTelefono ? C.dark : "#fff", border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", fontWeight: 700, fontSize: 14 }}>
-                {registroTelefono ? "✕ Cerrar el registro" : "📞 Registrar una ausencia comunicada por teléfono"}
+                <Ti tam={22}>{registroTelefono ? "✕ Cerrar el registro" : "📞 Registrar una ausencia comunicada por teléfono"}</Ti>
               </button>
             </div>
             {registroTelefono && (
@@ -5506,11 +5506,11 @@ export default function App() {
           <div>
             <h2 style={{ color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="banos" tam={44} />Baños — Tiempo Real</h2>
             <Card style={{ background: banoActivos.length > 0 ? "#FFF8E8" : "#E8F5F3", border: `2px solid ${banoActivos.length > 0 ? C.salmon : C.teal}` }}>
-              <h3 style={{ margin: "0 0 12px", color: C.dark }}>{banoActivos.length > 0 ? `⏳ ${banoActivos.length} alumno(s) fuera` : "✅ Ningún alumno fuera"}</h3>
+              <h3 style={{ margin: "0 0 12px", color: C.dark }}>{banoActivos.length > 0 ? <><Ic n="fuera-ahora" tam={26} />{banoActivos.length} alumno(s) fuera</> : "✅ Ningún alumno fuera"}</h3>
               {banoActivos.map(b => <div key={b.id} style={{ padding: "8px 0", borderBottom: `1px solid rgba(0,0,0,0.08)`, fontSize: 14 }}><strong>{b.alumno}</strong> — {b.curso} — {fmt(b.salida)}</div>)}
             </Card>
             <Card>
-              <h3 style={{ marginTop: 0, color: C.dark }}>📋 Historial completo</h3>
+              <h3 style={{ marginTop: 0, color: C.dark }}><Ic n="partes" tam={20} />Historial completo</h3>
               {banos.length === 0
                 ? <p style={{ color: C.gray }}>Sin registros</p>
                 : banos.map(b => {
@@ -5545,7 +5545,7 @@ export default function App() {
                     style={{ background: a.leida ? C.white : config.bg, border: `1px solid ${a.leida ? "#e5e7eb" : config.border}`, borderLeft: `4px solid ${a.leida ? "#e5e7eb" : config.border}`, borderRadius: 12, padding: 16, marginBottom: 10, cursor: "pointer", opacity: a.leida ? .7 : 1, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 20 }}>{config.icon}</span>
+                        <Ti tam={30}>{config.icon}</Ti>
                         <div>
                           <div style={{ fontWeight: 700, color: a.leida ? C.gray : config.color }}>{config.label} — {a.alumno}</div>
                           <div style={{ fontSize: 13, color: "#374151", marginTop: 2 }}>{a.curso} · {a.msg || a.msgs?.join(" · ")}</div>
@@ -5583,24 +5583,24 @@ export default function App() {
             
             {/* SELECTOR DE TIPO DE INFORME */}
             <Card style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>📊 Selecciona el tipo de informe</label>
+              <label style={labelStyle}><Ic n="dashboard" tam={20} />Selecciona el tipo de informe</label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 <button 
                   onClick={() => setInformeType("partes")}
                   style={{ padding: 16, border: `2px solid ${informeType === "partes" ? C.teal : C.cream}`, borderRadius: 10, background: informeType === "partes" ? "#E8F5F3" : C.white, cursor: "pointer", fontWeight: 600, color: informeType === "partes" ? C.teal : C.gray, transition: "all .2s" }}>
-                  📋 Informe de Partes
+                  <Ic n="partes" tam={20} />Informe de Partes
                 </button>
                 <button 
                   onClick={() => setInformeType("banos")}
                   style={{ padding: 16, border: `2px solid ${informeType === "banos" ? C.teal : C.cream}`, borderRadius: 10, background: informeType === "banos" ? "#E8F5F3" : C.white, cursor: "pointer", fontWeight: 600, color: informeType === "banos" ? C.teal : C.gray, transition: "all .2s" }}>
-                  🚻 Informe de Salidas al Baño
+                  <Ic n="banos" tam={20} />Informe de Salidas al Baño
                 </button>
               </div>
             </Card>
 
             <Card>
               <div style={{ background: "#EEF5F8", borderRadius: 8, padding: 12, marginBottom: 20, fontSize: 13, color: C.blue }}>
-                💡 El informe se abrirá en pantalla completa. Pulsa <strong>⬇️ Descargar PDF</strong> para guardarlo o imprimirlo.
+                <Ic n="como-exportar" tam={20} />El informe se abrirá en pantalla completa. Pulsa <strong>⬇️ Descargar PDF</strong> para guardarlo o imprimirlo.
               </div>
               
               {informeType === "partes" ? (
@@ -5621,7 +5621,7 @@ export default function App() {
                     {filtFechaDesde && ` · Desde: ${fmtD(filtFechaDesde)}`}{filtFechaHasta && ` · Hasta: ${fmtD(filtFechaHasta)}`}
                   </div>
                   <Btn onClick={() => setPrintInforme(true)} disabled={partesFiltrados.length === 0} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                    📄 Ver informe de partes y descargar PDF
+                    <Ic n="informe" tam={20} />Ver informe de partes y descargar PDF
                   </Btn>
                 </>
               ) : (
@@ -5637,7 +5637,7 @@ export default function App() {
                     {filtFechaDesde && ` · Desde: ${fmtD(filtFechaDesde)}`}{filtFechaHasta && ` · Hasta: ${fmtD(filtFechaHasta)}`}
                   </div>
                   <Btn onClick={() => setPrintInforme(true)} disabled={banosFiltrados.length === 0} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                    📄 Ver informe de baños y descargar PDF
+                    <Ic n="informe" tam={20} />Ver informe de baños y descargar PDF
                   </Btn>
                 </>
               )}
@@ -5723,7 +5723,7 @@ export default function App() {
           <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "80vh", overflowY: "auto" }}>
             <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 Cuadrante de Guardias</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}><Ic n="fecha-hora" tam={20} />Cuadrante de Guardias</div>
                 <button onClick={() => setSemanaCuadrante(w => w - 1)} aria-label="Semana anterior" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>←</button>
                 <span style={{ fontSize: 13 }}>Semana del {sumarDias(lunesDe(), 7 * semanaCuadrante).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}</span>
                 <button onClick={() => setSemanaCuadrante(w => w + 1)} aria-label="Semana siguiente" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 6, padding: "4px 10px", cursor: "pointer" }}>→</button>
@@ -5766,10 +5766,10 @@ export default function App() {
                               <div style={{ color: C.teal }}>
                                 {asignaciones.map((a, idx) => (
                                   <div key={idx} style={{ marginBottom: 6, paddingBottom: 6, borderBottom: idx < asignaciones.length - 1 ? "1px solid #d0e8e6" : "none" }}>
-                                    <strong style={{ color: C.dark }}>👤 {a.profesor}</strong><br/>
-                                    <span style={{ color: C.teal, fontSize: 9 }}>📍 {a.zona}</span><br/>
-                                    {a.apoyo && <><span style={{ color: C.blue, fontSize: 9 }}>👥 Apoyo: {a.apoyo}</span><br/></>}
-                                    {a.sustituto && <span style={{ color: "#7c3aed", fontSize: 9 }}>🔁 Sustituto: {a.sustituto}</span>}
+                                    <strong style={{ color: C.dark }}><Ic n="por-alumno" tam={20} />{a.profesor}</strong><br/>
+                                    <span style={{ color: C.teal, fontSize: 9 }}><Ic n="edificio" tam={20} />{a.zona}</span><br/>
+                                    {a.apoyo && <><span style={{ color: C.blue, fontSize: 9 }}><Ic n="grupos" tam={20} />Apoyo: {a.apoyo}</span><br/></>}
+                                    {a.sustituto && <span style={{ color: "#7c3aed", fontSize: 9 }}><Ic n="sustituto" tam={20} />Sustituto: {a.sustituto}</span>}
                                   </div>
                                 ))}
                               </div>
@@ -5784,7 +5784,7 @@ export default function App() {
                 </tbody>
               </table>
               <div style={{ marginTop: 16, fontSize: 11, color: C.gray, padding: "12px", background: "#f9fafb", borderRadius: 8 }}>
-                <strong>👤</strong> = Profesor | <strong>📍</strong> = Lugar/Zona | <strong>👥</strong> = Profesor de Apoyo
+                <strong><Ic n="por-alumno" tam={20} /></strong> = Profesor | <strong><Ic n="edificio" tam={20} /></strong> = Lugar/Zona | <strong><Ic n="grupos" tam={20} /></strong> = Profesor de Apoyo
               </div>
             </div>
           </div>
@@ -5801,14 +5801,14 @@ export default function App() {
                 <div style={{ fontSize: 12, opacity: .8 }}>Ref: PARTE-{showParte.id}</div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                <button onClick={() => pdfParte(showParte)} title="Descargar PDF" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>🖨 PDF</button>
+                <button onClick={() => pdfParte(showParte)} title="Descargar PDF" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}><Ic n="informe" tam={20} />PDF</button>
                 <button onClick={() => setParteGrande(v => !v)} title={parteGrande ? "Volver al tamaño normal" : "Ver a pantalla completa"} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>{parteGrande ? "🗗 Reducir" : "⛶ Pantalla completa"}</button>
                 <button onClick={() => setShowParte(null)} aria-label="Cerrar" style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
               </div>
             </div>
             <div style={{ padding: 24, maxWidth: parteGrande ? 900 : "none", margin: "0 auto" }}>
               {(() => { const g = gObj(showParte.gravedad); return <div style={{ background: g.bg, border: `2px solid ${g.color}`, borderRadius: 10, padding: 12, marginBottom: 20, textAlign: "center" }}><strong style={{ color: g.color, fontSize: 16 }}>{g.label} — {g.desc}</strong></div>; })()}
-              {showParte.esGrupal && <div style={{ background: "#E8F5F3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 12 }}>👥 Parte generado como parte de grupo</div>}
+              {showParte.esGrupal && <div style={{ background: "#E8F5F3", borderRadius: 8, padding: "8px 14px", fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 12 }}><Ic n="grupos" tam={20} />Parte generado como parte de grupo</div>}
               {[["Alumno", showParte.alumno], ["Curso", showParte.curso], ["Tutor/a del grupo", showParte.tutor || "—"], ["Correo del tutor/a", showParte.tutorEmail || "—"], ["Tipo", showParte.tipo], ["Hora", showParte.hora || "No especificada"], ["Fecha y hora", fmt(showParte.ts)], ["Profesor", showParte.profesor]].map(([k, v]) => (
                 <InfoRow key={k} label={k} value={v} />
               ))}
@@ -5817,7 +5817,7 @@ export default function App() {
                 const fuente = showParte.gravedad === "leve" ? "Plan de Convivencia" : "Decreto 32/2019";
                 return (
                   <div style={{ margin: "8px 0", padding: "8px 12px", background: "#EEF5F8", borderRadius: 8, border: `1px solid ${C.blue}`, fontSize: 12 }}>
-                    <span style={{ fontWeight: 700, color: C.blue }}>⚖️ Tipificación </span>
+                    <span style={{ fontWeight: 700, color: C.blue }}><Ic n="tipificacion" tam={20} />Tipificación </span>
                     <span style={{ color: C.gray }}>({fuente})</span>
                     <div style={{ marginTop: 3, color: C.dark }}>{tipObj?.label}</div>
                   </div>
@@ -5825,7 +5825,7 @@ export default function App() {
               })()}
               <div style={{ marginTop: 16, background: C.cream, borderRadius: 8, padding: 14, fontSize: 14, lineHeight: 1.6, color: C.dark }}>{showParte.descripcion}</div>
               <div style={{ marginTop: 12, background: "#EEF5F8", borderRadius: 8, padding: 12, fontSize: 13 }}>
-                <strong style={{ color: C.blue }}>📬 Familia:</strong> ✉️ {showParte.email} · 📱 {showParte.telefono}
+                <strong style={{ color: C.blue }}>📬 Familia:</strong> <Ic n="mensaje-enviar" tam={20} />{showParte.email} · 📱 {showParte.telefono}
               </div>
               <ComoAvisar parte={showParte} />
             </div>
@@ -5838,7 +5838,7 @@ export default function App() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20, overflowY: "auto" }}>
           <div style={{ background: C.white, borderRadius: 16, maxWidth: "95vw", width: "100%", maxHeight: "90vh", overflowY: "auto", marginY: 20 }}>
             <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>🔄 Coordinación Diaria de Ausencias</div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}><Ic n="eventos" tam={24} />Coordinación Diaria de Ausencias</div>
               <button onClick={() => setShowCoordinacion(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 16 }}>✕</button>
             </div>
             <div style={{ padding: 24 }}>
