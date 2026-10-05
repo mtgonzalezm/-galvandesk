@@ -440,6 +440,20 @@ function ConIcono({ texto, tam = 24, gap = 8 }) {
   return <span style={{ display: "inline-flex", alignItems: "center", gap, verticalAlign: "middle" }}><Icono nombre={icono} tam={tam} /><span>{resto}</span></span>;
 }
 
+
+// Icono pequeño dentro de un texto, y texto que cambia sus emojis por iconos
+const EMOJI_EN_TEXTO = { "⚠️": "aviso", "⚠": "aviso", "🛡️": "titular", "🛡": "titular", "👥": "apoyo", "🔁": "sustituto", "📚": "deberes", "🏫": "aula", "👤": "titular", "📍": "edificio", "📌": "material", "✍️": "firmar", "✍": "firmar", "📋": "pasar-lista", "🕐": "hora-reloj", "⏰": "hora-reloj", "📅": "fecha-hora", "📝": "ejercicios" };
+const Ic = ({ n, tam = 20 }) => <img src={`/iconos/${n}.png`} alt="" width={tam} height={tam} style={{ width: tam, height: tam, borderRadius: Math.round(tam * 0.22), display: "inline-block", verticalAlign: "middle", margin: "0 4px 2px 0" }} />;
+const RE_EMOJI_TEXTO = new RegExp("(" + Object.keys(EMOJI_EN_TEXTO).sort((a, b) => b.length - a.length).map(e => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\s?", "u");
+function partirEmojis(texto, tam) {
+  const trozos = String(texto).split(RE_EMOJI_TEXTO);
+  return trozos.map((t, i) => (i % 2 === 1 ? <Ic key={i} n={EMOJI_EN_TEXTO[t]} tam={tam} /> : t));
+}
+function Ti({ children, tam = 20 }) {
+  const arr = Array.isArray(children) ? children : [children];
+  return <>{arr.map((ch, i) => (typeof ch === "string" ? <span key={i}>{partirEmojis(ch, tam)}</span> : ch))}</>;
+}
+
 const Badge = ({ g }) => {
   const gv = gObj(g);
   return <span style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px 3px 4px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}><ConIcono texto={gv.label} tam={20} gap={5} /></span>;
@@ -1772,10 +1786,10 @@ function tareasDeGuardia(g, fecha, ausencias) {
 // Tarjeta con lo que ha dejado el profesor ausente
 const TareaAusente = ({ a, C }) => (
   <div style={{ background: "#FFFBEB", border: "1px solid #fbbf24", borderRadius: 8, padding: 10, fontSize: 12, color: "#78350F", lineHeight: 1.5 }}>
-    <div style={{ fontWeight: 700, marginBottom: 4 }}>📝 Deja {a.profesor}{a.asignatura ? ` · ${a.asignatura}` : ""}</div>
-    {(a.aula || a.edificio) && <div>🏫 Aula {a.aula || "?"}{a.edificio ? ` · Edificio ${a.edificio}` : ""}</div>}
-    <div>✏️ {a.tarea ? a.tarea : <em>No ha dejado tarea</em>}</div>
-    {a.ubicacion && <div>📍 Material: {a.ubicacion}</div>}
+    <div style={{ fontWeight: 700, marginBottom: 4 }}><Ic n="profe-ausente" tam={22} />Deja {a.profesor}{a.asignatura ? ` · ${a.asignatura}` : ""}</div>
+    {(a.aula || a.edificio) && <div><Ic n="aula" tam={20} />Aula {a.aula || "?"}{a.edificio ? ` · Edificio ${a.edificio}` : ""}</div>}
+    <div><Ic n="ejercicios" tam={20} />{a.tarea ? a.tarea : <em>No ha dejado tarea</em>}</div>
+    {a.ubicacion && <div><Ic n="material" tam={20} />Material: {a.ubicacion}</div>}
     {a.enlace && <div><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontWeight: 600 }}>🔗 Ver recursos</a></div>}
   </div>
 );
@@ -2367,7 +2381,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
           return (
             <div style={{ background: "#FEF3C7", borderRadius: 12, padding: 16, marginBottom: 16, borderLeft: "4px solid #F59E0B", boxShadow: "0 2px 10px rgba(245, 158, 11, 0.15)" }}>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                <div style={{ fontSize: 24 }}>⚠️</div>
+                <div style={{ fontSize: 24 }}><Ic n="aviso" tam={22} /></div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, color: "#92400E", marginBottom: 10, fontSize: 15 }}>
                     Tienes {ausenciasACubrir.length} {ausenciasACubrir.length === 1 ? "clase" : "clases"} sin profesor hoy
@@ -2379,7 +2393,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                           {a.horas.join(", ")} - {a.asignatura || "Clase"}
                         </div>
                         <div style={{ fontSize: 12 }}>
-                          👤 {a.profesor} · 🏫 Aula {a.aula || "?"} {a.asignatura ? `· 📚 ${a.asignatura}` : ""}
+                          <Ti tam={20}>👤 {a.profesor} · 🏫 Aula {a.aula || "?"} {a.asignatura ? `· 📚 ${a.asignatura}` : ""}</Ti>
                         </div>
                         {a.tarea && <div style={{ fontSize: 12, marginTop: 4 }}>✏️ Tarea: {a.tarea}</div>}
                       </div>
@@ -2410,7 +2424,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
         
         return (
           <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize:13, fontWeight:600, color:C.gray, marginBottom:12 }}>📅 Próximos 7 días</div>
+            <div style={{ fontSize:13, fontWeight:600, color:C.gray, marginBottom:12 }}><Ic n="fecha-hora" tam={22} />Próximos 7 días</div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7,minmax(0,1fr))", gap:4 }}>
               {proximosDias.map((p, idx) => (
                 <div key={idx} 
@@ -2451,7 +2465,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
               }}
               onMouseOver={e => { e.currentTarget.style.background = "#00a399"; e.currentTarget.style.transform = "translateY(-2px)"; }}
               onMouseOut={e => { e.currentTarget.style.background = C.blue; e.currentTarget.style.transform = "translateY(0)"; }}>
-                📅 Ver Cuadrante Completo
+                <Ic n="fecha-hora" tam={22} />Ver Cuadrante Completo
               </button>
             </div>
           </div>
@@ -2470,7 +2484,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
       ) : (
         <div>
           <div style={{ fontWeight:600, color:C.gray, fontSize:13, marginBottom:10 }}>
-            📅 {diaHoy} — {guardiasDia.length} guardia(s) asignada(s)
+            <Ic n="fecha-hora" tam={22} />{diaHoy} — {guardiasDia.length} guardia(s) asignada(s)
           </div>
           {guardiasDia.map((g, i) => {
             const { sit } = g;
@@ -2507,20 +2521,20 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:12, flexWrap:"wrap" }}>
                   <div>
                     <div style={{ fontWeight:800, fontSize:18, color:C.dark }}>{g.hora} <span style={{ fontSize:14, fontWeight:600, color:C.gray }}>· {HORARIO[g.hora]}</span></div>
-                    <div style={{ fontSize:15, color:r.color, fontWeight:600, marginTop:4 }}>📍 {g.zona}</div>
+                    <div style={{ fontSize:15, color:r.color, fontWeight:600, marginTop:4 }}><Ic n="edificio" tam={22} />{g.zona}</div>
                   </div>
                   {esAhora && <span style={{ background:r.color, color:"#fff", borderRadius:20, padding:"4px 12px", fontSize:12, fontWeight:700 }}>⏱ AHORA</span>}
                 </div>
-                <div style={{ marginTop:12, padding:"6px 12px", background:r.bg, borderRadius:8, fontSize:12, fontWeight:700, color:r.color, display:"inline-block" }}>{r.txt}</div>
-                {aviso && <div style={{ marginTop:10, padding:"10px 12px", borderRadius:8, fontSize:13, fontWeight:700, ...aviso.estilo }}>{aviso.txt}</div>}
+                <div style={{ marginTop:12, padding:"6px 12px", background:r.bg, borderRadius:8, fontSize:12, fontWeight:700, color:r.color, display:"inline-block" }}><Ti tam={22}>{r.txt}</Ti></div>
+                {aviso && <div style={{ marginTop:10, padding:"10px 12px", borderRadius:8, fontSize:13, fontWeight:700, ...aviso.estilo }}><Ti tam={22}>{aviso.txt}</Ti></div>}
                 <div style={{ marginTop:10, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:6, fontSize:12, color:C.gray }}>
-                  <div>🛡️ Titular: {nombre(sit.titular, sit.tA)}</div>
-                  <div>👥 Apoyo: {nombre(sit.apoyo, sit.aA)}</div>
-                  <div>🔁 Sustituto: {nombre(sit.sustituto, sit.sA)}</div>
+                  <div><Ic n="titular" tam={22} />Titular: {nombre(sit.titular, sit.tA)}</div>
+                  <div><Ic n="apoyo" tam={22} />Apoyo: {nombre(sit.apoyo, sit.aA)}</div>
+                  <div><Ic n="sustituto" tam={22} />Sustituto: {nombre(sit.sustituto, sit.sA)}</div>
                 </div>
                 {g.ausencias.length > 0 && (
                   <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 6 }}>📚 Deberes y tareas de las clases sin profesor</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#92400e", marginBottom: 6 }}><Ic n="deberes" tam={22} />Deberes y tareas de las clases sin profesor</div>
                     <div style={{ display: "grid", gap: 8 }}>{g.ausencias.map(a => <TareaAusente key={a.id} a={a} C={C} />)}</div>
                   </div>
                 )}
@@ -2536,23 +2550,26 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                         ? <span style={{ ...btn, background: "#E8F5F3", color: C.teal, cursor: "default" }}>✅ Guardia firmada a las {horaCorta(firma.ts)}</span>
                         : <button onClick={() => firmar(g)} disabled={!empezada} title={empezada ? "Registra que has hecho esta guardia" : `Se puede firmar desde las ${inicioHora(g.hora)}`}
                             style={{ ...btn, background: empezada ? C.teal : "#e5e7eb", color: empezada ? "#fff" : "#6b7280", cursor: empezada ? "pointer" : "not-allowed" }}>
-                            ✍️ {empezada ? "Firmar guardia" : `Firmar desde las ${inicioHora(g.hora)}`}
+                            <Ic n="firmar" tam={22} />{empezada ? "Firmar guardia" : `Firmar desde las ${inicioHora(g.hora)}`}
                           </button>}
                       {g.hora !== "Recreo" && cursosTarea.map(curso => {
                         const l = listaDe(g.hora, curso);
                         return (
                           <button key={curso} onClick={() => setListaAbierta({ hora: g.hora, curso })}
                             style={{ ...btn, background: l ? "#EEF5F8" : C.blue, color: l ? C.blue : "#fff" }}>
-                            📋 {l ? `Lista de ${curso}: ${l.ausentes.length} ${l.ausentes.length === 1 ? "falta" : "faltas"}` : `Pasar lista · ${curso}`}
+                            <Ic n="pasar-lista" tam={22} />{l ? `Lista de ${curso}: ${l.ausentes.length} ${l.ausentes.length === 1 ? "falta" : "faltas"}` : `Pasar lista · ${curso}`}
                           </button>
                         );
                       })}
                       {g.hora !== "Recreo" && (
+                        <span style={{ position: "relative", display: "inline-block" }}>
+                        <img src="/iconos/lista-otro-grupo.png" alt="" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 24, height: 24, borderRadius: 5, pointerEvents: "none" }} />
                         <select aria-label="Pasar lista de otro grupo" value="" onChange={e => e.target.value && setListaAbierta({ hora: g.hora, curso: e.target.value })}
-                          style={{ padding: "9px 10px", borderRadius: 10, border: "1px solid #d1d5db", fontSize: 12, color: C.gray, background: "#fff" }}>
-                          <option value="">📋 Pasar lista de otro grupo…</option>
+                          style={{ padding: "9px 10px 9px 38px", borderRadius: 10, border: "1px solid #d1d5db", fontSize: 12, color: C.gray, background: "#fff" }}>
+                          <option value="">Pasar lista de otro grupo…</option>
                           {cursosCentro.map(c => <option key={c} value={c}>{c}{listaDe(g.hora, c) ? " (pasada)" : ""}</option>)}
                         </select>
+                        </span>
                       )}
                     </div>
                   );
@@ -2565,7 +2582,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
               onGuardar={guardarLista} onCerrar={() => setListaAbierta(null)} C={C} />
           )}
           <div style={{ background:"#FFF8E8", borderRadius:10, padding:14, marginTop:8, fontSize:13, color:C.dark, border:"1px solid #fbbf24" }}>
-            ⚠️ Si no puedes asistir, notifícalo en <strong>Notificar Ausencia</strong>.
+            <Ic n="aviso" tam={22} />Si no puedes asistir, notifícalo en <strong>Notificar Ausencia</strong>.
           </div>
         </div>
       )}
@@ -2576,7 +2593,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
           <div style={{ position: "fixed", right: 0, top: 0, bottom: 0, width: "min(400px, 100vw)", background: C.white, boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", overflowY: "auto", animation: "slideIn 0.3s ease" }} onClick={e => e.stopPropagation()}>
             <div style={{ background: `linear-gradient(135deg, ${C.teal}, ${C.blue})`, color: "#fff", padding: 20, display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>📅 {diaSeleccionadoGuardias.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}><Ic n="fecha-hora" tam={22} />{diaSeleccionadoGuardias.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" })}</div>
                 <div style={{ fontSize: 12, opacity: 0.9, marginTop: 4 }}>Guardias asignadas</div>
               </div>
               {(() => {
@@ -2622,30 +2639,30 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {guardiasDelDia.map((g, idx) => (
                       <div key={idx} style={{ background: "#f9fafb", borderRadius: 10, padding: 14, borderLeft: `4px solid ${C.teal}` }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: C.dark, marginBottom: 8 }}>🕐 {conTramo(g.hora)}</div>
-                        <div style={{ fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 10 }}>📍 {g.zona}</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: C.dark, marginBottom: 8 }}><Ic n="hora-reloj" tam={22} />{conTramo(g.hora)}</div>
+                        <div style={{ fontSize: 13, color: C.teal, fontWeight: 600, marginBottom: 10 }}><Ic n="edificio" tam={22} />{g.zona}</div>
                         
                         <div style={{ fontSize: 12, fontWeight: 700, color: C.blue, marginBottom: 6 }}>
-                          {g.rol === "titular" ? "🛡️ Titular" : g.rol === "apoyo" ? "👥 Apoyo" : "🔁 Sustituto"}
+                          <Ti tam={22}>{g.rol === "titular" ? "🛡️ Titular" : g.rol === "apoyo" ? "👥 Apoyo" : "🔁 Sustituto"}</Ti>
                         </div>
                         <div style={{ background: "#EEF5F8", borderRadius: 6, padding: "6px 10px", fontSize: 12, color: C.dark, marginBottom: 8, lineHeight: 1.6 }}>
-                          🛡️ Titular: {g.sit.titular || "—"}{g.sit.tA ? " (ausente)" : ""}<br/>
-                          👥 Apoyo: {g.sit.apoyo || "sin asignar"}{g.sit.aA ? " (ausente)" : ""}<br/>
-                          🔁 Sustituto: {g.sit.sustituto || "sin asignar"}{g.sit.sA ? " (ausente)" : ""}
+                          <Ic n="titular" tam={22} />Titular: {g.sit.titular || "—"}{g.sit.tA ? " (ausente)" : ""}<br/>
+                          <Ic n="apoyo" tam={22} />Apoyo: {g.sit.apoyo || "sin asignar"}{g.sit.aA ? " (ausente)" : ""}<br/>
+                          <Ic n="sustituto" tam={22} />Sustituto: {g.sit.sustituto || "sin asignar"}{g.sit.sA ? " (ausente)" : ""}
                           {g.sit.sustituyeA && <div style={{ color: "#92400e", fontWeight: 700 }}>Entra el sustituto por {g.sit.sustituyeA}</div>}
                         </div>
                         
                         {g.ausencias.length > 0 && (
                           <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #e5e7eb" }}>
-                            <div style={{ fontWeight: 600, color: "#d97706", fontSize: 12, marginBottom: 8 }}>⚠️ AUSENCIAS A CUBRIR:</div>
+                            <div style={{ fontWeight: 600, color: "#d97706", fontSize: 12, marginBottom: 8 }}><Ic n="aviso" tam={22} />AUSENCIAS A CUBRIR:</div>
                             {g.ausencias.map((a, i) => (
                               <div key={i} style={{ background: "#FFF8E8", borderRadius: 6, padding: 10, marginBottom: 8, borderLeft: `3px solid #fbbf24` }}>
                                 <div style={{ fontWeight: 600, color: C.dark, fontSize: 12, marginBottom: 6 }}>👤 {a.profesor}</div>
-                                {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>📚 Asignatura:</strong> {a.asignatura}</div>}
-                                {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>🏫 Aula:</strong> {a.aula}</div>}
+                                {a.asignatura && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong><Ic n="deberes" tam={22} />Asignatura:</strong> {a.asignatura}</div>}
+                                {a.aula && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong><Ic n="aula" tam={22} />Aula:</strong> {a.aula}</div>}
                                 {a.tarea && <div style={{ fontSize: 11, color: "#555", marginBottom: 3 }}><strong>✏️ Tarea:</strong> {a.tarea}</div>}
                                 {a.enlace && <div style={{ fontSize: 11, marginBottom: 3 }}><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, textDecoration: "underline" }}>🔗 Ver recursos</a></div>}
-                                {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong>📍 Ubicación:</strong> {a.ubicacion}</div>}
+                                {a.ubicacion && <div style={{ fontSize: 11, color: "#555" }}><strong><Ic n="edificio" tam={22} />Ubicación:</strong> {a.ubicacion}</div>}
                               </div>
                             ))}
                           </div>
