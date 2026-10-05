@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 // ─── Paleta de colores ───────────────────────────────────────────────────────
 // ─── Nombre de la aplicación y del centro (cámbialos aquí para otro instituto) ─
 const APP = "RumboAula";
-const CENTRO = "IES Enrique Tierno Galván";
+const CENTRO = "Centro educativo";
 const CIUDAD = "Madrid";
 
 const C = {
