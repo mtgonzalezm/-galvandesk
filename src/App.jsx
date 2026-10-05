@@ -3357,10 +3357,12 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
               {mensajes.map(m => (
                 <div key={m.id} style={{ background: m.destinatario === usuario ? "#E8F5F3" : "#FEF3C7", borderRadius: 10, padding: 12, borderLeft: `4px solid ${m.destinatario === usuario ? C.teal : C.blue}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                    <div style={{ fontWeight: 600, color: C.dark, fontSize: 13 }}>
-                      {m.remitente === usuario ? "📤 A: " : "📥 De: "}{m.remitente === usuario ? m.destinatario : m.remitente}
+                    <div style={{ fontWeight: 600, color: C.dark, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+                      <Icono nombre={m.remitente === usuario ? "boton-enviar" : (m.leido ? "mensaje-leido" : "mensaje-recibido")} tam={28} />
+                      {m.remitente === usuario ? "A: " : "De: "}{m.remitente === usuario ? m.destinatario : m.remitente}
                     </div>
-                    <div style={{ fontSize: 11, color: C.gray }}>
+                    <div style={{ fontSize: 11, color: C.gray, display: "flex", alignItems: "center", gap: 5 }}>
+                      <Icono nombre="hora-mensaje" tam={20} />
                       {new Date(m.ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
@@ -3368,8 +3370,8 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
                     {m.texto}
                   </div>
                   {m.destinatario === usuario && !m.leido && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: C.teal, fontWeight: 600 }}>
-                      ✉️ Sin leer
+                    <div style={{ marginTop: 8, fontSize: 11, color: C.teal, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                      <Icono nombre="mensaje-sin-leer" tam={22} />Sin leer
                     </div>
                   )}
                 </div>
