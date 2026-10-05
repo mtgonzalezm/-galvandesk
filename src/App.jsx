@@ -422,7 +422,7 @@ const ICONO_EMOJI = {
   "👨‍🏫": "profesorado", "🟡": "leve", "⚠": "grave", "🔴": "muy-grave",
   "🔍": "buscar", "⏰": "hora", "📂": "tipo-parte", "🎯": "gravedad-campo", "⚖": "tipificacion", "📝": "descripcion",
 };
-const ICONO_TEXTO = [[/^Profesor responsable/, "profesor"], [/^Generar Parte/, "generar"], [/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
+const ICONO_TEXTO = [[/^Profesor\/a$/, "cargo-profesor"], [/^Tutor\/a de un grupo/, "tutor"], [/^Como tutor\/a/, "tutor"], [/^Como profesor\/a/, "cargo-profesor"], [/^Profesor responsable/, "profesor"], [/^Generar Parte/, "generar"], [/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
 function iconoDe(texto) {
   const m = String(texto ?? "").match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*\uFE0F?)\s*(.*)$/su);
   if (!m) return { icono: null, resto: texto };
@@ -835,7 +835,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
               </div>
             ))}
           </div>
-          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px" }}>👩‍🏫 Resumen por grupo y tutoría</div>
+          <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, margin: "0 0 8px", display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="tutor" tam={32} />Resumen por grupo y tutoría</div>
           <div style={{ overflowX: "auto", marginBottom: 24 }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead><tr style={{ background: C.blue, color: "#fff" }}>{["Grupo", "Tutor/a del grupo", "Correo", "Leves", "Graves", "Muy graves", "Total"].map(h => <th key={h} style={{ padding: "8px", textAlign: "left" }}>{h}</th>)}</tr></thead>
@@ -1027,7 +1027,7 @@ function TutoriasGrupos({ cursos, tutores, setTutores, setAlumnos, profesores, s
   const inp = { ...inpStyle, padding: "8px 10px", fontSize: 13 };
   return (
     <div style={{ background: C.white, borderRadius: 14, padding: 18, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", border: `1px solid ${C.cream}` }}>
-      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>👩‍🏫 {soloCurso ? `Tutor/a de ${soloCurso}` : "Tutorías de grupo"}</div>
+      <div style={{ fontWeight: 700, color: C.dark, fontSize: 15, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="tutor" tam={36} />{soloCurso ? `Tutor/a de ${soloCurso}` : "Tutorías de grupo"}</div>
       <div style={{ fontSize: 12, color: C.gray, margin: "4px 0 12px" }}>
         {soloCurso ? "Aparece en el informe. Si lo cambias aquí, queda guardado para el grupo." : "El tutor/a de cada grupo aparece en los partes y en los informes. Los cambios se guardan solos."}
       </div>
@@ -4096,7 +4096,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
             ].map(o => (
               <button key={o.id} disabled={o.off} onClick={() => { setAmbito(o.id); setAlumnoDoc(""); setGrupoDoc(""); }}
                 style={{ flex: "1 1 220px", textAlign: "left", padding: "10px 14px", borderRadius: 10, border: `2px solid ${ambitoOk === o.id ? C.teal : "#e2e8f0"}`, background: o.off ? "#f8fafc" : ambitoOk === o.id ? "#F0FAF7" : C.white, cursor: o.off ? "not-allowed" : "pointer", opacity: o.off ? .65 : 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: C.dark }}>{ambitoOk === o.id ? "✔ " : ""}{o.txt}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: C.dark, display: "flex", alignItems: "center", gap: 6 }}>{ambitoOk === o.id ? "✔ " : ""}<ConIcono texto={o.txt} tam={34} /></div>
                 <div style={{ fontSize: 11, color: C.gray }}>{o.sub}</div>
               </button>
             ))}
@@ -5583,7 +5583,7 @@ export default function App() {
                   </div>
                   {filtCurso
                     ? <TutoriasGrupos soloCurso={filtCurso} cursos={cursos} tutores={tutores} setTutores={setTutores} setAlumnos={setAlumnos} profesores={profesores} C={C} inpStyle={inpStyle} />
-                    : <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>👩‍🏫 El informe incluye el tutor/a de cada grupo. Elige un curso para ver o cambiar su tutor/a.</div>}
+                    : <div style={{ fontSize: 12, color: C.gray, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}><Icono nombre="tutor" tam={24} />El informe incluye el tutor/a de cada grupo. Elige un curso para ver o cambiar su tutor/a.</div>}
                   <div style={{ background: C.cream, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.dark }}>
                     El informe incluirá <strong>{partesFiltrados.length} parte(s)</strong>
                     {filtCurso && ` · ${filtCurso}`}{filtGravedad && ` · ${GRAVEDAD.find(g => g.id === filtGravedad)?.label}`}
