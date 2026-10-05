@@ -1212,7 +1212,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
 
       {subTab === "manual" && (
         <Card>
-          <h3 style={{ marginTop: 0, color: C.dark }}>Añadir alumno manualmente</h3>
+          <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="por-alumno" tam={40} />Añadir alumno manualmente</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[["nombre", "Nombre completo *"], ["curso", "Curso / Aula *"], ["tutor", "Tutor de grupo"], ["email", "Email familia"], ["telefono", "Teléfono familia"], ["nia", "NIA / DNI"]].map(([k, ph]) => (
               <input key={k} value={nuevoAlumno[k] || ""} onChange={e => setNuevoAlumno(p => ({ ...p, [k]: e.target.value }))} placeholder={ph} style={inpStyle} />
@@ -5627,7 +5627,7 @@ export default function App() {
           <div>
             <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="perfil" tam={44} />Gestión de Profesores</h2>
             <Card>
-              <h3 style={{ marginTop: 0, color: C.dark }}>Añadir profesor</h3>
+              <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="profesor" tam={40} />Añadir profesor</h3>
               <div style={{ display: "flex", gap: 10 }}>
                 <input value={nuevoProfesor} onChange={e => setNuevoProfesor(e.target.value)} placeholder="Nombre completo del profesor" style={{ ...inpStyle, flex: 1 }}
                   onKeyDown={e => { if (e.key === "Enter" && nuevoProfesor.trim()) { setProfesores(prev => [...prev, nuevoProfesor.trim()]); setNuevoProfesor(""); } }} />
@@ -5639,12 +5639,12 @@ export default function App() {
                   setFeedbackAñadirProfesor(true);
                   setTimeout(() => setFeedbackAñadirProfesor(false), 1500);
                 }} color={feedbackAñadirProfesor ? "#10b981" : C.teal} style={{ transition: "all .3s ease" }}>
-                  {feedbackAñadirProfesor ? "✅ ¡Agregado!" : "➕ Añadir"}
+                  {feedbackAñadirProfesor ? "✅ ¡Agregado!" : <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="grupos" tam={24} />Añadir</span>}
                 </Btn>
               </div>
             </Card>
             <Card style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark }}>👨‍🏫 {profesores.length} profesor(es)</div>
+              <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="selecciona-profesor" tam={26} />{profesores.length} profesor(es)</div>
               <div style={{ padding: "10px 20px", fontSize: 12, color: C.gray, borderBottom: `1px solid ${C.cream}` }}>
                 El cargo decide a qué perfiles puede entrar cada persona: Profesor/a solo al de profesor; Jefatura de Estudios también a Jefatura; Dirección a los tres; Secretaría y Coordinación TIC también a Administración.
               </div>
