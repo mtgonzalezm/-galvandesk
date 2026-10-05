@@ -4986,7 +4986,7 @@ export default function App() {
         {/* ── Baños (profesor) ── */}
         {tab === "bano" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🚻 Control de Salidas al Baño</h2>
+            <h2 style={{ color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="banos" tam={44} />Control de Salidas al Baño</h2>
             <Card>
               <label style={labelStyle}><ConIcono texto="🔍 Buscar alumno" tam={30} /></label>
               <input value={bBusqueda} onChange={e => { setBBusqueda(e.target.value); setBAlumno(""); }} placeholder="Nombre o curso…" style={{ ...inpStyle, marginBottom: 8 }} />
@@ -5002,11 +5002,11 @@ export default function App() {
                   ))}
                 </div>
               )}
-              <Btn onClick={registrarSalida} disabled={!bAlumno} color={C.blue}>🚻 Registrar Salida</Btn>
+              <Btn onClick={registrarSalida} disabled={!bAlumno} color={C.blue}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="banos" tam={24} />Registrar Salida</span></Btn>
             </Card>
             {banoActivos.length > 0 && (
               <Card style={{ background: "#FFF8E8", border: `1px solid ${C.salmon}` }}>
-                <h3 style={{ margin: "0 0 12px", color: C.dark }}>⏳ Fuera ahora ({banoActivos.length})</h3>
+                <h3 style={{ margin: "0 0 12px", color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="fuera-ahora" tam={32} />Fuera ahora ({banoActivos.length})</h3>
                 {banoActivos.map(b => (
                   <div key={b.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.cream}` }}>
                     <div style={{ fontSize: 13 }}><strong>{b.alumno}</strong> — {b.curso} — {fmt(b.salida)}</div>
@@ -5017,7 +5017,7 @@ export default function App() {
               </Card>
             )}
             <Card>
-              <h3 style={{ marginTop: 0, color: C.dark }}>📅 Historial de hoy</h3>
+              <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="horario" tam={32} />Historial de hoy</h3>
               {banos.filter(b => b.fecha === todayStr()).length === 0
                 ? <p style={{ color: C.gray }}>Sin registros hoy</p>
                 : banos.filter(b => b.fecha === todayStr()).map(b => {
@@ -5451,7 +5451,7 @@ export default function App() {
 
         {tab === "bano_live" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🚻 Baños — Tiempo Real</h2>
+            <h2 style={{ color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="banos" tam={44} />Baños — Tiempo Real</h2>
             <Card style={{ background: banoActivos.length > 0 ? "#FFF8E8" : "#E8F5F3", border: `2px solid ${banoActivos.length > 0 ? C.salmon : C.teal}` }}>
               <h3 style={{ margin: "0 0 12px", color: C.dark }}>{banoActivos.length > 0 ? `⏳ ${banoActivos.length} alumno(s) fuera` : "✅ Ningún alumno fuera"}</h3>
               {banoActivos.map(b => <div key={b.id} style={{ padding: "8px 0", borderBottom: `1px solid rgba(0,0,0,0.08)`, fontSize: 14 }}><strong>{b.alumno}</strong> — {b.curso} — {fmt(b.salida)}</div>)}
