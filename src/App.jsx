@@ -1138,15 +1138,15 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
     <div>
       <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="grupos" tam={44} />Gestión de Alumnos</h2>
       <div style={{ background: C.white, borderRadius: 12, marginBottom: 14, display: "flex", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", borderBottom: `2px solid ${C.cream}` }}>
-        <button style={stb(subTab === "importar")} onClick={() => setSubTab("importar")}>📥 Importar CSV/Excel</button>
-        <button style={stb(subTab === "manual")}   onClick={() => setSubTab("manual")}>✏️ Añadir manual</button>
-        <button style={stb(subTab === "lista")}    onClick={() => setSubTab("lista")}>📋 Lista completa</button>
+        <button style={stb(subTab === "importar")} onClick={() => setSubTab("importar")}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="importar" tam={30} />Importar CSV/Excel</span></button>
+        <button style={stb(subTab === "manual")}   onClick={() => setSubTab("manual")}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="anadir-manual" tam={30} />Añadir manual</span></button>
+        <button style={stb(subTab === "lista")}    onClick={() => setSubTab("lista")}><span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="lista-completa" tam={30} />Lista completa</span></button>
       </div>
 
       {subTab === "importar" && (
         <div>
           <Card style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, marginBottom: 14 }}>
-            <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, fontSize: 14 }}>💡 Cómo exportar desde Raíces</div>
+            <div style={{ fontWeight: 700, color: C.blue, marginBottom: 8, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="como-exportar" tam={32} />Cómo exportar desde Raíces</div>
             <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.8 }}>
               1. Entra en <strong>Raíces → Alumnado → Listados</strong><br />
               2. Exporta en formato <strong>CSV o Excel</strong><br />
@@ -1160,9 +1160,9 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
             onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) processFile(f); }}
             onClick={() => fileRef.current.click()}
             style={{ border: `2px dashed ${dragging ? C.teal : "#d1d5db"}`, borderRadius: 12, padding: "36px 20px", textAlign: "center", cursor: "pointer", background: dragging ? "#E8F5F3" : C.white, transition: "all .2s", marginBottom: 14 }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>📂</div>
+            <Icono nombre="arrastrar" tam={88} style={{ margin: "0 auto 8px" }} />
             <div style={{ fontWeight: 700, color: C.dark, fontSize: 15 }}>Arrastra tu archivo aquí</div>
-            <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>o haz clic para seleccionar · CSV o Excel (.xlsx)</div>
+            <div style={{ color: C.gray, fontSize: 13, marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}><Icono nombre="formato" tam={30} />o haz clic para seleccionar · CSV o Excel (.xlsx)</div>
             <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: "none" }}
               onChange={e => { if (e.target.files[0]) processFile(e.target.files[0]); e.target.value = ""; }} />
           </div>
@@ -1212,7 +1212,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
 
       {subTab === "manual" && (
         <Card>
-          <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="por-alumno" tam={40} />Añadir alumno manualmente</h3>
+          <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="anadir-manual" tam={40} />Añadir alumno manualmente</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[["nombre", "Nombre completo *"], ["curso", "Curso / Aula *"], ["tutor", "Tutor de grupo"], ["email", "Email familia"], ["telefono", "Teléfono familia"], ["nia", "NIA / DNI"]].map(([k, ph]) => (
               <input key={k} value={nuevoAlumno[k] || ""} onChange={e => setNuevoAlumno(p => ({ ...p, [k]: e.target.value }))} placeholder={ph} style={inpStyle} />
