@@ -725,7 +725,67 @@ function resumenPorGrupo(partes, tutores = {}) {
 }
 const tutorDeParte = (p, tutores = {}) => p.tutor || tutores[p.curso]?.tutor || "";
 
-function pdfInformePartes(partes, filtrosTexto, tutores = {}, fechaInforme) {
+
+// ─── Comparativa: alumno/a ↔ grupo ↔ nivel (porcentajes) ─────────────────────
+const DATOS_CENTRO = { partes: [], alumnos: [] };
+const nivelDe = curso => String(curso || "").replace(/\s*[A-Z]$/, "").trim();
+const pct = (a, b) => b ? `${(Math.round(a / b * 1000) / 10).toLocaleString("es-ES")} %` : "-";
+const dec = n => (Math.round(n * 100) / 100).toLocaleString("es-ES");
+function comparativaPDF(doc, y, { desde, hasta, cursos = [], alumno = null }) {
+  const enRango = p => { const d = isoLocal(new Date(p.ts)); return (!desde || d >= desde) && (!hasta || d <= hasta); };
+  const todos = DATOS_CENTRO.partes.filter(enRango);
+  const al = DATOS_CENTRO.alumnos;
+  const niveles = [...new Set(cursos.map(nivelDe))].filter(Boolean);
+  if (!niveles.length) return y;
+  const w = doc.internal.pageSize.getWidth();
+  const titulo = t => {
+    if (y > doc.internal.pageSize.getHeight() - 50) { doc.addPage(); y = 24; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(...OSCURO); doc.text(t, 14, y); doc.setTextColor(0); y += 3;
+  };
+  titulo("Comparativa en porcentajes");
+  doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
+  doc.text(`Calculado con todos los partes del periodo${desde ? ` (${fmtD(parseISO(desde))} – ${fmtD(parseISO(hasta))})` : ""}. Datos agregados, sin nombres de otros alumnos.`, 14, y + 2, { maxWidth: w - 28 });
+  doc.setTextColor(0); y += 6;
+  if (alumno) {
+    const grupo = todos.filter(p => p.curso === alumno.curso);
+    const suyos = grupo.filter(p => p.alumno === alumno.nombre);
+    const nAl = al.filter(a => a.curso === alumno.curso).length || 1;
+    const conPartes = new Set(grupo.filter(p => !p.esGrupal).map(p => p.alumno)).size;
+    autoTable(doc, { ...estiloTabla, startY: y, theme: "grid", columnStyles: { 0: { fontStyle: "bold", cellWidth: 95, fillColor: [238, 245, 248] }, 1: { halign: "center" } },
+      body: [
+        [`Partes de ${alumno.nombre}`, String(suyos.length)],
+        [`Partes de todo el grupo ${alumno.curso}`, String(grupo.length)],
+        ["Peso del alumno/a en los partes del grupo", pct(suyos.length, grupo.length)],
+        ["Media de partes por alumno/a en el grupo", dec(grupo.length / nAl)],
+        ["Alumnado del grupo con algún parte", `${conPartes} de ${nAl} (${pct(conPartes, nAl)})`],
+      ].map(r => r.map(sinEmoji)) });
+    y = doc.lastAutoTable.finalY + 6;
+  }
+  niveles.forEach(nv => {
+    const grupos = [...new Set([...al.map(a => a.curso), ...todos.map(p => p.curso)].filter(c => nivelDe(c) === nv))].sort();
+    const delNivel = todos.filter(p => nivelDe(p.curso) === nv);
+    const alNivel = al.filter(a => nivelDe(a.curso) === nv).length;
+    const filas = grupos.map(g => {
+      const pg = delNivel.filter(p => p.curso === g); const n = al.filter(a => a.curso === g).length;
+      return [g, n || "-", pg.length, pct(pg.length, delNivel.length), n ? dec(pg.length / n) : "-",
+        pg.filter(p => p.gravedad === "grave" || p.gravedad === "muy_grave").length, pct(new Set(pg.filter(p => !p.esGrupal).map(p => p.alumno)).size, n)].map(String);
+    });
+    filas.push([`Total ${nv}`, alNivel || "-", delNivel.length, delNivel.length ? "100 %" : "-", alNivel ? dec(delNivel.length / alNivel) : "-",
+      delNivel.filter(p => p.gravedad === "grave" || p.gravedad === "muy_grave").length, pct(new Set(delNivel.filter(p => !p.esGrupal).map(p => p.alumno)).size, alNivel)].map(String));
+    titulo(`Nivel ${nv}: grupos comparados`);
+    const marcar = new Set(alumno ? [alumno.curso] : cursos);
+    autoTable(doc, { ...estiloTabla, startY: y + 1,
+      head: [["Grupo", "Alumnos", "Partes", "% del nivel", "Partes por alumno/a", "Graves y muy graves", "% alumnado con partes"]],
+      body: filas, columnStyles: { 1: { halign: "center" }, 2: { halign: "center" }, 3: { halign: "center" }, 4: { halign: "center" }, 5: { halign: "center" }, 6: { halign: "center" } },
+      didParseCell: c => { if (c.section !== "body") return; const r = c.row.raw[0];
+        if (r.startsWith("Total")) { c.cell.styles.fontStyle = "bold"; c.cell.styles.fillColor = [238, 245, 248]; }
+        else if (marcar.has(r)) { c.cell.styles.fillColor = [255, 243, 205]; c.cell.styles.fontStyle = "bold"; } } });
+    y = doc.lastAutoTable.finalY + 6;
+  });
+  return y;
+}
+
+function pdfInformePartes(partes, filtrosTexto, tutores = {}, fechaInforme, rango) {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
   const fecha = new Date(fechaInforme || Date.now()).toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" });
   let y = cabeceraPDF(doc, "Informe de partes", `Generado el ${fecha} · Jefatura de Estudios${filtrosTexto ? ` · ${filtrosTexto}` : ""}`);
@@ -743,7 +803,8 @@ function pdfInformePartes(partes, filtrosTexto, tutores = {}, fechaInforme) {
     head: [["Fecha y hora", "Hora", "Alumno/a", "Curso", "Tutor/a", "Tipo", "Gravedad", "Tipificación", "Profesor/a", "Descripción"]],
     body: partes.map(p => [fmt(p.ts), p.hora || "-", p.alumno + (p.esGrupal ? " (grupo)" : ""), p.curso, tutorDeParte(p, tutores) || "-", p.tipo, sinEmoji(gObj(p.gravedad)?.label), textoTipificacion(p), p.profesor, p.descripcion].map(sinEmoji)),
     columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 14 }, 2: { cellWidth: 30 }, 3: { cellWidth: 18 }, 4: { cellWidth: 24 }, 5: { cellWidth: 27 }, 6: { cellWidth: 19 }, 7: { cellWidth: 40 }, 8: { cellWidth: 24 }, 9: { cellWidth: "auto" } } });
-  let yf = doc.lastAutoTable.finalY + 8;
+  const fechasP = partes.map(p => isoLocal(new Date(p.ts))).sort();
+  let yf = comparativaPDF(doc, doc.lastAutoTable.finalY + 8, { desde: rango?.desde || fechasP[0], hasta: rango?.hasta || fechasP[fechasP.length - 1], cursos: [...new Set(partes.map(p => p.curso))] });
   if (yf > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); yf = 24; }
   doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(180, 83, 9);
   doc.text("Documento interno del centro: contiene datos de varios alumnos. No entregar a las familias; para ellas, use el informe individual del alumno/a.", 14, yf, { maxWidth: doc.internal.pageSize.getWidth() - 28 });
@@ -3978,6 +4039,7 @@ function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remiten
       didParseCell: c => { if (c.section === "body" && c.column.index === 3 && Number(c.cell.raw) > 10) { c.cell.styles.textColor = [180, 83, 9]; c.cell.styles.fontStyle = "bold"; } } });
     y = doc.lastAutoTable.finalY + 8;
   }
+  y = comparativaPDF(doc, y, { desde: periodo.desde, hasta: periodo.hasta, alumno, cursos: [alumno.curso] });
   if (y > 240) { doc.addPage(); y = 24; }
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   const cierre = doc.splitTextToSize("Les enviamos este informe para mantenerles informados y trabajar juntos. Pueden solicitar una reunión con el tutor/a o con Jefatura de Estudios.", w - 28);
@@ -4358,7 +4420,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
           <button style={btnDoc()} onClick={() => pdfEstadisticas(est, periodo, esProfe ? `${ambitoOk === "mios" ? "Partes puestos por" : `Tutoría de ${ambitoOk} ·`} ${usuario}` : "")}>
             <Ic n="dashboard" tam={20} />Estadísticas del periodo<span style={sub}>Resumen, evolución por día, grupos, alumnado, faltas y profesorado</span>
           </button>
-          <button style={btnDoc(est.partes.length > 0)} disabled={!est.partes.length} onClick={() => pdfInformePartes(est.partes, periodo.texto, tutores)}>
+          <button style={btnDoc(est.partes.length > 0)} disabled={!est.partes.length} onClick={() => pdfInformePartes(est.partes, periodo.texto, tutores, undefined, periodo)}>
             <Ic n="partes" tam={20} />Todos los partes<span style={sub}>{est.partes.length} parte(s) con su detalle y resumen por grupo</span>
           </button>
           <button style={btnDoc(est.banos.length > 0)} disabled={!est.banos.length} onClick={() => pdfInformeBanos(est.banos, periodo.texto)}>
@@ -4387,7 +4449,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
                 return <option key={a.id} value={String(a.id)}>{a.nombre} ({a.curso}){n ? ` · ${n}` : ""}</option>;
               })}
             </select>
-            <button style={btnDoc(partesAlumno.length > 0)} disabled={!partesAlumno.length} onClick={() => pdfInformePartes(partesAlumno, `${nombreAlumno} · ${periodo.texto}`, tutores)}>
+            <button style={btnDoc(partesAlumno.length > 0)} disabled={!partesAlumno.length} onClick={() => pdfInformePartes(partesAlumno, `${nombreAlumno} · ${periodo.texto}`, tutores, undefined, periodo)}>
               ⬇️ {alumnoDoc ? `${partesAlumno.length} parte(s) en este periodo` : "Descargar"}
             </button>
             {alumnoObj && <ContactoFamilia alumno={alumnoObj} partes={partesAlumno} banos={banosAlumno} periodo={periodo} tutores={tutores} remitente={esProfe ? usuario : ""} C={C} />}
@@ -4398,7 +4460,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
               <option value="">Elige grupo…</option>
               {(esProfe ? [...new Set(partes.map(p => p.curso))].sort() : cursos).map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <button style={btnDoc(partesGrupo.length > 0)} disabled={!partesGrupo.length} onClick={() => pdfInformePartes(partesGrupo, `Grupo ${grupoDoc} · ${periodo.texto}`, tutores)}>
+            <button style={btnDoc(partesGrupo.length > 0)} disabled={!partesGrupo.length} onClick={() => pdfInformePartes(partesGrupo, `Grupo ${grupoDoc} · ${periodo.texto}`, tutores, undefined, periodo)}>
               ⬇️ {grupoDoc ? `${partesGrupo.length} parte(s) en este periodo` : "Descargar"}
             </button>
           </div>}
@@ -4424,8 +4486,10 @@ export default function App() {
   const [usuario, setUsuario]     = useState(null);
   const [tab, setTab]             = useState("partes");
   const [alumnos, setAlumnos]     = useState(DEMO_ALUMNOS);
+  DATOS_CENTRO.alumnos = alumnos;
   const [profesores, setProfesores] = useState(DEMO_PROFESORES);
   const [partes, setPartes]       = useState([]);
+  DATOS_CENTRO.partes = partes;
   const [banos, setBanos]         = useState([]);
   const [alertas, setAlertas]     = useState([]);
   const [mensajes, setMensajes]   = useState([]);
