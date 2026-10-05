@@ -358,8 +358,8 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             <div style={{ fontSize: 12, color: C.gray, marginBottom: 14 }}>Según tu cargo ({cargo.label}) puedes usar estos perfiles.</div>
             {permitidos.map(p => (
               <button key={p.id} onClick={() => onEntrar(nombre, p)}
-                style={{ display: "block", width: "100%", padding: "14px 20px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark }}>
-                {p.label}
+                style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 16px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark }}>
+                <Icono nombre={PERFIL_ICONO[p.id]} tam={44} />{sinEmoji1(p.label)}
               </button>
             ))}
             <button onClick={() => setPaso("nombre")} style={enlace}>← Cambiar de persona</button>
@@ -452,6 +452,40 @@ function partirEmojis(texto, tam) {
 function Ti({ children, tam = 20 }) {
   const arr = Array.isArray(children) ? children : [children];
   return <>{arr.map((ch, i) => (typeof ch === "string" ? <span key={i}>{partirEmojis(ch, tam)}</span> : ch))}</>;
+}
+
+// Icono de cada perfil de acceso y desplegable con iconos para cambiar de perfil
+const PERFIL_ICONO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", admin: "cargo-administracion" };
+const sinEmoji1 = t => iconoDe(t).resto;
+function SelectorPerfil({ perfiles, actual, onCambiar }) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = e => { if (ref.current && !ref.current.contains(e.target)) setAbierto(false); };
+    const esc = e => { if (e.key === "Escape") setAbierto(false); };
+    document.addEventListener("mousedown", cerrar); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", cerrar); document.removeEventListener("keydown", esc); };
+  }, [abierto]);
+  const a = perfiles.find(p => p.id === actual.id) || actual;
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button onClick={() => setAbierto(v => !v)} aria-haspopup="listbox" aria-expanded={abierto} title="Cambiar de perfil"
+        style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "4px 10px 4px 4px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+        <Icono nombre={PERFIL_ICONO[a.id]} tam={28} />{sinEmoji1(a.label)} <span style={{ fontSize: 10 }}>▼</span>
+      </button>
+      {abierto && (
+        <div role="listbox" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 12px 30px rgba(0,0,0,0.2)", padding: 6, zIndex: 300, minWidth: 240 }}>
+          {perfiles.map(p => (
+            <button key={p.id} role="option" aria-selected={p.id === a.id} onClick={() => { setAbierto(false); onCambiar(p.id); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 10px", border: "none", borderRadius: 8, background: p.id === a.id ? "#E8F5F3" : "transparent", color: "#2C4A52", cursor: "pointer", fontSize: 14, fontWeight: p.id === a.id ? 700 : 500 }}>
+              <Icono nombre={PERFIL_ICONO[p.id]} tam={34} /><span style={{ flex: 1, whiteSpace: "nowrap" }}>{sinEmoji1(p.label)}</span>{p.id === a.id ? "✓" : ""}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const Badge = ({ g }) => {
@@ -4661,15 +4695,12 @@ export default function App() {
             <img className="gd-logo" src="/icono-rumboaula.png" alt="" style={{ width: 36, height: 36, background: "rgba(255,255,255,0.92)", borderRadius: 10, padding: 3 }} />
             <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .5 }}>{APP}</div>
-              <div style={{ fontSize: 11, opacity: .8 }}>{CENTRO} · {perfil.label}</div>
+              <div style={{ fontSize: 11, opacity: .8 }}>{CENTRO} · {sinEmoji1(perfil.label)}</div>
             </div>
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          {perfilesPermitidos(cuentas, usuario).length > 1 && <select value={perfil.id} onChange={e => cambiarPerfil(e.target.value)} aria-label="Cambiar de perfil" title="Cambiar de perfil"
-            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 8px", cursor: "pointer", fontSize: 13, fontWeight: 600, maxWidth: 210 }}>
-            {perfilesPermitidos(cuentas, usuario).map(p => <option key={p.id} value={p.id} style={{ color: C.dark }}>{p.label}</option>)}
-          </select>}
+          {perfilesPermitidos(cuentas, usuario).length > 1 && <SelectorPerfil perfiles={perfilesPermitidos(cuentas, usuario)} actual={perfil} onCambiar={cambiarPerfil} />}
           <button onClick={salir} 
             onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
