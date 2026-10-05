@@ -418,8 +418,8 @@ const Card = ({ children, style = {} }) => (
 const ICONO_EMOJI = {
   "📊": "dashboard", "🏫": "por-curso", "👤": "por-alumno", "📋": "partes", "👨‍🎓": "partes", "🚻": "banos",
   "🔔": "alertas", "📤": "informe", "📄": "informe", "📈": "estadisticas", "🔄": "guardias", "💬": "mensajes",
-  "📢": "profe-ausente", "🗂": "documentos", "📅": "horario", "👥": "grupos", "✍": "tareas", "⚙": "configuracion",
-  "👨‍🏫": "perfil", "🟡": "leve", "⚠": "grave", "🔴": "muy-grave",
+  "📢": "profe-ausente", "🗂": "documentos", "📅": "horario", "👥": "grupos", "✍": "tareas", "⚙": "cargo-administracion",
+  "👨‍🏫": "profesorado", "🟡": "leve", "⚠": "grave", "🔴": "muy-grave",
   "🔍": "buscar", "⏰": "hora", "📂": "tipo-parte", "🎯": "gravedad-campo", "⚖": "tipificacion", "📝": "descripcion",
 };
 const ICONO_TEXTO = [[/^Profesor responsable/, "profesor"], [/^Generar Parte/, "generar"], [/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
@@ -1254,7 +1254,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
                     <div style={{ fontWeight: 600, color: C.dark }}>{a.nombre} <span style={{ color: C.gray, fontWeight: 400 }}>— {a.curso}</span>{a.nia && <span style={{ fontSize: 11, color: C.blue, marginLeft: 6 }}>NIA: {a.nia}</span>}</div>
                     <div style={{ color: C.gray, marginTop: 2 }}>Tutor: {a.tutor || "—"} · ✉️ {a.email || "—"} · 📱 {a.telefono || "—"}</div>
                   </div>
-                  <button onClick={() => setAlumnos(prev => prev.filter(x => x.id !== a.id))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🗑</button>
+                  <button onClick={() => setAlumnos(prev => prev.filter(x => x.id !== a.id))} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "4px 6px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex" }} title="Eliminar"><Icono nombre="eliminar" tam={26} /></button>
                 </div>
               ))}
           </Card>
@@ -3185,6 +3185,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
 // ═══════════════════════════════════════════════════════════════════════════
 // GALVÁNGRAM - MENSAJERÍA RÁPIDA
 // ═══════════════════════════════════════════════════════════════════════════
+const ICONO_CARGO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", direccion: "cargo-direccion", secretaria: "cargo-secretaria", tic: "cargo-tic" };
 const ICONO_MENSAJE = { "Alumno enfermo": "alumno-enfermo", "Emergencia": "emergencia", "Urgencia en aula": "emergencia", "Falta material": "falta-material",
   "Alumno derivado": "alumno-derivado", "Cambio de guardia": "sustituto", "Falta un profesor": "profe-ausente", "Reunión importante": "eventos" };
 function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C, inpStyle, selStyle, labelStyle }) {
@@ -5627,7 +5628,7 @@ export default function App() {
           <div>
             <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="perfil" tam={44} />Gestión de Profesores</h2>
             <Card>
-              <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="profesor" tam={40} />Añadir profesor</h3>
+              <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="anadir-profesor" tam={44} />Añadir profesor</h3>
               <div style={{ display: "flex", gap: 10 }}>
                 <input value={nuevoProfesor} onChange={e => setNuevoProfesor(e.target.value)} placeholder="Nombre completo del profesor" style={{ ...inpStyle, flex: 1 }}
                   onKeyDown={e => { if (e.key === "Enter" && nuevoProfesor.trim()) { setProfesores(prev => [...prev, nuevoProfesor.trim()]); setNuevoProfesor(""); } }} />
@@ -5644,7 +5645,7 @@ export default function App() {
               </div>
             </Card>
             <Card style={{ padding: 0, overflow: "hidden" }}>
-              <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="selecciona-profesor" tam={26} />{profesores.length} profesor(es)</div>
+              <div style={{ padding: "12px 20px", background: C.cream, borderBottom: `1px solid #e5e7eb`, fontWeight: 600, fontSize: 13, color: C.dark, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="profesorado" tam={30} />{profesores.length} profesor(es)</div>
               <div style={{ padding: "10px 20px", fontSize: 12, color: C.gray, borderBottom: `1px solid ${C.cream}` }}>
                 El cargo decide a qué perfiles puede entrar cada persona: Profesor/a solo al de profesor; Jefatura de Estudios también a Jefatura; Dirección a los tres; Secretaría y Coordinación TIC también a Administración.
               </div>
@@ -5652,9 +5653,12 @@ export default function App() {
                 const cuenta = cuentas[p] || {};
                 return (
                   <div key={p} style={{ padding: "10px 20px", borderBottom: `1px solid ${C.cream}`, fontSize: 14, display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ minWidth: 160 }}>
-                      <div style={{ fontWeight: 600, color: C.dark }}>👤 {p}{p === usuario ? " (tú)" : ""}</div>
-                      <div style={{ fontSize: 11, color: cuenta.clave ? C.teal : C.gray }}>{cuenta.clave ? "Clave creada" : "Sin clave: la creará al entrar por primera vez"}</div>
+                    <div style={{ minWidth: 160, display: "flex", alignItems: "center", gap: 10 }}>
+                      <Icono nombre={ICONO_CARGO[cuenta.cargo || "profesor"] || "cargo-profesor"} tam={40} />
+                      <div>
+                        <div style={{ fontWeight: 600, color: C.dark }}>{p}{p === usuario ? " (tú)" : ""}</div>
+                        <div style={{ fontSize: 11, color: cuenta.clave ? C.teal : C.gray, display: "flex", alignItems: "center", gap: 4 }}>{cuenta.clave ? "Clave creada" : <><Icono nombre="sin-clave" tam={18} />Sin clave: la creará al entrar por primera vez</>}</div>
+                      </div>
                     </div>
                     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                       <select aria-label={`Cargo de ${p}`} value={cuenta.cargo || "profesor"}
@@ -5669,9 +5673,9 @@ export default function App() {
                       </select>
                       {cuenta.clave && (
                         <button onClick={() => { if (window.confirm(`¿Restablecer la clave de ${p}? La próxima vez que entre tendrá que crear una nueva.`)) setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), clave: null } })); }}
-                          style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🔑 Restablecer clave</button>
+                          style={{ background: "#EEF5F8", color: C.blue, border: "none", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}><Icono nombre="sin-clave" tam={20} />Restablecer clave</button>
                       )}
-                      <button aria-label={`Eliminar a ${p}`} onClick={() => { if (window.confirm(`¿Eliminar a ${p} de la lista del profesorado?`)) setProfesores(prev => prev.filter((_, j) => j !== i)); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🗑</button>
+                      <button aria-label={`Eliminar a ${p}`} onClick={() => { if (window.confirm(`¿Eliminar a ${p} de la lista del profesorado?`)) setProfesores(prev => prev.filter((_, j) => j !== i)); }} style={{ background: "#FDF0EF", color: C.salmon, border: "none", borderRadius: 8, padding: "4px 6px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex" }} title="Eliminar"><Icono nombre="eliminar" tam={26} /></button>
                     </div>
                   </div>
                 );
