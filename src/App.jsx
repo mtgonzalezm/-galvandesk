@@ -273,7 +273,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
     <div role="dialog" aria-modal="true" aria-labelledby="gd-globo-titulo" onClick={cerrarGlobo}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, maxWidth: 460, width: "100%", padding: "28px 26px", textAlign: "left", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" }}>
-        <div style={{ fontSize: 40, textAlign: "center" }}>👋</div>
+        <Icono nombre="saludo" tam={64} style={{ margin: "0 auto" }} />
         <h2 id="gd-globo-titulo" style={{ color: C.dark, textAlign: "center", margin: "6px 0 4px", fontSize: 22 }}>Bienvenida/o a la demostración</h2>
         <p style={{ color: C.gray, textAlign: "center", fontSize: 13, margin: "0 0 18px" }}>Todo es ficticio. Sigue estos pasos:</p>
         {[
@@ -2030,13 +2030,13 @@ function AyudaPantalla({ id, C }) {
   const cerrar = () => { setAbierta(false); try { localStorage.setItem(clave, "1"); } catch { /* sin almacenamiento */ } };
   if (!abierta) return (
     <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-      <button onClick={() => setAbierta(true)} style={{ background: "none", border: `1px solid ${C.blue}`, color: C.blue, borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>ℹ️ Cómo se usa</button>
+      <button onClick={() => setAbierta(true)} style={{ background: "none", border: `1px solid ${C.blue}`, color: C.blue, borderRadius: 20, padding: "5px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 6 }}><Icono nombre="como-se-usa" tam={22} />Cómo se usa</button>
     </div>
   );
   return (
     <div className="no-print" role="note" style={{ background: "#EEF5F8", border: `1px solid ${C.blue}`, borderRadius: 12, padding: "12px 16px", marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <div style={{ fontWeight: 700, color: C.blue, fontSize: 14 }}>ℹ️ Cómo se usa: {ayuda.titulo}</div>
+        <div style={{ fontWeight: 700, color: C.blue, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="como-se-usa" tam={26} />Cómo se usa: {ayuda.titulo}</div>
         <button onClick={cerrar} style={{ background: C.blue, color: "#fff", border: "none", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 700, flexShrink: 0 }}>Entendido</button>
       </div>
       {ayuda.pasos.length === 1
@@ -2311,7 +2311,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
           <div style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.teal} 100%)`, color: "#fff", borderRadius: 16, padding: 24, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
               <div>
-                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8 }}>{saludo}, {usuario}! 👋</h1>
+                <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{saludo}, {usuario}! <Icono nombre="saludo" tam={40} /></h1>
                 <p style={{ margin: 0, fontSize: 15, opacity: 0.9, lineHeight: 1.5 }}>
                   {guardiasDia.length > 0 ? (
                     <>Hoy tienes <strong>{guardiasDia.length} guardia{guardiasDia.length !== 1 ? 's' : ''}</strong> asignada{guardiasDia.length !== 1 ? 's' : ''}</>
@@ -2323,7 +2323,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                 </p>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 48 }}>📚</div>
+                <Icono nombre="fecha" tam={60} style={{ marginLeft: "auto" }} />
                 <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
               </div>
             </div>
@@ -4818,7 +4818,7 @@ export default function App() {
                 <div style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.teal} 100%)`, color: "#fff", borderRadius: 16, padding: 24, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
                     <div style={{ flex: 1 }}>
-                      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8 }}>{saludo}, {usuario}! 👋</h1>
+                      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{saludo}, {usuario}! <Icono nombre="saludo" tam={40} /></h1>
                       <p style={{ margin: 0, fontSize: 15, opacity: 0.9, lineHeight: 1.5 }}>
                         Hoy has registrado <strong>{partesHoy} parte{partesHoy !== 1 ? 's' : ''}</strong>
                         {banoHoy > 0 && <> y <strong>{banoHoy} salida{banoHoy !== 1 ? 's' : ''}</strong> al baño</>}
@@ -4826,13 +4826,13 @@ export default function App() {
                       </p>
                       {guardiasHoy > 0 && (
                         <div style={{ marginTop: 12, background: "rgba(255,255,255,0.15)", borderRadius: 8, padding: "8px 12px", border: "1px solid rgba(255,255,255,0.3)" }}>
-                          <strong style={{ fontSize: 14 }}>🔔 Alerta: Tienes {guardiasHoy} guardia{guardiasHoy !== 1 ? 's' : ''} hoy</strong>
+                          <strong style={{ fontSize: 14, display: "inline-flex", alignItems: "center", gap: 8 }}><Icono nombre="alerta" tam={28} />Alerta: Tienes {guardiasHoy} guardia{guardiasHoy !== 1 ? 's' : ''} hoy</strong>
                           <div style={{ fontSize: 12, marginTop: 4, opacity: 0.9 }}>Ve a la sección "Mi Guardia Hoy" para verlas</div>
                         </div>
                       )}
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 48 }}>📚</div>
+                      <Icono nombre="fecha" tam={60} style={{ marginLeft: "auto" }} />
                       <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
                     </div>
                   </div>
@@ -4840,7 +4840,7 @@ export default function App() {
               );
             })()}
 
-            <h2 style={{ color: C.dark, marginTop: 0 }}>📋 Nuevo Parte de Incidencia</h2>
+            <h2 style={{ color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="nuevo-parte" tam={44} />Nuevo Parte de Incidencia</h2>
             {parteGenerado && (
               <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -5110,7 +5110,7 @@ export default function App() {
                 <div style={{ background: `linear-gradient(135deg, ${C.blue} 0%, ${C.teal} 100%)`, color: "#fff", borderRadius: 16, padding: 24, marginBottom: 24, boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
                     <div>
-                      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8 }}>{saludo}, {usuario}! 👋</h1>
+                      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800, marginBottom: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>{saludo}, {usuario}! <Icono nombre="saludo" tam={40} /></h1>
                       <p style={{ margin: 0, fontSize: 15, opacity: 0.9, lineHeight: 1.5 }}>
                         Hoy hay <strong>{guardiaHoy} zona{guardiaHoy !== 1 ? 's' : ''} de guardia</strong> programada{guardiaHoy !== 1 ? 's' : ''} 
                         {partesHoy > 0 && <> y <strong>{partesHoy} parte{partesHoy !== 1 ? 's' : ''}</strong> registrado{partesHoy !== 1 ? 's' : ''}</>}
@@ -5118,7 +5118,7 @@ export default function App() {
                       </p>
                     </div>
                     <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: 48 }}>📚</div>
+                      <Icono nombre="fecha" tam={60} style={{ marginLeft: "auto" }} />
                       <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>{new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}</div>
                     </div>
                   </div>
