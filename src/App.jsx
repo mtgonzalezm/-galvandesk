@@ -1122,7 +1122,7 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
 
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>👥 Gestión de Alumnos</h2>
+      <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="grupos" tam={44} />Gestión de Alumnos</h2>
       <div style={{ background: C.white, borderRadius: 12, marginBottom: 14, display: "flex", boxShadow: "0 2px 8px rgba(0,0,0,0.05)", borderBottom: `2px solid ${C.cream}` }}>
         <button style={stb(subTab === "importar")} onClick={() => setSubTab("importar")}>📥 Importar CSV/Excel</button>
         <button style={stb(subTab === "manual")}   onClick={() => setSubTab("manual")}>✏️ Añadir manual</button>
@@ -1405,7 +1405,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
   // ── Vista principal ──
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>🗓 Planificador de Guardias</h2>
+      <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="horario" tam={44} />Planificador de Guardias</h2>
 
       {planGuardia && (
         <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}>
@@ -1845,7 +1845,7 @@ function FirmasYListas({ profesores, cuadrante, apoyosGuardia, sustitutosGuardia
   const pend = debidas.length - firmadas;
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>✍️ Firmas de guardia y listas</h2>
+      <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="tareas" tam={44} />Firmas de guardia y listas</h2>
       <div className="no-print" style={{ background: C.white, borderRadius: 12, padding: 16, marginBottom: 14, boxShadow: "0 2px 8px rgba(0,0,0,0.06)", display: "flex", gap: 12, alignItems: "end", flexWrap: "wrap" }}>
         <div style={{ flex: 1, minWidth: 180 }}>
           <label style={{ display: "block", fontWeight: 600, fontSize: 13, color: C.dark, marginBottom: 6 }}>Fecha</label>
@@ -2331,7 +2331,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
         );
       })()}
 
-      <h2 style={{ color:C.dark, marginTop:0 }}>🔄 Mi Guardia Hoy</h2>
+      <h2 style={{color:C.dark, marginTop:0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="guardias" tam={44} />Mi Guardia Hoy</h2>
       <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
         <label style={labelStyle}>Soy el/la profesor/a</label>
         <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle} disabled={profesores.includes(usuario)}>
@@ -2690,7 +2690,7 @@ function NotificarAusencia({ usuario, modoJefatura = false, profesores, ausencia
 
   return (
     <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>{modoJefatura ? "📞 Registrar una ausencia comunicada por teléfono" : "📢 Notificar Ausencia"}</h2>
+      <h2 style={{ color:C.dark, marginTop:0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="profe-ausente" tam={44} />{modoJefatura ? "Registrar una ausencia comunicada por teléfono" : "Notificar Ausencia"}</h2>
       {modoJefatura && <p style={{ marginTop: -6, color: C.gray, fontSize: 13 }}>Para cuando un profesor llama al instituto y no puede avisar desde la app. Su guardia y la tarea llegan igual a quien le cubre.</p>}
       {enviado && (
         <div style={{ background:"#E8F5F3", border:`2px solid ${C.teal}`, borderRadius:12, padding:16, marginBottom:16, fontWeight:700, color:C.teal, fontSize:15 }}>
@@ -2857,7 +2857,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
   
   return (
     <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📅 Cuadrante de Guardias</h2>
+      <h2 style={{color:C.dark, marginTop:0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="horario" tam={44} />Cuadrante de Guardias</h2>
       
       {/* SELECTOR DE PROFESOR */}
       <div style={{ background:C.white, borderRadius:12, padding:20, marginBottom:16, boxShadow:"0 2px 10px rgba(0,0,0,0.06)" }}>
@@ -3035,7 +3035,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
   
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Coordinación Diaria de Ausencias</h2>
+      <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="eventos" tam={44} />Coordinación Diaria de Ausencias</h2>
       
       {/* SELECTOR DE FECHA */}
       <div style={{ background: C.white, borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
@@ -3220,7 +3220,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
   
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>💬 Galvángram</h2>
+      <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="mensajes" tam={44} />Galvángram</h2>
       
       {/* TABS */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: `2px solid ${C.light}` }}>
@@ -3386,7 +3386,7 @@ function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia
 
   return (
     <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>🔄 Parte del Día — {diaHoy}</h2>
+      <h2 style={{color:C.dark, marginTop:0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="estado-general" tam={44} />Parte del Día — {diaHoy}</h2>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:12, marginBottom:16 }}>
         {[
           { label:"Zonas de guardia",   value:asignaciones.length,                                   color:C.dark   },
@@ -3461,7 +3461,7 @@ function GestionAusencias({ ausencias, setAusencias, profesores, C, fmt }) {
 
   return (
     <div>
-      <h2 style={{ color:C.dark, marginTop:0 }}>📢 Gestión de Ausencias</h2>
+      <h2 style={{color:C.dark, marginTop:0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="profe-ausente" tam={44} />Gestión de Ausencias</h2>
       <div style={{ background:C.white, borderRadius:12, padding:16, marginBottom:14, boxShadow:"0 2px 8px rgba(0,0,0,0.06)" }}>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
           <div>
@@ -4061,7 +4061,7 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
 
   return (
     <div>
-      <h2 style={{ color: C.dark, marginTop: 0 }}>📈 {esProfe ? "Mis estadísticas e informes" : "Estadísticas y documentos"}</h2>
+      <h2 style={{ color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="estadisticas" tam={44} />{esProfe ? "Mis estadísticas e informes" : "Estadísticas y documentos"}</h2>
       {esProfe && (
         <div className="no-print" style={{ ...tarjeta, borderLeft: `5px solid ${C.teal}` }}>
           <label style={labelStyle}>¿Qué partes quieres analizar?</label>
@@ -4916,7 +4916,7 @@ export default function App() {
         {/* ── Parte de grupo ── */}
         {tab === "parte_grupo" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>👥 Parte de Grupo</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="grupos" tam={44} />Parte de Grupo</h2>
             {grupoGenerado && <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}><strong style={{ color: C.teal }}>✅ {grupoGenerado.total} partes generados para {grupoGenerado.curso} · {fmt(grupoGenerado.ts)}</strong></Card>}
             <Card>
               <div style={{ marginBottom: 16 }}>
@@ -5047,7 +5047,7 @@ export default function App() {
         {/* ── Registrar Guardia ── */}
         {tab === "guardias_prof" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Registrar Guardia</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="guardias" tam={44} />Registrar Guardia</h2>
             {guardiaGenerada && (
               <Card style={{ background: "#E8F5F3", border: `2px solid ${C.teal}`, marginBottom: 20 }}>
                 <strong style={{ color: C.teal }}>✅ Guardia registrada · {fmt(guardiaGenerada.ts)}</strong>
@@ -5083,7 +5083,7 @@ export default function App() {
         {/* ── Mis Partes ── */}
         {tab === "historial" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🗂 Mis Partes Enviados</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="documentos" tam={44} />Mis Partes Enviados</h2>
             {partes.filter(p => p.profesor === fProfesor).length === 0
               ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>No has generado ningún parte aún</Card>
               : partes.filter(p => p.profesor === fProfesor).map(p => <ParteCard key={p.id} parte={p} onVer={() => setShowParte(completar(p))} onPrint={() => pdfParte(completar(p))} />)}
@@ -5126,7 +5126,7 @@ export default function App() {
               );
             })()}
 
-            <h2 style={{ color: C.dark, marginTop: 0, marginBottom: 20 }}>📊 Estado General</h2>
+            <h2 style={{color: C.dark, marginTop: 0, marginBottom: 20, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="dashboard" tam={44} />Estado General</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 24 }}>
               {[
                 { label: "Total Partes", value: partes.length,                                              color: C.dark,   emoji: "📋" },
@@ -5182,7 +5182,7 @@ export default function App() {
         {/* ── Por Curso ── */}
         {tab === "por_curso" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🏫 Partes por Curso / Grupo</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="por-curso" tam={44} />Partes por Curso / Grupo</h2>
             {cursos.map(curso => {
               const pC = partes.filter(p => p.curso === curso);
               const alC = alumnos.filter(a => a.curso === curso);
@@ -5230,7 +5230,7 @@ export default function App() {
         {/* ── Por Alumno ── */}
         {tab === "por_alumno" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>👤 Partes por Alumno</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="por-alumno" tam={44} />Partes por Alumno</h2>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
               <select value={filtCurso} onChange={e => { setFiltCurso(e.target.value); setFiltAlumno(""); }} style={selStyle}><option value="">Todos los cursos</option>{cursos.map(c => <option key={c}>{c}</option>)}</select>
               <select value={filtAlumno} onChange={e => setFiltAlumno(e.target.value)} style={selStyle}><option value="">Seleccionar alumno</option>{alumnos.filter(a => !filtCurso || a.curso === filtCurso).map(a => <option key={a.id} value={a.id}>{a.nombre} — {a.curso}</option>)}</select>
@@ -5291,7 +5291,7 @@ export default function App() {
         {/* ── Todos los Partes ── */}
         {tab === "partes_todos" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>📋 Todos los Partes</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="partes" tam={44} />Todos los Partes</h2>
             <Card>
               <div style={{ fontWeight: 600, color: C.dark, marginBottom: 10 }}>🔍 Filtros</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
@@ -5315,7 +5315,7 @@ export default function App() {
         {/* ── Guardias (Jefatura) ── */}
         {tab === "guardias_jef" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🔄 Registro de Guardias</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="guardias" tam={44} />Registro de Guardias</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 14, marginBottom: 20 }}>
               {[{ label: "Guardias Hoy", value: guardias.filter(g => g.fecha === todayStr()).length, color: C.blue }, { label: "Esta Semana", value: guardias.filter(g => weekKey(g.fecha) === weekKey(new Date())).length, color: C.teal }, { label: "Total", value: guardias.length, color: C.dark }].map(s => (
                 <div key={s.label} style={{ background: C.white, borderRadius: 12, padding: 16, textAlign: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
@@ -5476,7 +5476,7 @@ export default function App() {
         {/* ── Alertas ── */}
         {tab === "alertas" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>🔔 Alertas</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="alertas" tam={44} />Alertas</h2>
             {alertas.length === 0
               ? <Card style={{ textAlign: "center", color: C.gray, padding: 40 }}>Sin alertas</Card>
               : alertas.map(a => {
@@ -5526,7 +5526,7 @@ export default function App() {
         {/* ── Informe ── */}
         {tab === "informe" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>📤 Exportar Informe</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="informe" tam={44} />Exportar Informe</h2>
             
             {/* SELECTOR DE TIPO DE INFORME */}
             <Card style={{ marginBottom: 20 }}>
@@ -5604,7 +5604,7 @@ export default function App() {
         {/* ── Admin Profesores ── */}
         {tab === "admin_profesores" && (
           <div>
-            <h2 style={{ color: C.dark, marginTop: 0 }}>👨‍🏫 Gestión de Profesores</h2>
+            <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="perfil" tam={44} />Gestión de Profesores</h2>
             <Card>
               <h3 style={{ marginTop: 0, color: C.dark }}>Añadir profesor</h3>
               <div style={{ display: "flex", gap: 10 }}>
