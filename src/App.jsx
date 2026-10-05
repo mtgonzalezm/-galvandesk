@@ -3969,7 +3969,7 @@ function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remiten
 // Botones para contactar con la familia de un alumno/a
 // ─── Elegir a quién se envía un aviso ────────────────────────────────────────
 // Correos del centro (Jefatura, Orientación…) configurables en Administración
-const CorreosCentroCtx = createContext({ correos: {}, setCorreos: () => {} });
+const CorreosCentroCtx = createContext({ correos: {}, setCorreos: () => {}, profes: [] });
 const DESTINOS_CENTRO = [
   { id: "jefatura", label: "Jefatura de Estudios", icono: "cargo-jefatura" },
   { id: "orientacion", label: "Orientación", icono: "tutor" },
@@ -3977,7 +3977,8 @@ const DESTINOS_CENTRO = [
 ];
 const correoValido = c => /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(c || "").trim());
 function ElegirDestinatarios({ alumno, tutorNombre, tutorEmail, asunto, cuerpo, porDefecto = ["familia", "tutor"], C }) {
-  const { correos } = useContext(CorreosCentroCtx);
+  const { correos, profes = [] } = useContext(CorreosCentroCtx);
+  const [profesElegidos, setProfesElegidos] = useState([]);
   const opciones = [
     { id: "familia", label: `Familia de ${alumno?.nombre || "el alumno/a"}`, email: alumno?.email, icono: "por-alumno" },
     { id: "tutor", label: `Tutor/a${tutorNombre ? `: ${tutorNombre}` : ""}`, email: tutorEmail, icono: "tutor" },
@@ -3986,7 +3987,9 @@ function ElegirDestinatarios({ alumno, tutorNombre, tutorEmail, asunto, cuerpo, 
   const [marcados, setMarcados] = useState(() => porDefecto.filter(id => correoValido(opciones.find(o => o.id === id)?.email)));
   const [otro, setOtro] = useState("");
   const [copiado, setCopiado] = useState(false);
-  const lista = [...opciones.filter(o => marcados.includes(o.id)).map(o => o.email.trim()), ...otro.split(/[,;\s]+/).filter(correoValido)];
+  const lista = [...opciones.filter(o => marcados.includes(o.id)).map(o => o.email.trim()),
+    ...profesElegidos.map(n => profes.find(p => p.nombre === n)?.email).filter(correoValido),
+    ...otro.split(/[,;\s]+/).filter(correoValido)];
   const unicos = [...new Set(lista)];
   const cambia = id => setMarcados(m => m.includes(id) ? m.filter(x => x !== id) : [...m, id]);
   const cuerpoCorto = cuerpo && cuerpo.length > 1800 ? cuerpo.slice(0, 1800) + "\n[…] (el texto completo va en el PDF adjunto)" : cuerpo || "";
@@ -4007,7 +4010,30 @@ function ElegirDestinatarios({ alumno, tutorNombre, tutorEmail, asunto, cuerpo, 
           );
         })}
       </div>
-      <input value={otro} onChange={e => setOtro(e.target.value)} placeholder="Otro correo (opcional): orientacion@…, otro profesor…" aria-label="Otro correo"
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+        <Icono nombre="selecciona-profesor" tam={26} />
+        <select value="" aria-label="Añadir a otro profesor/a" onChange={e => { const n = e.target.value; if (n) setProfesElegidos(prev => prev.includes(n) ? prev : [...prev, n]); }}
+          style={{ flex: "1 1 220px", padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 12, background: "#fff" }}>
+          <option value="">Añadir a otro profesor/a…</option>
+          {[...profes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map(p => (
+            <option key={p.nombre} value={p.nombre} disabled={!correoValido(p.email) || profesElegidos.includes(p.nombre)}>
+              {p.nombre}{correoValido(p.email) ? ` · ${p.email}` : " · sin correo"}
+            </option>
+          ))}
+        </select>
+      </div>
+      {profesElegidos.length > 0 && (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+          {profesElegidos.map(n => (
+            <span key={n} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "#EEF5F8", color: C.dark, borderRadius: 20, padding: "4px 6px 4px 10px", fontSize: 12, fontWeight: 600 }}>
+              {n}
+              <button aria-label={`Quitar a ${n}`} onClick={() => setProfesElegidos(prev => prev.filter(x => x !== n))}
+                style={{ border: "none", background: "#fff", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontWeight: 800, color: C.gray, lineHeight: "18px", padding: 0 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <input value={otro} onChange={e => setOtro(e.target.value)} placeholder="Otro correo (opcional): PTSC, familia separada…" aria-label="Otro correo"
         style={{ width: "100%", marginTop: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 12, boxSizing: "border-box" }} />
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
         <a href={unicos.length ? mailto : undefined} onClick={e => { if (!unicos.length) e.preventDefault(); }}
@@ -4741,7 +4767,7 @@ export default function App() {
       ];
 
   return (
-    <CorreosCentroCtx.Provider value={{ correos: correosCentro, setCorreos: setCorreosCentro }}>
+    <CorreosCentroCtx.Provider value={{ correos: correosCentro, setCorreos: setCorreosCentro, profes: profesores.map(p => ({ nombre: p, email: cuentas[p]?.email || (MODO_DEMO ? correoDemo(p) : "") })) }}>
     <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif", width: "100%" }}>
       <style>{`
         * { box-sizing: border-box; }
@@ -5768,6 +5794,9 @@ export default function App() {
                       <Icono nombre={ICONO_CARGO[cuenta.cargo || "profesor"] || "cargo-profesor"} tam={40} />
                       <div>
                         <div style={{ fontWeight: 600, color: C.dark }}>{p}{p === usuario ? " (tú)" : ""}</div>
+                        <input type="email" aria-label={`Correo de ${p}`} placeholder={MODO_DEMO ? correoDemo(p) : "correo@educa.madrid.org"} value={cuenta.email || ""}
+                          onChange={e => setCuentas(prev => ({ ...prev, [p]: { ...(prev[p] || {}), email: e.target.value } }))}
+                          style={{ margin: "4px 0", padding: "5px 8px", borderRadius: 6, border: `1px solid ${cuenta.email && !correoValido(cuenta.email) ? C.salmon : "#d1d5db"}`, fontSize: 12, width: 260, maxWidth: "100%" }} />
                         <div style={{ fontSize: 11, color: cuenta.clave ? C.teal : C.gray, display: "flex", alignItems: "center", gap: 4 }}>{cuenta.clave ? "Clave creada" : <><Icono nombre="sin-clave" tam={18} />Sin clave: la creará al entrar por primera vez</>}</div>
                       </div>
                     </div>
