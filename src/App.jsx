@@ -2,6 +2,11 @@ import { useState, useEffect, useRef } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 // ─── Paleta de colores ───────────────────────────────────────────────────────
+// ─── Nombre de la aplicación y del centro (cámbialos aquí para otro instituto) ─
+const APP = "RumboAula";
+const CENTRO = "IES Enrique Tierno Galván";
+const CIUDAD = "Madrid";
+
 const C = {
   cream: "#F4F0E4", teal: "#44A194", blue: "#00B7B5", salmon: "#EC8F8D",
   dark: "#2C4A52", white: "#FFFFFF", gray: "#64748b", light: "#F8F6F0",
@@ -293,8 +298,8 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
       <style>{`* { box-sizing: border-box; } body { margin: 0; }`}</style>
       <div style={{ background: C.white, borderRadius: 20, padding: "36px 32px", maxWidth: 420, width: "100%", textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
         <div style={{ fontSize: 52, marginBottom: 4 }}>🏫</div>
-        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>GalvánDesk</h1>
+        <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
+        <h1 style={{ color: C.dark, margin: "0 0 4px", fontSize: 28 }}>{APP}</h1>
         <p style={{ color: C.gray, marginBottom: 20, fontSize: 13 }}>Sistema de Gestión de Incidencias</p>
         <AvisoDemo />
         {globoBienvenida}
@@ -450,7 +455,7 @@ const nombreArchivo = t => sinEmoji(t).normalize("NFD").replace(/[\u0300-\u036f]
 function cabeceraPDF(doc, titulo, subtitulo) {
   const w = doc.internal.pageSize.getWidth();
   doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
-  doc.text("IES ENRIQUE TIERNO GALVÁN · MADRID", w / 2, 14, { align: "center" });
+  doc.text(`${CENTRO.toUpperCase()} · ${CIUDAD.toUpperCase()}`, w / 2, 14, { align: "center" });
   doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(...OSCURO);
   doc.text(titulo, w / 2, 22, { align: "center" });
   if (subtitulo) { doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(...GRIS); doc.text(sinEmoji(subtitulo), w / 2, 28, { align: "center", maxWidth: w - 28 }); }
@@ -463,7 +468,7 @@ function guardarPDF(doc, archivo) {
   const hoy = new Date().toLocaleDateString("es-ES");
   for (let i = 1; i <= n; i++) {
     doc.setPage(i); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
-    doc.text(`GalvánDesk · IES Enrique Tierno Galván · ${hoy} · Página ${i} de ${n}`, w / 2, h - 8, { align: "center" });
+    doc.text(`${APP} · ${CENTRO} · ${hoy} · Página ${i} de ${n}`, w / 2, h - 8, { align: "center" });
   }
   // Si el visor está abierto en la página, el informe se ve primero en pantalla
   if (visor.pdf) visor.pdf({ url: URL.createObjectURL(doc.output("blob")), archivo, paginas: n });
@@ -573,7 +578,7 @@ const textoTipificacion = p => {
 function textoParte(parte) {
   const g = gObj(parte.gravedad);
   const tip = TIPIFICACION[parte.gravedad]?.find(t => t.id === parte.tipificacion)?.label;
-  return `PARTE DE INCIDENCIA — IES Enrique Tierno Galván (Madrid)
+  return `PARTE DE INCIDENCIA — ${CENTRO} (${CIUDAD})
 Ref.: PARTE-${parte.id}
 
 Alumno/a: ${parte.alumno}
@@ -689,7 +694,7 @@ function PrintParte({ parte, onClose }) {
   return (
     <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "Georgia, serif" }}>
       <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: "system-ui" }}>GalvánDesk · Vista previa del parte</span>
+        <span style={{ fontWeight: 700, fontSize: 14, fontFamily: "system-ui" }}>{APP} · Vista previa del parte</span>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => pdfParte(parte)} style={{ background: "#16a34a", border: "none", color: "#fff", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontWeight: 700, fontFamily: "system-ui" }}>⬇️ Descargar PDF</button>
           <CopyBtn getText={() => texto} />
@@ -698,8 +703,8 @@ function PrintParte({ parte, onClose }) {
       </div>
       <div style={{ maxWidth: 680, margin: "40px auto", padding: "0 24px 60px" }}>
         <div style={{ textAlign: "center", borderBottom: `3px solid ${C.teal}`, paddingBottom: 16, marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: C.gray, marginBottom: 4, letterSpacing: 2 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.dark, fontFamily: "system-ui" }}>GalvánDesk — Parte de Incidencia</div>
+          <div style={{ fontSize: 11, color: C.gray, marginBottom: 4, letterSpacing: 2 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.dark, fontFamily: "system-ui" }}>{APP} — Parte de Incidencia</div>
           <div style={{ marginTop: 10 }}>
             <span style={{ display: "inline-block", padding: "6px 20px", borderRadius: 8, fontWeight: 700, fontSize: 15, background: g.bg, color: g.color, border: `2px solid ${g.color}` }}>{g.label} — {g.desc}</span>
           </div>
@@ -735,7 +740,7 @@ function PrintParte({ parte, onClose }) {
           ))}
         </div>
         <div style={{ marginTop: 32, textAlign: "center", color: "#aaa", fontSize: 11, borderTop: "1px dashed #ccc", paddingTop: 12 }}>
-          GalvánDesk · IES Enrique Tierno Galván · Ref: PARTE-{parte.id}
+          {APP} · {CENTRO} · Ref: PARTE-{parte.id}
         </div>
       </div>
       <style>{`@media print{.no-print{display:none!important}}`}</style>
@@ -760,7 +765,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
       filtros.filtFechaDesde && `Desde: ${fmtD(filtros.filtFechaDesde)}`,
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
-    const textoPlano = `GALVÁNDESK — INFORME DE PARTES\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} (tutor/a: ${tutorDeParte(p, tutores) || "-"}) | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
+    const textoPlano = `${APP.toUpperCase()} — INFORME DE PARTES\n${CENTRO} · ${CIUDAD}\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total: ${partes.length} | Leves: ${res.leve} | Graves: ${res.grave} | Muy Graves: ${res.muy_grave}\n\n${"─".repeat(90)}\n${partes.map((p, i) => `${i + 1}. ${fmt(p.ts)} | ${p.hora || "-"} | ${p.alumno} | ${p.curso} (tutor/a: ${tutorDeParte(p, tutores) || "-"}) | ${p.tipo} | ${p.gravedad.toUpperCase()} | ${p.profesor}\n   ${p.descripcion}`).join("\n")}\n${"─".repeat(90)}`;
     
     const resumen = resumenPorGrupo(partes, tutores);
     const descargarPDF = () => { pdfInformePartes(partes, filtrosTexto, tutores); onDescargado?.({ tipo: "partes", filtrosTexto, ids: partes.map(p => p.id) }); };
@@ -768,7 +773,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Partes</span>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>{APP} — Informe de Partes</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
             <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
@@ -777,8 +782,8 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
         </div>
         <div data-print-informe style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
           <div style={{ textAlign: "center", borderBottom: `3px solid ${C.teal}`, paddingBottom: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>GalvánDesk — Informe de Partes</div>
+            <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>{APP} — Informe de Partes</div>
             <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>Generado el {fecha} · Jefatura de Estudios</div>
             {filtrosTexto && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Filtros: {filtrosTexto}</div>}
           </div>
@@ -840,7 +845,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
           </table>
           </div>
           <div style={{ marginTop: 24, textAlign: "center", color: "#aaa", fontSize: 11, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
-            GalvánDesk · IES Enrique Tierno Galván · Madrid · {fecha}
+            {APP} · {CENTRO} · {CIUDAD} · {fecha}
           </div>
         </div>
         <style>{`@media print{.no-print{display:none!important}}`}</style>
@@ -852,14 +857,14 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
       filtros.filtFechaDesde && `Desde: ${fmtD(filtros.filtFechaDesde)}`,
       filtros.filtFechaHasta && `Hasta: ${fmtD(filtros.filtFechaHasta)}`,
     ].filter(Boolean).join(" · ");
-    const textoPlano = `GALVÁNDESK — INFORME DE SALIDAS AL BAÑO\nIES Enrique Tierno Galván · Madrid\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts || b.salida)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor || "-"}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
+    const textoPlano = `${APP.toUpperCase()} — INFORME DE SALIDAS AL BAÑO\n${CENTRO} · ${CIUDAD}\nGenerado el ${fecha}\n${filtrosTexto ? `Filtros: ${filtrosTexto}\n` : ""}\nRESUMEN: Total de salidas: ${banos.length}\n\n${"─".repeat(90)}\n${banos.map((b, i) => `${i + 1}. ${fmt(b.ts || b.salida)} | ${b.alumno} | ${b.curso} | Autorizado por: ${b.profesor || "-"}\n   Motivo: ${b.motivo || "-"}`).join("\n")}\n${"─".repeat(90)}`;
     
     const descargarPDF = () => { pdfInformeBanos(banos, filtrosTexto); onDescargado?.({ tipo: "banos", filtrosTexto, ids: banos.map(b => b.id) }); };
     
     return (
       <div style={{ position: "fixed", inset: 0, background: "#fff", zIndex: 1000, overflowY: "auto", fontFamily: "system-ui, sans-serif" }}>
         <div className="no-print" style={{ background: C.dark, color: "#fff", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-          <span style={{ fontWeight: 700, fontSize: 14 }}>GalvánDesk — Informe de Baños</span>
+          <span style={{ fontWeight: 700, fontSize: 14 }}>{APP} — Informe de Baños</span>
           <div style={{ display: "flex", gap: 8 }}>
             <CopyBtn getText={() => textoPlano} />
             <button onClick={descargarPDF} style={{ background: "rgba(76, 175, 80, 0.8)", border: "none", color: "#fff", borderRadius: 8, padding: "8px 18px", cursor: "pointer", fontWeight: 700 }}>⬇️ Descargar PDF</button>
@@ -868,8 +873,8 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
         </div>
         <div data-print-informe style={{ maxWidth: 900, margin: "30px auto", padding: "0 24px 60px" }}>
           <div style={{ textAlign: "center", borderBottom: `3px solid ${C.blue}`, paddingBottom: 16, marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>IES ENRIQUE TIERNO GALVÁN · MADRID</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>GalvánDesk — Informe de Salidas al Baño</div>
+            <div style={{ fontSize: 11, color: C.gray, letterSpacing: 2, marginBottom: 4 }}>{CENTRO.toUpperCase()} · {CIUDAD.toUpperCase()}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: C.dark }}>{APP} — Informe de Salidas al Baño</div>
             <div style={{ color: C.gray, fontSize: 13, marginTop: 4 }}>Generado el {fecha} · Jefatura de Estudios</div>
             {filtrosTexto && <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>Filtros: {filtrosTexto}</div>}
           </div>
@@ -902,7 +907,7 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
             </tbody>
           </table>
           <div style={{ marginTop: 24, textAlign: "center", color: "#aaa", fontSize: 11, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
-            GalvánDesk · IES Enrique Tierno Galván · Madrid · {fecha}
+            {APP} · {CENTRO} · {CIUDAD} · {fecha}
           </div>
         </div>
         <style>{`@media print{.no-print{display:none!important}}`}</style>
@@ -1328,7 +1333,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
         ← Volver al listado
       </button>
       <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, borderRadius: "14px 14px 0 0", padding: "20px 24px", color: "#fff" }}>
-        <div style={{ fontSize: 11, opacity: .7, letterSpacing: 1, marginBottom: 4 }}>PLAN DE GUARDIA · IES ENRIQUE TIERNO GALVÁN</div>
+        <div style={{ fontSize: 11, opacity: .7, letterSpacing: 1, marginBottom: 4 }}>PLAN DE GUARDIA · {CENTRO.toUpperCase()}</div>
         <div style={{ fontSize: 20, fontWeight: 800 }}>👤 {verPlan.profesorAusente}</div>
         <div style={{ fontSize: 13, opacity: .85, marginTop: 4 }}>
           📅 {verPlan.multidia ? `${fmtD(verPlan.fecha)} → ${fmtD(verPlan.fechaFin)}` : fmtD(verPlan.fecha)} · {verPlan.motivo}
@@ -3721,7 +3726,7 @@ async function excelPeriodo(est, periodo, tutores = {}, alumnos = [], soloAlumna
       .map(l => [fecha(l.fecha), l.hora, l.curso, l.profesor, horaCorta(l.ts), (l.ausentes || []).length, (l.ausentes || []).map(x => x.nombre).join(", ")]),
     [11, 9, 10, 22, 11, 11, 60]);
 
-  const archivo = `galvandesk-datos-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.xlsx`;
+  const archivo = `rumboaula-datos-${periodo.desde}${periodo.hasta !== periodo.desde ? `-a-${periodo.hasta}` : ""}.xlsx`;
   const descargar = async () => {
     const XLSX = await import("xlsx");
     const libro = XLSX.utils.book_new();
@@ -3823,7 +3828,7 @@ function textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores 
   const firma = remitente || tutor || "El equipo docente";
   return `Estimada familia de ${alumno.nombre} (${alumno.curso}):
 
-Les escribimos desde el IES Enrique Tierno Galván para informarles de la convivencia de ${alumno.nombre} durante ${periodo.texto}.
+Les escribimos desde el ${CENTRO} para informarles de la convivencia de ${alumno.nombre} durante ${periodo.texto}.
 
 Resumen:
 - Partes: ${partes.length} (${d.leve} leves, ${d.grave} graves y ${d.muy_grave} muy graves)${d.faltas[0] ? `\n- Lo que más se repite: ${d.faltas[0][0]} (${d.faltas[0][1]} ${d.faltas[0][1] === 1 ? "vez" : "veces"})` : ""}
@@ -4510,7 +4515,7 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: `linear-gradient(135deg,${C.dark},${C.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui,sans-serif" }}>
       <div style={{ color: "#fff", textAlign: "center" }}>
         <div style={{ fontSize: 52 }}>🏫</div>
-        <div style={{ fontSize: 18, fontWeight: 600, marginTop: 12 }}>Cargando GalvánDesk…</div>
+        <div style={{ fontSize: 18, fontWeight: 600, marginTop: 12 }}>Cargando {APP}…</div>
       </div>
     </div>
   );
@@ -4607,8 +4612,8 @@ export default function App() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span className="gd-logo" style={{ fontSize: 26 }}>🏫</span>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .5 }}>GalvánDesk</div>
-              <div style={{ fontSize: 11, opacity: .8 }}>IES Enrique Tierno Galván · {perfil.label}</div>
+              <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: .5 }}>{APP}</div>
+              <div style={{ fontSize: 11, opacity: .8 }}>{CENTRO} · {perfil.label}</div>
             </div>
           </div>
         </div>
@@ -5704,7 +5709,7 @@ export default function App() {
           <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: parteGrande ? 0 : 16, maxWidth: parteGrande ? "none" : 760, width: "100%", height: parteGrande ? "100%" : "auto", maxHeight: parteGrande ? "100%" : "92vh", overflowY: "auto", fontSize: parteGrande ? 18 : 15, zoom: parteGrande ? 1.25 : 1 }}>
             <div style={{ position: "sticky", top: 0, zIndex: 2, background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "16px 24px", borderRadius: parteGrande ? 0 : "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
               <div>
-                <div style={{ fontWeight: 700 }}>GalvánDesk · Parte de Incidencia</div>
+                <div style={{ fontWeight: 700 }}>{APP} · Parte de Incidencia</div>
                 <div style={{ fontSize: 12, opacity: .8 }}>Ref: PARTE-{showParte.id}</div>
               </div>
               <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
