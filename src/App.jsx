@@ -259,7 +259,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
       ].map(b => (
         <button key={b.txt} onClick={() => { if (!ejemploListo) cargarEjemplo(); b.accion(); }}
           style={{ display: "block", width: "100%", textAlign: "left", padding: "10px 14px", marginBottom: 8, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 10, cursor: "pointer" }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>{b.txt}</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.dark }}><ConIcono texto={b.txt} tam={26} /></div>
           <div style={{ fontSize: 11, color: C.gray }}>{b.sub}</div>
         </button>
       ))}
@@ -413,9 +413,35 @@ const Card = ({ children, style = {} }) => (
   <div style={{ background: C.white, borderRadius: 14, padding: 20, boxShadow: "0 2px 12px rgba(0,0,0,0.07)", marginBottom: 14, ...style }}>{children}</div>
 );
 
+// ─── Iconos de la app (public/iconos) ───────────────────────────────────────
+// Sustituyen al emoji del principio de cada etiqueta; el resto del texto se mantiene.
+const ICONO_EMOJI = {
+  "📊": "dashboard", "🏫": "por-curso", "👤": "por-alumno", "📋": "partes", "👨‍🎓": "partes", "🚻": "banos",
+  "🔔": "alertas", "📤": "informe", "📄": "informe", "📈": "estadisticas", "🔄": "guardias", "💬": "mensajes",
+  "📢": "profe-ausente", "🗂": "documentos", "📅": "horario", "👥": "grupos", "✍": "tareas", "⚙": "configuracion",
+  "👨‍🏫": "perfil", "🟡": "leve", "⚠": "grave", "🔴": "muy-grave",
+};
+const ICONO_TEXTO = [[/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
+function iconoDe(texto) {
+  const m = String(texto ?? "").match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*\uFE0F?)\s*(.*)$/su);
+  if (!m) return { icono: null, resto: texto };
+  const emoji = m[1].replace(/\uFE0F/g, ""), resto = m[2];
+  const porTexto = ICONO_TEXTO.find(([re]) => re.test(resto))?.[1];
+  const icono = porTexto || ICONO_EMOJI[emoji];
+  return icono ? { icono, resto } : { icono: null, resto: texto };
+}
+const Icono = ({ nombre, tam = 24, style = {} }) => (
+  <img src={`/iconos/${nombre}.png`} alt="" width={tam} height={tam} style={{ width: tam, height: tam, borderRadius: Math.round(tam * 0.22), flexShrink: 0, display: "block", ...style }} />
+);
+function ConIcono({ texto, tam = 24, gap = 8 }) {
+  const { icono, resto } = iconoDe(texto);
+  if (!icono) return <>{texto}</>;
+  return <span style={{ display: "inline-flex", alignItems: "center", gap, verticalAlign: "middle" }}><Icono nombre={icono} tam={tam} /><span>{resto}</span></span>;
+}
+
 const Badge = ({ g }) => {
   const gv = gObj(g);
-  return <span style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}>{gv.label}</span>;
+  return <span style={{ background: gv.bg, color: gv.color, borderRadius: 8, padding: "3px 10px 3px 4px", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center" }}><ConIcono texto={gv.label} tam={20} gap={5} /></span>;
 };
 
 const InfoRow = ({ label, value }) => (
@@ -4625,7 +4651,7 @@ export default function App() {
             onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}
             style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600, transition: "background .2s" }}>
-            Salir
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icono nombre="fuera-ahora" tam={22} />Salir</span>
           </button>
         </div>
       </div>
@@ -4653,7 +4679,7 @@ export default function App() {
                 boxShadow: moduloProfesor === m.id ? "0 4px 12px rgba(255, 229, 42, 0.3)" : "0 2px 6px rgba(0,0,0,0.05)",
                 transform: moduloProfesor === m.id ? "translateY(-2px)" : "translateY(0)"
               }}>
-              {m.label}
+              <ConIcono texto={m.label} tam={28} />
             </button>
           ))}
         </div>
@@ -4682,7 +4708,7 @@ export default function App() {
                 boxShadow: moduloJefatura === m.id ? "0 4px 12px rgba(255, 229, 42, 0.3)" : "0 2px 6px rgba(0,0,0,0.05)",
                 transform: moduloJefatura === m.id ? "translateY(-2px)" : "translateY(0)"
               }}>
-              {m.label}
+              <ConIcono texto={m.label} tam={28} />
             </button>
           ))}
         </div>
@@ -4710,7 +4736,7 @@ export default function App() {
                 boxShadow: moduloJefatura === m.id ? `0 4px 12px ${m.color}44` : "0 2px 6px rgba(0,0,0,0.05)",
                 transform: moduloJefatura === m.id ? "translateY(-2px)" : "translateY(0)"
               }}>
-              {m.label}
+              <ConIcono texto={m.label} tam={28} />
             </button>
           ))}
         </div>
@@ -4736,7 +4762,7 @@ export default function App() {
               boxShadow: tab === t.id ? `0 4px 12px ${t.color}44` : "0 1px 3px rgba(0,0,0,0.05)",
               transform: tab === t.id ? "translateY(-1px)" : "translateY(0)"
             }}>
-            {t.label}
+            <ConIcono texto={t.label} tam={26} />
           </button>
         ))}
       </div>
