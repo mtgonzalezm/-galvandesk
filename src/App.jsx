@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 // ─── Paleta de colores ───────────────────────────────────────────────────────
@@ -993,13 +993,12 @@ function PrintInforme({ type = "partes", partes, banos, filtros, tutores = {}, o
 // ─── Cómo avisar a la familia y a Jefatura ─────────────────────────────────
 // La app no envía correos: el profesor lo manda desde su correo del centro.
 function ComoAvisar({ parte }) {
-  const direcciones = [parte.email, parte.tutorEmail].filter(Boolean).join(", ");
   const btn = { border: "none", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 };
   return (
     <div style={{ marginTop: 14, background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 14, textAlign: "left" }}>
       <div style={{ fontWeight: 700, color: C.dark, fontSize: 14, marginBottom: 6 }}><Ic n="mensaje-enviar" tam={20} />Cómo avisar a la familia y a Jefatura</div>
       <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.55 }}>
-        Escribe un correo desde tu cuenta del centro a la familia y a Jefatura (con el tutor/a en copia) y elige una de estas dos formas:
+        Elige abajo a quién se lo envías y pulsa «Abrir en mi correo». Para el contenido, elige una de estas dos formas:
         <ol style={{ margin: "6px 0 10px", paddingLeft: 20 }}>
           <li><strong>Descarga el PDF</strong> y adjúntalo al correo.</li>
           <li><strong>Copia el texto</strong> del parte y pégalo en el cuerpo del correo.</li>
@@ -1008,8 +1007,9 @@ function ComoAvisar({ parte }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button onClick={() => pdfParte(parte)} style={{ ...btn, background: "#16a34a", color: "#fff" }}>⬇️ Descargar PDF</button>
         <CopyBtn getText={() => textoParte(parte)} label="📋 Copiar texto" />
-        {direcciones && <CopyBtn getText={() => direcciones} label="✉️ Copiar correos (familia y tutor/a)" />}
       </div>
+      <ElegirDestinatarios alumno={{ nombre: parte.alumno, email: parte.email }} tutorNombre={parte.tutor} tutorEmail={parte.tutorEmail}
+        asunto={`Parte de incidencia · ${parte.alumno} (${parte.curso}) · PARTE-${parte.id}`} cuerpo={textoParte(parte)} porDefecto={["familia", "tutor", "jefatura"]} C={C} />
       <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>La app no envía correos: se mandan desde tu correo del centro, que es el canal oficial.</div>
     </div>
   );
@@ -3967,6 +3967,82 @@ function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remiten
 }
 
 // Botones para contactar con la familia de un alumno/a
+// ─── Elegir a quién se envía un aviso ────────────────────────────────────────
+// Correos del centro (Jefatura, Orientación…) configurables en Administración
+const CorreosCentroCtx = createContext({ correos: {}, setCorreos: () => {} });
+const DESTINOS_CENTRO = [
+  { id: "jefatura", label: "Jefatura de Estudios", icono: "cargo-jefatura" },
+  { id: "orientacion", label: "Orientación", icono: "tutor" },
+  { id: "direccion", label: "Dirección", icono: "cargo-direccion" },
+];
+const correoValido = c => /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(String(c || "").trim());
+function ElegirDestinatarios({ alumno, tutorNombre, tutorEmail, asunto, cuerpo, porDefecto = ["familia", "tutor"], C }) {
+  const { correos } = useContext(CorreosCentroCtx);
+  const opciones = [
+    { id: "familia", label: `Familia de ${alumno?.nombre || "el alumno/a"}`, email: alumno?.email, icono: "por-alumno" },
+    { id: "tutor", label: `Tutor/a${tutorNombre ? `: ${tutorNombre}` : ""}`, email: tutorEmail, icono: "tutor" },
+    ...DESTINOS_CENTRO.map(d => ({ ...d, email: correos?.[d.id] })),
+  ];
+  const [marcados, setMarcados] = useState(() => porDefecto.filter(id => correoValido(opciones.find(o => o.id === id)?.email)));
+  const [otro, setOtro] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  const lista = [...opciones.filter(o => marcados.includes(o.id)).map(o => o.email.trim()), ...otro.split(/[,;\s]+/).filter(correoValido)];
+  const unicos = [...new Set(lista)];
+  const cambia = id => setMarcados(m => m.includes(id) ? m.filter(x => x !== id) : [...m, id]);
+  const cuerpoCorto = cuerpo && cuerpo.length > 1800 ? cuerpo.slice(0, 1800) + "\n[…] (el texto completo va en el PDF adjunto)" : cuerpo || "";
+  const mailto = `mailto:${unicos.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(asunto || "")}&body=${encodeURIComponent(cuerpoCorto)}`;
+  const copiar = async () => { try { await navigator.clipboard.writeText(unicos.join(", ")); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { window.prompt("Copia los correos:", unicos.join(", ")); } };
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: 12, marginTop: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: C.dark, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}><Ic n="selecciona-profesor" tam={22} />¿A quién se lo envías?</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 6 }}>
+        {opciones.map(o => {
+          const ok = correoValido(o.email);
+          return (
+            <label key={o.id} title={ok ? o.email : "Sin correo registrado"} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, border: `1px solid ${marcados.includes(o.id) && ok ? C.teal : "#e5e7eb"}`, background: marcados.includes(o.id) && ok ? "#F0FAF7" : "#fff", cursor: ok ? "pointer" : "not-allowed", opacity: ok ? 1 : .55 }}>
+              <input type="checkbox" checked={ok && marcados.includes(o.id)} disabled={!ok} onChange={() => cambia(o.id)} />
+              <Icono nombre={o.icono} tam={26} />
+              <span style={{ fontSize: 12, lineHeight: 1.25 }}><b style={{ color: C.dark }}>{o.label}</b><br /><span style={{ color: C.gray }}>{ok ? o.email : DESTINOS_CENTRO.some(d => d.id === o.id) ? "Sin correo: añádelo en Administración" : "Sin correo registrado"}</span></span>
+            </label>
+          );
+        })}
+      </div>
+      <input value={otro} onChange={e => setOtro(e.target.value)} placeholder="Otro correo (opcional): orientacion@…, otro profesor…" aria-label="Otro correo"
+        style={{ width: "100%", marginTop: 8, padding: "8px 10px", borderRadius: 8, border: "1px solid #d1d5db", fontSize: 12, boxSizing: "border-box" }} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+        <a href={unicos.length ? mailto : undefined} onClick={e => { if (!unicos.length) e.preventDefault(); }}
+          style={{ flex: "1 1 200px", textAlign: "center", textDecoration: "none", padding: "10px 12px", borderRadius: 10, background: unicos.length ? C.teal : "#cbd5e1", color: "#fff", fontWeight: 800, fontSize: 13, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: unicos.length ? "pointer" : "not-allowed" }}>
+          <Icono nombre="boton-enviar" tam={24} />Abrir en mi correo ({unicos.length})
+        </a>
+        <button onClick={copiar} disabled={!unicos.length} style={{ flex: "1 1 160px", padding: "10px 12px", borderRadius: 10, border: `2px solid ${C.teal}`, background: "#F0FAF7", color: C.dark, fontWeight: 700, fontSize: 12, cursor: unicos.length ? "pointer" : "not-allowed" }}>
+          {copiado ? "✅ Correos copiados" : "Copiar solo los correos"}
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: C.gray, marginTop: 6 }}>Se abre tu programa de correo con los destinatarios, el asunto y el texto. Revisa y adjunta el PDF antes de enviarlo.</div>
+    </div>
+  );
+}
+
+// Correos del centro, en Administración
+function CorreosCentro({ C }) {
+  const { correos, setCorreos } = useContext(CorreosCentroCtx);
+  return (
+    <div style={{ background: "#fff", borderRadius: 12, padding: 20, marginBottom: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
+      <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="mensaje-enviar" tam={40} />Correos del centro para los avisos</h3>
+      <div style={{ fontSize: 12, color: C.gray, marginBottom: 12 }}>Aparecen como destinatarios al avisar de un parte o enviar un informe a la familia.</div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 10 }}>
+        {DESTINOS_CENTRO.map(d => (
+          <label key={d.id} style={{ fontSize: 12, fontWeight: 700, color: C.dark }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><Icono nombre={d.icono} tam={24} />{d.label}</span>
+            <input type="email" value={correos?.[d.id] || ""} placeholder="correo@educa.madrid.org" onChange={e => setCorreos(prev => ({ ...prev, [d.id]: e.target.value }))}
+              style={{ width: "100%", padding: "8px 10px", borderRadius: 8, border: `1px solid ${correos?.[d.id] && !correoValido(correos[d.id]) ? C.salmon : "#d1d5db"}`, fontSize: 13, boxSizing: "border-box" }} />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C }) {
   const [copiado, setCopiado] = useState("");
   const copiar = async (texto, que) => {
@@ -3974,7 +4050,6 @@ function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C
     catch { window.prompt("Copia el texto:", texto); }
   };
   if (!alumno) return null;
-  const correos = [alumno.email, tutores[alumno.curso]?.email].filter(Boolean).join(", ");
   const btn = { flex: "1 1 150px", padding: "10px 12px", borderRadius: 10, border: `2px solid ${C.teal}`, background: "#F0FAF7", color: C.dark, fontWeight: 700, fontSize: 12, cursor: "pointer" };
   return (
     <div style={{ background: "#FFFBEB", border: "1px solid #fcd34d", borderRadius: 10, padding: 12, marginTop: 10 }}>
@@ -3983,9 +4058,9 @@ function ContactoFamilia({ alumno, partes, banos, periodo, tutores, remitente, C
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button style={btn} onClick={() => pdfInformeFamilia(alumno, partes, banos, periodo, tutores, remitente)}><Ic n="informe" tam={20} />Ver informe para la familia</button>
         <button style={btn} onClick={() => copiar(textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores), "texto")}>{copiado === "texto" ? "✅ Copiado" : "📋 Copiar texto del correo"}</button>
-        <button style={btn} disabled={!correos} onClick={() => copiar(correos, "correos")}>{copiado === "correos" ? "✅ Copiado" : "📧 Copiar correos"}</button>
       </div>
-      <div style={{ fontSize: 11, color: C.gray, marginTop: 8 }}>Escribe desde tu correo del centro: pega el texto y adjunta el PDF. «Copiar correos» incluye la familia y el tutor/a.</div>
+      <ElegirDestinatarios alumno={alumno} tutorNombre={tutores[alumno.curso]?.tutor || alumno.tutor} tutorEmail={tutores[alumno.curso]?.email}
+        asunto={`Convivencia de ${alumno.nombre} (${alumno.curso}) · ${periodo.texto}`} cuerpo={textoInformeFamilia(alumno, partes, banos, periodo, remitente, tutores)} C={C} />
     </div>
   );
 }
@@ -4313,7 +4388,8 @@ export default function App() {
   const [informes, setInformes]   = useState([]);           // informes descargados
   const [loading, setLoading]     = useState(true);
   const [showParte, setShowParte] = useState(null);
-  const [avisosFamilia, setAvisosFamilia] = useState({}); // avisos a familias ya hechos: {id: {n, ts, por}}
+  const [avisosFamilia, setAvisosFamilia] = useState({});
+  const [correosCentro, setCorreosCentro] = useState(MODO_DEMO ? { jefatura: "jefatura@ejemplo.es", orientacion: "orientacion@ejemplo.es", direccion: "direccion@ejemplo.es" } : {}); // {jefatura, orientacion, direccion} // avisos a familias ya hechos: {id: {n, ts, por}}
   const [parteGrande, setParteGrande] = useState(false); // parte a pantalla completa
   useEffect(() => {
     if (!showParte) return;
@@ -4426,6 +4502,7 @@ export default function App() {
       const fi = await sGet("firmas_guardia"); if (fi) setFirmas(fi);
       const li = await sGet("listas_guardia"); if (li) setListas(li);
       const avf = await sGet("avisos_familia"); if (avf) setAvisosFamilia(avf);
+      const cc = await sGet("correos_centro"); if (cc) setCorreosCentro(cc);
       const cuentasActuales = cu || CUENTAS_DEMO;
       const ses = leerSesion();
       // Solo se recupera la sesión si esa persona tiene clave y su cargo permite ese perfil
@@ -4457,6 +4534,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("firmas_guardia", firmas); }, [firmas, loading]);
   useEffect(() => { if (!loading) sSet("listas_guardia", listas); }, [listas, loading]);
   useEffect(() => { if (!loading) sSet("avisos_familia", avisosFamilia); }, [avisosFamilia, loading]);
+  useEffect(() => { if (!loading) sSet("correos_centro", correosCentro); }, [correosCentro, loading]);
   // Cada profesor actúa siempre en su propio nombre
   const identidadFija = !!usuario && profesores.includes(usuario);
   useEffect(() => { if (identidadFija) { setFProfesor(usuario); setAusProfesor(usuario); } }, [usuario, identidadFija]);
@@ -4663,6 +4741,7 @@ export default function App() {
       ];
 
   return (
+    <CorreosCentroCtx.Provider value={{ correos: correosCentro, setCorreos: setCorreosCentro }}>
     <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif", width: "100%" }}>
       <style>{`
         * { box-sizing: border-box; }
@@ -5658,6 +5737,7 @@ export default function App() {
         {tab === "admin_profesores" && (
           <div>
             <h2 style={{color: C.dark, marginTop: 0, display: "flex", alignItems: "center", gap: 12 }}><Icono nombre="perfil" tam={44} />Gestión de Profesores</h2>
+            <CorreosCentro C={C} />
             <Card>
               <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="anadir-profesor" tam={44} />Añadir profesor</h3>
               <div style={{ display: "flex", gap: 10 }}>
@@ -5864,5 +5944,6 @@ export default function App() {
         </div>
       )}
     </div>
+    </CorreosCentroCtx.Provider>
   );
 }
