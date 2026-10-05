@@ -192,7 +192,13 @@ const cargoDe = (cuentas, nombre) => {
   const ids = cargosIds(cuentas?.[nombre]); const lista = ids.map(id => CARGOS.find(c => c.id === id));
   return { id: ids[ids.length - 1], ids, label: lista.map(c => c.label).join(" · "), perfiles: [...new Set(lista.flatMap(c => c.perfiles))] };
 };
-const perfilesPermitidos = (cuentas, nombre) => PERFILES.filter(p => cargoDe(cuentas, nombre).perfiles.includes(p.id));
+// Un perfil por cada cargo de la persona (Profesor/a, Jefatura, Orientación, TIC…)
+const NOMBRE_PERFIL = { profesor: "Profesor/a", jefatura: "Convivencia y estadísticas", admin: "Administración" };
+const perfilesPermitidos = (cuentas, nombre) => cargoDe(cuentas, nombre).ids.flatMap(cid => {
+  const c = CARGOS.find(x => x.id === cid);
+  const ps = cid === "profesor" ? ["profesor"] : c.perfiles.filter(x => x !== "profesor");
+  return ps.map(pid => ({ id: pid, key: `${cid}-${pid}`, cargo: cid, label: ps.length > 1 ? `${c.label} · ${NOMBRE_PERFIL[pid]}` : c.label }));
+});
 const MIN_CLAVE = 6;
 // Las claves nunca se guardan tal cual: solo su huella SHA-256 (requiere conexión segura HTTPS).
 // En esta versión de demostración se guardan en el navegador; en el servidor del centro irán al servidor.
@@ -363,9 +369,9 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
             <div style={{ fontSize: 15, fontWeight: 700, color: C.dark, marginBottom: 4 }}>¿Con qué perfil entras?</div>
             <div style={{ fontSize: 12, color: C.gray, marginBottom: 14 }}>Según tu cargo ({cargo.label}) puedes usar estos perfiles.</div>
             {permitidos.map(p => (
-              <button key={p.id} onClick={() => onEntrar(nombre, p)}
+              <button key={p.key || p.id} onClick={() => onEntrar(nombre, p)}
                 style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 16px", marginBottom: 12, background: C.cream, border: `2px solid ${C.teal}`, borderRadius: 12, cursor: "pointer", fontSize: 16, fontWeight: 700, color: C.dark }}>
-                <Icono nombre={PERFIL_ICONO[p.id]} tam={44} />{sinEmoji1(p.label)}
+                <Icono nombre={iconoPerfil(p)} tam={44} />{sinEmoji1(p.label)}
               </button>
             ))}
             <button onClick={() => setPaso("nombre")} style={enlace}>← Cambiar de persona</button>
@@ -461,7 +467,8 @@ function Ti({ children, tam = 20 }) {
 }
 
 // Icono de cada perfil de acceso y desplegable con iconos para cambiar de perfil
-const PERFIL_ICONO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", admin: "cargo-administracion" };
+const PERFIL_ICONO_BASE = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", admin: "cargo-administracion" };
+const iconoPerfil = p => (p?.cargo && p.cargo !== "profesor" && ICONO_CARGO[p.cargo]) || PERFIL_ICONO_BASE[p?.id];
 const sinEmoji1 = t => iconoDe(t).resto;
 function SelectorPerfil({ perfiles, actual, onCambiar, cargos = "" }) {
   const [abierto, setAbierto] = useState(false);
@@ -473,20 +480,21 @@ function SelectorPerfil({ perfiles, actual, onCambiar, cargos = "" }) {
     document.addEventListener("mousedown", cerrar); document.addEventListener("keydown", esc);
     return () => { document.removeEventListener("mousedown", cerrar); document.removeEventListener("keydown", esc); };
   }, [abierto]);
-  const a = perfiles.find(p => p.id === actual.id) || actual;
+  const igual = (p, q) => (p.key && q.key) ? p.key === q.key : p.id === q.id;
+  const a = perfiles.find(p => igual(p, actual)) || perfiles.find(p => p.id === actual.id) || actual;
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button onClick={() => setAbierto(v => !v)} aria-haspopup="listbox" aria-expanded={abierto} title="Cambiar de perfil"
         style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "4px 10px 4px 4px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
-        <Icono nombre={PERFIL_ICONO[a.id]} tam={28} />{sinEmoji1(a.label)} <span style={{ fontSize: 10 }}>▼</span>
+        <Icono nombre={iconoPerfil(a)} tam={28} />{sinEmoji1(a.label)} <span style={{ fontSize: 10 }}>▼</span>
       </button>
       {abierto && (
         <div role="listbox" style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", background: "#fff", borderRadius: 12, boxShadow: "0 12px 30px rgba(0,0,0,0.2)", padding: 6, zIndex: 300, minWidth: 240 }}>
           {cargos && <div style={{ padding: "6px 10px 8px", fontSize: 11, color: "#64748b", borderBottom: "1px solid #eef2f4", marginBottom: 4, maxWidth: 280 }}>Tus cargos: <b style={{ color: "#2C4A52" }}>{cargos}</b></div>}
           {perfiles.map(p => (
-            <button key={p.id} role="option" aria-selected={p.id === a.id} onClick={() => { setAbierto(false); onCambiar(p.id); }}
-              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 10px", border: "none", borderRadius: 8, background: p.id === a.id ? "#E8F5F3" : "transparent", color: "#2C4A52", cursor: "pointer", fontSize: 14, fontWeight: p.id === a.id ? 700 : 500 }}>
-              <Icono nombre={PERFIL_ICONO[p.id]} tam={34} /><span style={{ flex: 1, whiteSpace: "nowrap" }}>{sinEmoji1(p.label)}</span>{p.id === a.id ? "✓" : ""}
+            <button key={p.key || p.id} role="option" aria-selected={igual(p, a)} onClick={() => { setAbierto(false); onCambiar(p.key || p.id); }}
+              style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "8px 10px", border: "none", borderRadius: 8, background: igual(p, a) ? "#E8F5F3" : "transparent", color: "#2C4A52", cursor: "pointer", fontSize: 14, fontWeight: igual(p, a) ? 700 : 500 }}>
+              <Icono nombre={iconoPerfil(p)} tam={34} /><span style={{ flex: 1, whiteSpace: "nowrap" }}>{sinEmoji1(p.label)}</span>{igual(p, a) ? "✓" : ""}
             </button>
           ))}
         </div>
@@ -4697,8 +4705,8 @@ export default function App() {
   }
 
   function cambiarPerfil(id) {
-    const p = perfilesPermitidos(cuentas, usuario).find(x => x.id === id);
-    if (!p || p.id === perfil?.id) return;
+    const p = perfilesPermitidos(cuentas, usuario).find(x => x.key === id || x.id === id);
+    if (!p || (p.key && p.key === perfil?.key)) return;
     guardarSesion({ usuario, perfil: p });
     setPerfil(p); setTab(tabInicial(p.id));
     setModuloProfesor("alumnos"); setModuloJefatura("alumnos");
