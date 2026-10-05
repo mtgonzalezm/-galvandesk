@@ -668,6 +668,25 @@ ${parte.descripcion}
 Para cualquier aclaración pueden contactar con el tutor/a del grupo o con Jefatura de Estudios.`;
 }
 
+// Bloque de firmas al pie de un PDF: una columna por firmante (con sitio para el sello del centro)
+function firmasPDF(doc, y, firmantes) {
+  const w = doc.internal.pageSize.getWidth(), margen = 14, hueco = 8;
+  if (y > doc.internal.pageSize.getHeight() - 52) { doc.addPage(); y = 30; }
+  const ancho = (w - margen * 2 - hueco * (firmantes.length - 1)) / firmantes.length;
+  y += 22;
+  firmantes.forEach((f, i) => {
+    const x = margen + i * (ancho + hueco);
+    doc.setDrawColor(150); doc.setLineWidth(0.3); doc.line(x, y, x + ancho, y);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...OSCURO);
+    doc.text(sinEmoji(f.cargo), x, y + 5, { maxWidth: ancho });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...GRIS);
+    doc.text(sinEmoji(f.nombre ? `Fdo.: ${f.nombre}` : "Fdo.:"), x, y + 10, { maxWidth: ancho });
+    if (f.sello) doc.text("(sello del centro)", x, y + 15);
+  });
+  doc.setTextColor(0);
+  return y + 20;
+}
+
 function pdfParte(parte) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const g = gObj(parte.gravedad);
@@ -689,11 +708,8 @@ function pdfParte(parte) {
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Contacto de la familia", 14, y);
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   doc.text(`Correo: ${parte.email || "-"}    Teléfono: ${parte.telefono || "-"}`, 14, y + 6);
-  y += 24;
-  doc.setDrawColor(150); doc.setLineWidth(0.3);
-  doc.line(14, y, 90, y); doc.line(120, y, 196, y);
-  doc.setFontSize(9); doc.setTextColor(...GRIS);
-  doc.text("Firma del profesor/a", 14, y + 5); doc.text("Recibí (familia)", 120, y + 5);
+  y += 8;
+  firmasPDF(doc, y, [{ cargo: "El profesor/a", nombre: parte.profesor }, { cargo: "Vº Bº Jefatura de Estudios", sello: true }, { cargo: "Recibí: la familia" }]);
   guardarPDF(doc, `parte-${nombreArchivo(parte.alumno)}-${isoLocal(parte.ts)}.pdf`);
 }
 
@@ -727,6 +743,12 @@ function pdfInformePartes(partes, filtrosTexto, tutores = {}, fechaInforme) {
     head: [["Fecha y hora", "Hora", "Alumno/a", "Curso", "Tutor/a", "Tipo", "Gravedad", "Tipificación", "Profesor/a", "Descripción"]],
     body: partes.map(p => [fmt(p.ts), p.hora || "-", p.alumno + (p.esGrupal ? " (grupo)" : ""), p.curso, tutorDeParte(p, tutores) || "-", p.tipo, sinEmoji(gObj(p.gravedad)?.label), textoTipificacion(p), p.profesor, p.descripcion].map(sinEmoji)),
     columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 14 }, 2: { cellWidth: 30 }, 3: { cellWidth: 18 }, 4: { cellWidth: 24 }, 5: { cellWidth: 27 }, 6: { cellWidth: 19 }, 7: { cellWidth: 40 }, 8: { cellWidth: 24 }, 9: { cellWidth: "auto" } } });
+  let yf = doc.lastAutoTable.finalY + 8;
+  if (yf > doc.internal.pageSize.getHeight() - 60) { doc.addPage(); yf = 24; }
+  doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(180, 83, 9);
+  doc.text("Documento interno del centro: contiene datos de varios alumnos. No entregar a las familias; para ellas, use el informe individual del alumno/a.", 14, yf, { maxWidth: doc.internal.pageSize.getWidth() - 28 });
+  doc.setTextColor(0);
+  firmasPDF(doc, yf + 4, [{ cargo: "Jefatura de Estudios", sello: true }, { cargo: "Vº Bº Dirección" }]);
   guardarPDF(doc, `informe-partes-${isoLocal(fechaInforme || new Date())}.pdf`);
 }
 
@@ -3959,10 +3981,8 @@ function pdfInformeFamilia(alumno, partes, banos, periodo, tutores = {}, remiten
   if (y > 240) { doc.addPage(); y = 24; }
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   const cierre = doc.splitTextToSize("Les enviamos este informe para mantenerles informados y trabajar juntos. Pueden solicitar una reunión con el tutor/a o con Jefatura de Estudios.", w - 28);
-  doc.text(cierre, 14, y); y += cierre.length * 5 + 18;
-  doc.setDrawColor(150); doc.setLineWidth(0.3); doc.line(14, y, 90, y); doc.line(120, y, 196, y);
-  doc.setFontSize(9); doc.setTextColor(...GRIS);
-  doc.text(sinEmoji(remitente || tutor || "Tutor/a"), 14, y + 5); doc.text("Recibí (familia)", 120, y + 5);
+  doc.text(cierre, 14, y); y += cierre.length * 5;
+  firmasPDF(doc, y, [{ cargo: remitente && remitente !== tutor ? "El profesor/a" : "El tutor/a", nombre: remitente || tutor }, { cargo: "Vº Bº Jefatura de Estudios", sello: true }, { cargo: "Recibí: la familia" }]);
   guardarPDF(doc, `informe-familia-${nombreArchivo(alumno.nombre)}-${periodo.desde}.pdf`);
 }
 
