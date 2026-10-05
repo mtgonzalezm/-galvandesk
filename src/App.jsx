@@ -420,8 +420,9 @@ const ICONO_EMOJI = {
   "🔔": "alertas", "📤": "informe", "📄": "informe", "📈": "estadisticas", "🔄": "guardias", "💬": "mensajes",
   "📢": "profe-ausente", "🗂": "documentos", "📅": "horario", "👥": "grupos", "✍": "tareas", "⚙": "configuracion",
   "👨‍🏫": "perfil", "🟡": "leve", "⚠": "grave", "🔴": "muy-grave",
+  "🔍": "buscar", "⏰": "hora", "📂": "tipo-parte", "🎯": "gravedad-campo", "⚖": "tipificacion", "📝": "descripcion",
 };
-const ICONO_TEXTO = [[/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
+const ICONO_TEXTO = [[/^Profesor responsable/, "profesor"], [/^Generar Parte/, "generar"], [/^Coordinación/, "eventos"], [/^Parte del Día/, "estado-general"], [/^Ver Guardias/, "horario"], [/^Ausencias de Profesores/, "profe-ausente"]];
 function iconoDe(texto) {
   const m = String(texto ?? "").match(/^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*\uFE0F?)\s*(.*)$/su);
   if (!m) return { icono: null, resto: texto };
@@ -1462,7 +1463,7 @@ function PlanificadorGuardias({ profesores, cursos, inpStyle, selStyle, labelSty
                 </div>
               )}
               <div style={{ marginBottom:4 }}>
-                <label style={labelStyle}>📝 Nota general (opcional)</label>
+                <label style={labelStyle}><ConIcono texto="📝 Nota general (opcional)" tam={30} /></label>
                 <textarea value={pgNota} onChange={e => setPgNota(e.target.value)} rows={2} placeholder="Observaciones generales sobre la ausencia…" style={{ ...inpStyle, resize:"vertical" }} />
               </div>
               <div style={{ background:"#EEF5F8", borderRadius:8, padding:"10px 14px", fontSize:12, color:C.blue, marginTop:12 }}>
@@ -4852,8 +4853,11 @@ export default function App() {
               </Card>
             )}
             <Card>
-              <label style={labelStyle}>🔍 Buscar alumno</label>
-              <input value={fBusqueda} onChange={e => { setFBusqueda(e.target.value); setFAlumno(""); }} placeholder="Nombre o curso…" style={inpStyle} />
+              <label style={labelStyle}><ConIcono texto="🔍 Buscar alumno" tam={30} /></label>
+              <div style={{ position: "relative" }}>
+                <Icono nombre="curso" tam={28} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                <input value={fBusqueda} onChange={e => { setFBusqueda(e.target.value); setFAlumno(""); }} placeholder="Nombre o curso…" style={{ ...inpStyle, paddingLeft: 44 }} />
+              </div>
               {fBusqueda && !fAlumno && (
                 <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, marginTop: 4, background: C.white, maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
                   {alumnos.filter(a => a.nombre.toLowerCase().includes(fBusqueda.toLowerCase()) || a.curso.toLowerCase().includes(fBusqueda.toLowerCase())).map(a => (
@@ -4875,16 +4879,19 @@ export default function App() {
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16, marginTop: 8 }}>
-                <div><label style={labelStyle}>⏰ Hora de clase</label><select value={fHora} onChange={e => setFHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
-                <div><label style={labelStyle}>📂 Tipo de parte</label><select value={fTipo} onChange={e => setFTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
-                <div><label style={labelStyle}>🎯 Gravedad</label><select value={fGravedad} onChange={e => { setFGravedad(e.target.value); setFTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="⏰ Hora de clase" tam={30} /></label><select value={fHora} onChange={e => setFHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="📂 Tipo de parte" tam={30} /></label><select value={fTipo} onChange={e => setFTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="🎯 Gravedad" tam={30} /></label><select value={fGravedad} onChange={e => { setFGravedad(e.target.value); setFTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>⚖️ Tipificación normativa <span style={{ fontWeight: 400, color: C.gray, fontSize: 11 }}>({fGravedad === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM"})</span></label>
-                <select value={fTipificacion} onChange={e => setFTipificacion(e.target.value)} style={{ ...selStyle, borderColor: fTipificacion ? C.teal : "#d1d5db" }}>
+                <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}><ConIcono texto="⚖️ Tipificación normativa" tam={30} /> <span style={{ fontWeight: 400, color: C.gray, fontSize: 11 }}>({fGravedad === "leve" ? "Plan de Convivencia del Centro" : "Decreto 32/2019 CAM"})</span></label>
+                <div style={{ position: "relative" }}>
+                <Icono nombre="seleccionar" tam={28} style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+                <select value={fTipificacion} onChange={e => setFTipificacion(e.target.value)} style={{ ...selStyle, paddingLeft: 44, borderColor: fTipificacion ? C.teal : "#d1d5db" }}>
                   <option value="">— Seleccionar tipificación (opcional) —</option>
                   {(TIPIFICACION[fGravedad] || []).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                 </select>
+                </div>
                 {fTipificacion && (
                   <div style={{ marginTop: 6, background: "#E8F5F3", borderRadius: 6, padding: "6px 12px", fontSize: 12, color: C.teal, fontWeight: 600 }}>
                     ✓ {TIPIFICACION[fGravedad]?.find(t => t.id === fTipificacion)?.label}
@@ -4892,15 +4899,15 @@ export default function App() {
                 )}
               </div>
               <div style={{ marginBottom: 14 }}>
-                <label style={labelStyle}>📝 Descripción del incidente</label>
+                <label style={labelStyle}><ConIcono texto="📝 Descripción del incidente" tam={30} /></label>
                 <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} rows={4} placeholder="Describe detalladamente lo ocurrido…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>👤 Profesor responsable</label>
+                <label style={labelStyle}><ConIcono texto="👤 Profesor responsable" tam={30} /></label>
                 <select value={fProfesor} onChange={e => setFProfesor(e.target.value)} style={selStyle} disabled={identidadFija}>{profesores.map(p => <option key={p}>{p}</option>)}</select>
               </div>
               <Btn onClick={crearParte} disabled={!fAlumno || !fDesc.trim()} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
-                📋 Generar Parte
+                <ConIcono texto="📋 Generar Parte" tam={28} />
               </Btn>
             </Card>
           </div>
@@ -4950,12 +4957,12 @@ export default function App() {
                 );
               })()}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16 }}>
-                <div><label style={labelStyle}>⏰ Hora</label><select value={gHora} onChange={e => setGHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
-                <div><label style={labelStyle}>📂 Tipo</label><select value={gTipo} onChange={e => setGTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
-                <div><label style={labelStyle}>🎯 Gravedad</label><select value={gGravedad} onChange={e => { setGGravedad(e.target.value); setGTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="⏰ Hora" tam={30} /></label><select value={gHora} onChange={e => setGHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="📂 Tipo" tam={30} /></label><select value={gTipo} onChange={e => setGTipo(e.target.value)} style={selStyle}>{TIPOS.map(t => <option key={t}>{t}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="🎯 Gravedad" tam={30} /></label><select value={gGravedad} onChange={e => { setGGravedad(e.target.value); setGTipificacion(""); }} style={selStyle}>{GRAVEDAD.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}</select></div>
                 {gGravedad && TIPIFICACION[gGravedad]?.length > 0 && (
                   <div style={{ gridColumn: "1/-1" }}>
-                    <label style={labelStyle}>⚖️ Tipificación de la falta</label>
+                    <label style={labelStyle}><ConIcono texto="⚖️ Tipificación de la falta" tam={30} /></label>
                     <select value={gTipificacion} onChange={e => setGTipificacion(e.target.value)} style={selStyle}>
                       <option value="">— Seleccionar tipificación —</option>
                       {TIPIFICACION[gGravedad].map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -4966,7 +4973,7 @@ export default function App() {
                 )}
               </div>
               <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>📝 Descripción</label>
+                <label style={labelStyle}><ConIcono texto="📝 Descripción" tam={30} /></label>
                 <textarea value={gDesc} onChange={e => setGDesc(e.target.value)} rows={4} placeholder="Describe el comportamiento del grupo…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <Btn onClick={crearParteGrupo} disabled={!gCurso || !gDesc.trim()} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
@@ -4981,7 +4988,7 @@ export default function App() {
           <div>
             <h2 style={{ color: C.dark, marginTop: 0 }}>🚻 Control de Salidas al Baño</h2>
             <Card>
-              <label style={labelStyle}>🔍 Buscar alumno</label>
+              <label style={labelStyle}><ConIcono texto="🔍 Buscar alumno" tam={30} /></label>
               <input value={bBusqueda} onChange={e => { setBBusqueda(e.target.value); setBAlumno(""); }} placeholder="Nombre o curso…" style={{ ...inpStyle, marginBottom: 8 }} />
               {bBusqueda && !bAlumno && (
                 <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, background: C.white, maxHeight: 160, overflowY: "auto", marginBottom: 12 }}>
@@ -5050,7 +5057,7 @@ export default function App() {
             <Card>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
                 <div><label style={labelStyle}>👤 Profesor ausente</label><select value={guProfesorAusente} onChange={e => setGuProfesorAusente(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{profesores.map(p => <option key={p}>{p}</option>)}</select></div>
-                <div><label style={labelStyle}>⏰ Hora de la guardia</label><select value={guHora} onChange={e => setGuHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
+                <div><label style={labelStyle}><ConIcono texto="⏰ Hora de la guardia" tam={30} /></label><select value={guHora} onChange={e => setGuHora(e.target.value)} style={selStyle}>{HORAS.map(h => <option key={h} value={h}>{conTramo(h)}</option>)}</select></div>
                 <div><label style={labelStyle}>🏢 Módulo</label><select value={guModulo} onChange={e => setGuModulo(e.target.value)} style={selStyle}>{MODULOS.map(m => <option key={m}>{m}</option>)}</select></div>
                 <div><label style={labelStyle}>🏫 Curso</label><select value={guCurso} onChange={e => setGuCurso(e.target.value)} style={selStyle}><option value="">— Seleccionar —</option>{cursos.map(c => <option key={c}>{c}</option>)}</select></div>
                 <div><label style={labelStyle}>📚 Materia</label><input value={guMateria} onChange={e => setGuMateria(e.target.value)} placeholder="Ej: Matemáticas" style={inpStyle} /></div>
@@ -5058,7 +5065,7 @@ export default function App() {
                 <div><label style={labelStyle}>❓ Motivo de ausencia</label><select value={guMotivo} onChange={e => setGuMotivo(e.target.value)} style={selStyle}>{MOTIVOS.map(m => <option key={m}>{m}</option>)}</select></div>
               </div>
               <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>📝 Material dejado para trabajar</label>
+                <label style={labelStyle}><ConIcono texto="📝 Material dejado para trabajar" tam={30} /></label>
                 <textarea value={guMaterial} onChange={e => setGuMaterial(e.target.value)} rows={3} placeholder="Describe el material o tarea…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <Btn onClick={crearGuardia} disabled={!guProfesorAusente || !guCurso || !guProfesorGuardia} color={C.blue} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
