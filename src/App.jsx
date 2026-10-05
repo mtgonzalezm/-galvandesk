@@ -2303,8 +2303,8 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
       {(() => {
         const hora = new Date().getHours();
         let saludo = "";
-        if (hora < 12) saludo = "¡Buenos días";
-        else if (hora < 18) saludo = "¡Buenas tardes";
+        if (hora < 14) saludo = "¡Buenos días";
+        else if (hora < 21) saludo = "¡Buenas tardes";
         else saludo = "¡Buenas noches";
         
         return (
@@ -4802,8 +4802,8 @@ export default function App() {
             {(() => {
               const hora = new Date().getHours();
               let saludo = "";
-              if (hora < 12) saludo = "¡Buenos días";
-              else if (hora < 18) saludo = "¡Buenas tardes";
+              if (hora < 14) saludo = "¡Buenos días";
+              else if (hora < 21) saludo = "¡Buenas tardes";
               else saludo = "¡Buenas noches";
               
               const partesHoy = partes.filter(p => p.ts.split("T")[0] === todayStr() && p.profesor === usuario).length;
@@ -5097,8 +5097,8 @@ export default function App() {
             {(() => {
               const hora = new Date().getHours();
               let saludo = "";
-              if (hora < 12) saludo = "¡Buenos días";
-              else if (hora < 18) saludo = "¡Buenas tardes";
+              if (hora < 14) saludo = "¡Buenos días";
+              else if (hora < 21) saludo = "¡Buenas tardes";
               else saludo = "¡Buenas noches";
               
               const hoyISO = isoLocal();
