@@ -88,6 +88,54 @@ const TIPIFICACION = {
 };
 
 const TIPOS   = ["Comportamiento", "Ausencia", "Académico", "Otro"];
+
+// ─── Frases rápidas para la descripción del parte ────────────────────────────
+// Frases breves y objetivas: describen lo que ocurre, sin juicios. Se añaden al texto y se pueden editar.
+const FRASES_TIPO = {
+  Comportamiento: ["Se le avisa varias veces y no rectifica.", "Continúa con la misma actitud tras la advertencia.", "Se le pide que salga un momento del aula para hablar con él/ella."],
+  Ausencia: ["No presenta justificante.", "Se comunica a la familia y a la tutoría.", "No es la primera vez que ocurre."],
+  Académico: ["No realiza la tarea propuesta en clase.", "No trae el material necesario.", "Se le ofrece ayuda y no la acepta."],
+  Otro: ["Se informa a la tutoría.", "Se habla con el alumno/a al final de la clase.", "Se comunica a Jefatura de Estudios."],
+};
+const FRASES_TIPIFICACION = {
+  "1L":  ["Interrumpe la explicación con comentarios en voz alta.", "Hace ruidos y distrae al grupo durante la clase.", "Se levanta de su sitio sin permiso repetidamente."],
+  "2L":  ["No trae el material de la asignatura.", "No realiza las actividades propuestas en clase.", "Se niega a participar en la tarea del grupo."],
+  "3L":  ["Llega tarde a clase sin justificación.", "Falta a clase sin justificación.", "Se incorpora al aula una vez empezada la clase sin motivo."],
+  "4L":  ["Permanece en el pasillo durante el cambio de clase.", "Sale del aula sin permiso del profesor/a.", "Tarda en volver al aula tras salir con permiso."],
+  "5L":  ["Habla continuamente con los compañeros e impide que trabajen.", "Molesta a un compañero/a que intenta hacer la tarea.", "Distrae a los compañeros de mesa durante la explicación."],
+  "6L":  ["Contesta de malas formas a un compañero/a.", "Se dirige al profesor/a con un tono inadecuado.", "Hace un comentario despectivo a un compañero/a."],
+  "7L":  ["Pinta o raya la mesa.", "Estropea material del aula.", "Daña una pertenencia de un compañero/a sin intención de hacerlo."],
+  "8L":  ["Usa el móvil en clase sin permiso.", "Se le pide que guarde el móvil y no lo hace.", "Usa auriculares o un dispositivo electrónico sin permiso."],
+  "9L":  ["No cumple la sanción impuesta por un parte leve anterior.", "No acude a la recuperación en el recreo.", "No entrega la tarea correctora que se le había pedido."],
+  "10L": ["Lanza objetos en el aula.", "Come o bebe en clase sin permiso.", "No respeta las normas del aula."],
+  aG:  ["Acumula faltas de asistencia injustificadas.", "Llega tarde a clase de forma reiterada sin justificación.", "La tutoría comunica la situación a Jefatura."],
+  bG:  ["Impide de forma continuada que la clase se desarrolle con normalidad.", "Molesta a los compañeros durante el examen.", "Sigue impidiendo el estudio de los compañeros pese a los avisos."],
+  cG:  ["Insulta a un compañero/a delante del grupo.", "Se burla de un compañero/a de forma reiterada.", "Falta al respeto a un miembro del personal del centro."],
+  dG:  ["Se niega a seguir las indicaciones del profesor/a.", "Desafía al profesor/a delante del grupo.", "Se niega a cambiarse de sitio cuando se le pide."],
+  eG:  ["Rompe intencionadamente material del centro.", "Causa daños en las instalaciones del centro.", "Daña el mobiliario del aula."],
+  fG:  ["Esconde las pertenencias de un compañero/a.", "Coge sin permiso objetos de un compañero/a.", "Daña una pertenencia de un compañero/a."],
+  gG:  ["Anima a sus compañeros a incumplir las normas.", "Incita a otros a salir del aula sin permiso.", "Provoca que otros compañeros alteren la clase."],
+  hG:  ["Participa en una pelea con otro alumno/a.", "Se enfrenta físicamente a un compañero/a; ambos aceptan la pelea.", "Hay que separar a los alumnos implicados."],
+  iG:  ["Altera de forma intencionada el desarrollo de la clase.", "Activa la alarma sin motivo.", "Provoca una interrupción que obliga a detener la actividad."],
+  jG:  ["Reiteración de faltas leves en el mismo trimestre.", "Acumula varios partes leves este trimestre.", "Se comunica a Jefatura por la acumulación de partes."],
+  kG:  ["Copia en el examen.", "Usa el móvil durante el examen.", "Entrega como propio un trabajo que no ha hecho."],
+  lG:  ["Conocía una situación de acoso y no la comunicó.", "No avisa al profesorado de una situación de riesgo para un compañero/a.", "Oculta información sobre un incidente grave."],
+  mG:  ["Difunde una foto de un compañero/a sin su permiso.", "Comparte en redes información de un miembro del centro.", "Graba a un compañero/a en clase sin permiso."],
+  nG:  ["No cumple la medida correctora impuesta.", "No repara el daño causado como se le había pedido.", "No asume el coste del material dañado."],
+  aMG: ["Insulta gravemente al profesor/a.", "Amenaza a un miembro del personal del centro.", "Se enfrenta al profesor/a de forma desafiante y agresiva."],
+  bMG: ["Humilla de forma reiterada a un compañero/a.", "Se confirma una situación de acoso a un compañero/a.", "Aísla y excluye a un compañero/a de forma continuada."],
+  cMG: ["Agrede físicamente a un compañero/a.", "Intimida a un compañero/a con amenazas.", "El compañero/a agredido necesita atención."],
+  dMG: ["Dirige insultos discriminatorios a un compañero/a.", "Humilla a un compañero/a por su origen, sexo u otra circunstancia.", "Hace comentarios vejatorios delante del grupo."],
+  eMG: ["Graba una agresión y la difunde.", "Comparte en redes un vídeo humillante de un compañero/a.", "Difunde contenido vejatorio sobre un miembro del centro."],
+  fMG: ["Causa daños graves de forma intencionada en el centro.", "Destroza material o instalaciones del centro.", "Daña gravemente las pertenencias de otra persona."],
+  gMG: ["Falsifica la firma de la familia.", "Se hace pasar por otra persona.", "Sustrae un documento académico."],
+  hMG: ["Se le encuentra con una sustancia o un objeto peligroso.", "Ofrece a compañeros una sustancia perjudicial para la salud.", "Introduce en el centro un objeto peligroso."],
+  iMG: ["Accede sin permiso a documentos o archivos del centro.", "Usa la contraseña de otra persona.", "Modifica sin autorización información del centro."],
+  jMG: ["Provoca una alteración grave de la actividad del centro.", "Su conducta obliga a interrumpir la actividad del centro.", "Incumple gravemente las normas de conducta."],
+  kMG: ["Reiteración de faltas graves en el mismo trimestre.", "Acumula dos o más partes graves este trimestre.", "Se comunica a Jefatura y a Dirección."],
+  lMG: ["Incita a otros a agredir a un compañero/a.", "Anima a cometer una falta muy grave.", "Organiza a otros para incumplir gravemente las normas."],
+  mMG: ["No cumple la medida correctora impuesta por una falta grave.", "Acude al centro durante los días de expulsión.", "No repara el daño causado como se le exigía."],
+};
 // ─── Horario del centro ──────────────────────────────────────────────────────
 // Los nombres ("1ª hora", "Recreo"...) son la clave con la que se guardan los datos;
 // el intervalo solo se muestra. La 7ª hora es solo para algunos grupos.
@@ -2248,6 +2296,31 @@ const DESCRIPCIONES_DEMO = {
   lMG: "Incita a sus compañeros a agredir a otro alumno a la salida del centro.",
   mMG: "Se presenta en el centro durante los días de expulsión que tenía impuestos.",
 };
+// Botones de frases rápidas: se muestran según el tipo de parte y la tipificación elegidos
+function FrasesRapidas({ tipo, tipificacion, texto, setTexto }) {
+  const frases = [...(FRASES_TIPIFICACION[tipificacion] || []), ...(FRASES_TIPO[tipo] || [])];
+  if (!frases.length) return null;
+  const anadir = f => setTexto(prev => { const t = prev.trim(); return t ? `${t} ${f}` : f; });
+  return (
+    <div style={{ background: C.cream, border: "1px solid #e5e7eb", borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: C.dark, marginBottom: 8 }}>
+        💬 Frases rápidas <span style={{ fontWeight: 400, color: C.gray }}>— pulsa para añadirla; luego puedes cambiar el texto{tipificacion ? "" : ". Elige una tipificación para ver frases más concretas"}</span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {frases.map(f => {
+          const usada = texto.includes(f);
+          return (
+            <button key={f} type="button" onClick={() => !usada && anadir(f)} disabled={usada}
+              style={{ fontSize: 12, padding: "6px 10px", borderRadius: 16, border: `1px solid ${usada ? "#e5e7eb" : C.teal}`, background: usada ? "#f3f4f6" : C.white, color: usada ? C.gray : C.dark, cursor: usada ? "default" : "pointer", textAlign: "left" }}>
+              {usada ? "✓ " : "+ "}{f}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const tipoDeTipificacion = t => ["3L", "aG"].includes(t) ? "Ausencia" : ["2L", "kG"].includes(t) ? "Académico" : t === "10L" ? "Otro" : "Comportamiento";
 
 function datosEjemploConvivencia(profesores) {
@@ -4727,12 +4800,16 @@ export default function App() {
 
   function generarAlertasParte(parte, partesActuales) {
     const nuevasAlertas = [];
-    const total = partesActuales.filter(p => p.alumnoId === parte.alumnoId).length + 1;
-    const leves  = partesActuales.filter(p => p.alumnoId === parte.alumnoId && p.gravedad === "leve").length + (parte.gravedad === "leve" ? 1 : 0);
+    // Se cuentan solo los partes del mismo trimestre que el nuevo (la cuenta empieza de cero cada trimestre)
+    const tri    = trimestreDe(parte.ts);
+    const delAlumnoTri = partesActuales.filter(p => { const f = isoLocal(p.ts); return p.alumnoId === parte.alumnoId && f >= tri.desde && f <= tri.hasta; });
+    const total  = delAlumnoTri.length + 1;
+    const leves  = delAlumnoTri.filter(p => p.gravedad === "leve").length + (parte.gravedad === "leve" ? 1 : 0);
     const hora   = new Date(parte.ts).getHours();
     const fueraHorario = hora < 8 || hora >= 15;
-    if (leves === 3)       nuevasAlertas.push({ id: Date.now() + 1, tipo: "acumulacion_leves", alumno: parte.alumno, curso: parte.curso, msg: `Acumulación de 3 partes leves — Considerar sanción`, ts: parte.ts, leida: false });
-    if (total === 3)       nuevasAlertas.push({ id: Date.now() + 2, tipo: "total_partes",      alumno: parte.alumno, curso: parte.curso, msg: `Ha alcanzado 3 partes en total`, ts: parte.ts, leida: false });
+    // Avisa cada 3 partes: al llegar a 3, 6, 9...
+    if (parte.gravedad === "leve" && leves % UMBRAL_AVISO === 0) nuevasAlertas.push({ id: Date.now() + 1, tipo: "acumulacion_leves", alumno: parte.alumno, curso: parte.curso, msg: `Acumulación de ${leves} partes leves en ${tri.texto} — Considerar sanción`, ts: parte.ts, leida: false });
+    if (total % UMBRAL_AVISO === 0) nuevasAlertas.push({ id: Date.now() + 2, tipo: "total_partes", alumno: parte.alumno, curso: parte.curso, msg: `Ha alcanzado ${total} partes en ${tri.texto}`, ts: parte.ts, leida: false });
     if (fueraHorario)      nuevasAlertas.push({ id: Date.now() + 3, tipo: "fuera_horario",     alumno: parte.alumno, curso: parte.curso, msg: `Parte generado fuera del horario habitual (${new Date(parte.ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })})`, ts: parte.ts, leida: false });
     if (nuevasAlertas.length > 0) { setAlertas(prev => [...nuevasAlertas, ...prev]); setShowAlerta(nuevasAlertas[0]); }
   }
@@ -5157,7 +5234,8 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 14 }}>
                 <label style={labelStyle}><ConIcono texto="📝 Descripción del incidente" tam={40} /></label>
-                <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} rows={4} placeholder="Describe detalladamente lo ocurrido…" style={{ ...inpStyle, resize: "vertical" }} />
+                <FrasesRapidas tipo={fTipo} tipificacion={fTipificacion} texto={fDesc} setTexto={setFDesc} />
+                <textarea value={fDesc} onChange={e => setFDesc(e.target.value)} rows={4} placeholder="Describe detalladamente lo ocurrido… o pulsa las frases rápidas de arriba" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}><ConIcono texto="👤 Profesor responsable" tam={40} /></label>
@@ -5231,6 +5309,7 @@ export default function App() {
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}><ConIcono texto="📝 Descripción" tam={40} /></label>
+                <FrasesRapidas tipo={gTipo} tipificacion={gTipificacion} texto={gDesc} setTexto={setGDesc} />
                 <textarea value={gDesc} onChange={e => setGDesc(e.target.value)} rows={4} placeholder="Describe el comportamiento del grupo…" style={{ ...inpStyle, resize: "vertical" }} />
               </div>
               <Btn onClick={crearParteGrupo} disabled={!gCurso || !gDesc.trim()} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
