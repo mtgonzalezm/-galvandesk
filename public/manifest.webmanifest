@@ -3,6 +3,7 @@
   "short_name": "RumboAula",
   "description": "Gestión de la convivencia en el centro",
   "lang": "es",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
