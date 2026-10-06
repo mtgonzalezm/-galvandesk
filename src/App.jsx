@@ -88,6 +88,7 @@ const TIPIFICACION = {
 };
 
 const TIPOS   = ["Comportamiento", "Ausencia", "Académico", "Otro"];
+const HORAS_RECTIFICAR = 48; // plazo para rectificar un parte tras ponerlo
 
 // ─── Frases rápidas para la descripción del parte ────────────────────────────
 // Frases breves y objetivas: describen lo que ocurre, sin juicios. Se añaden al texto y se pueden editar.
@@ -768,6 +769,12 @@ function pdfParte(parte) {
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   const lineas = doc.splitTextToSize(sinEmoji(parte.descripcion), doc.internal.pageSize.getWidth() - 28);
   doc.text(lineas, 14, y + 6); y += 6 + lineas.length * 5 + 6;
+  if (parte.rectificaciones?.length) {
+    const r = parte.rectificaciones.at(-1);
+    doc.setFont("helvetica", "italic"); doc.setFontSize(9);
+    doc.text(sinEmoji(`Parte rectificado el ${new Date(r.ts).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" })} por ${r.por}${r.perfil === "jefatura" ? " (Jefatura)" : ""}.`), 14, y - 2);
+    y += 6;
+  }
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.text("Contacto de la familia", 14, y);
   doc.setFont("helvetica", "normal"); doc.setFontSize(10);
   doc.text(`Correo: ${parte.email || "-"}    Teléfono: ${parte.telefono || "-"}`, 14, y + 6);
@@ -4746,6 +4753,24 @@ export default function App() {
   const partesDeAlumno = id => partes.filter(p => p.alumnoId === id);
   // Completa un parte con el tutor/a y su correo (los partes antiguos no los guardaban)
   const completar = p => p && ({ ...p, tutor: p.tutor || tutores[p.curso]?.tutor || "", tutorEmail: p.tutorEmail || tutores[p.curso]?.email || "" });
+
+  // ─── Rectificar un parte: Jefatura y el profesor/a que lo puso, durante 48 horas ───
+  const [rectificando, setRectificando] = useState(false);
+  const [rDesc, setRDesc] = useState("");
+  const [rTip, setRTip]   = useState("");
+  useEffect(() => { setRectificando(false); }, [showParte?.id]);
+  const horasDesde = p => (Date.now() - new Date(p.ts).getTime()) / 3600000;
+  const puedeRectificar = p => !!p && !!perfil && horasDesde(p) < HORAS_RECTIFICAR &&
+    (perfil.id === "jefatura" || (perfil.id === "profesor" && p.profesor === usuario));
+  function empezarRectificar() { setRDesc(showParte.descripcion || ""); setRTip(showParte.tipificacion || ""); setRectificando(true); }
+  function guardarRectificacion() {
+    if (!rDesc.trim() || !puedeRectificar(showParte)) return;
+    const cambio = { ts: new Date().toISOString(), por: usuario, perfil: perfil.id, descripcionAnterior: showParte.descripcion, tipificacionAnterior: showParte.tipificacion || "" };
+    const actualizado = { ...showParte, descripcion: rDesc.trim(), tipificacion: rTip, rectificaciones: [...(showParte.rectificaciones || []), cambio] };
+    setPartes(prev => prev.map(x => x.id === showParte.id ? { ...x, descripcion: actualizado.descripcion, tipificacion: rTip, rectificaciones: actualizado.rectificaciones } : x));
+    setShowParte(completar(actualizado));
+    setRectificando(false);
+  }
   const partesLeves    = id => partesDeAlumno(id).filter(p => p.gravedad === "leve").length;
   const partesFiltrados = partes.filter(p => {
     if (filtCurso     && p.curso    !== filtCurso)              return false;
@@ -6118,8 +6143,48 @@ export default function App() {
                   </div>
                 );
               })()}
-              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: C.dark }}><Icono nombre="descripcion" tam={40} />Descripción del incidente</div>
-              <div style={{ marginTop: 8, background: C.cream, borderRadius: 8, padding: 14, fontSize: 14, lineHeight: 1.6, color: C.dark }}>{showParte.descripcion}</div>
+              <div style={{ marginTop: 16, display: "flex", alignItems: "center", gap: 8, fontWeight: 700, color: C.dark, flexWrap: "wrap" }}>
+                <Icono nombre="descripcion" tam={40} />Descripción del incidente
+                {!rectificando && puedeRectificar(showParte) && (
+                  <button onClick={empezarRectificar} style={{ marginLeft: "auto", background: C.white, color: C.dark, border: `1px solid ${C.teal}`, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 700 }}>
+                    ✏️ Rectificar <span style={{ fontWeight: 400, color: C.gray }}>(quedan {Math.max(1, Math.ceil(HORAS_RECTIFICAR - horasDesde(showParte)))} h)</span>
+                  </button>
+                )}
+              </div>
+              {rectificando ? (
+                <div style={{ marginTop: 8, border: `2px solid ${C.teal}`, borderRadius: 10, padding: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: C.dark }}>Tipificación</label>
+                  <select value={rTip} onChange={e => setRTip(e.target.value)} style={{ ...selStyle, margin: "4px 0 10px" }}>
+                    <option value="">— Sin tipificación —</option>
+                    {(TIPIFICACION[showParte.gravedad] || []).map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                  <FrasesRapidas tipo={showParte.tipo} tipificacion={rTip} texto={rDesc} setTexto={setRDesc} />
+                  <textarea value={rDesc} onChange={e => setRDesc(e.target.value)} rows={5} style={{ ...inpStyle, resize: "vertical" }} />
+                  <div style={{ fontSize: 12, color: C.gray, margin: "6px 0 10px" }}>Se guardará el texto original y quedará anotado quién rectifica y cuándo.</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <Btn onClick={guardarRectificacion} disabled={!rDesc.trim()} color={C.teal}>💾 Guardar rectificación</Btn>
+                    <Btn onClick={() => setRectificando(false)} color={C.gray}>Cancelar</Btn>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: 8, background: C.cream, borderRadius: 8, padding: 14, fontSize: 14, lineHeight: 1.6, color: C.dark }}>{showParte.descripcion}</div>
+              )}
+              {!rectificando && showParte.rectificaciones?.length > 0 && (
+                <details style={{ marginTop: 8, background: "#FFF8E8", border: "1px solid #fbbf24", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: C.dark }}>
+                  <summary style={{ cursor: "pointer", fontWeight: 700, color: "#b45309" }}>
+                    ✏️ Parte rectificado {showParte.rectificaciones.length > 1 ? `${showParte.rectificaciones.length} veces` : ""} · última vez el {fmt(showParte.rectificaciones.at(-1).ts)} por {showParte.rectificaciones.at(-1).por}{showParte.rectificaciones.at(-1).perfil === "jefatura" ? " (Jefatura)" : ""}
+                  </summary>
+                  {showParte.rectificaciones.map((r, i) => (
+                    <div key={i} style={{ marginTop: 8, paddingTop: 8, borderTop: i ? "1px dashed #fbbf24" : "none" }}>
+                      <div style={{ fontSize: 12, color: C.gray }}>Texto antes de la rectificación del {fmt(r.ts)} ({r.por}):</div>
+                      <div style={{ marginTop: 4, fontStyle: "italic" }}>{r.descripcionAnterior}</div>
+                      {r.tipificacionAnterior !== undefined && r.tipificacionAnterior !== (showParte.rectificaciones[i + 1]?.tipificacionAnterior ?? showParte.tipificacion) && (
+                        <div style={{ marginTop: 4, fontSize: 12, color: C.gray }}>Tipificación anterior: {TIPIFICACION[showParte.gravedad]?.find(t => t.id === r.tipificacionAnterior)?.label || "sin tipificación"}</div>
+                      )}
+                    </div>
+                  ))}
+                </details>
+              )}
               <div style={{ marginTop: 12, background: "#EEF5F8", borderRadius: 8, padding: 12, fontSize: 13 }}>
                 <strong style={{ color: C.blue }}>📬 Familia:</strong> <Ic n="mensaje-enviar" tam={20} />{showParte.email} · 📱 {showParte.telefono}
               </div>
