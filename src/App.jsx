@@ -2305,7 +2305,8 @@ const AYUDAS = {
     "Toca un mensaje rápido o escribe el tuyo; el texto se puede retocar.",
     "En «¿Dónde estás?», deja que se rellene según tu horario o escribe a mano el aula, el edificio y el grupo. En los avisos urgentes es obligatorio.",
     "En «¿A quién avisar?» aparecen los profes de guardia de esa hora por zonas, primero los de tu edificio. Toca un nombre o «Avisar a la zona»; también puedes añadir a cualquier otro profesor/a.",
-    "Pulsa «Enviar Mensaje». Lo verá al abrir la app: no llega como notificación al móvil."] },
+    "Pulsa «Enviar Mensaje». Le saldrá un aviso en cualquier pantalla de la app; si es urgente, a pantalla completa, con sonido y los botones «Voy» o «No puedo».",
+    "Tú verás si lo ha leído (✓✓) y su respuesta. Todavía no llega como notificación al móvil con la app cerrada."] },
   dashboard: { titulo: "Resumen del día", pasos: [
     "De un vistazo: partes por gravedad, alumnos fuera del aula, profesores ausentes y alertas.",
     "Debajo, el resumen por curso y los alumnos con más incidencias.",
@@ -3554,13 +3555,117 @@ function dondeEsta({ fecha, hora, profesor, horarios = {}, coberturas = {}, equi
 }
 const URGENTES = ["Alumno enfermo", "Emergencia", "Urgencia en aula"];
 
+// ─── Avisos de mensajes en cualquier pantalla ────────────────────────────────
+// Sonido de alarma sin ficheros: tres pitidos con Web Audio (si el navegador lo permite)
+function sonarAlarma() {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext; if (!Ctx) return;
+    const ctx = new Ctx();
+    [0, 0.35, 0.7].forEach(t => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "square"; o.frequency.value = 880; o.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + t + 0.28);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + 0.3);
+    });
+    setTimeout(() => ctx.close(), 1500);
+  } catch { /* sin sonido */ }
+  try { navigator.vibrate?.([300, 150, 300, 150, 600]); } catch { /* sin vibración */ }
+}
+const RESPUESTAS = { voy: { txt: "va de camino", icono: "🏃", color: "#0f766e", bg: "#E8F5F3" }, no: { txt: "no puede ir", icono: "✋", color: "#b45309", bg: "#fef3c7" } };
+// Los demás destinatarios del mismo aviso (se envió a la vez a varios)
+const hermanosDe = (m, mensajes) => mensajes.filter(x => x.id !== m.id && x.remitente === m.remitente && (m.aviso ? x.aviso === m.aviso : x.ts === m.ts));
+
+function AvisosMensajes({ mensajes, usuario, onActualizar, onAbrir, C }) {
+  const [ocultos, setOcultos] = useState([]); // avisos normales cerrados (siguen sin leer en el historial)
+  const urgentes = mensajes.filter(m => m.destinatario === usuario && m.urgente && !m.leido);
+  const nuevos = mensajes.filter(m => m.destinatario === usuario && !m.urgente && !m.leido && !ocultos.includes(m.id));
+  const respuestas = mensajes.filter(m => m.remitente === usuario && m.respuesta && !m.respuestaVista);
+  // Sonido y vibración cuando llega un aviso urgente nuevo
+  const vistos = useRef(new Set(urgentes.map(m => m.id)));
+  useEffect(() => {
+    const hayNuevo = urgentes.some(m => !vistos.current.has(m.id));
+    urgentes.forEach(m => vistos.current.add(m.id));
+    if (hayNuevo) sonarAlarma();
+  }, [urgentes]);
+  const ahora = () => new Date().toISOString();
+  const hora = ts => new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  const u = urgentes[0];
+  const toast = { position: "fixed", left: "50%", transform: "translateX(-50%)", zIndex: 300, width: "min(560px, calc(100% - 24px))", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.25)", padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
+  const btn = { border: "none", borderRadius: 8, padding: "8px 12px", fontWeight: 800, cursor: "pointer", fontSize: 13 };
+  return (<>
+    {/* Respuestas a mis avisos */}
+    {respuestas.length > 0 && (() => {
+      const r = respuestas[0], R = RESPUESTAS[r.respuesta.tipo];
+      return (
+        <div role="status" style={{ ...toast, top: 12, background: R.bg, border: `2px solid ${R.color}` }}>
+          <div style={{ flex: "1 1 260px", color: R.color, fontWeight: 800, fontSize: 15 }}>
+            {R.icono} {r.destinatario} {R.txt}
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.dark }}>Respuesta a tu aviso de las {hora(r.ts)} · {hora(r.respuesta.ts)}{respuestas.length > 1 ? ` · y ${respuestas.length - 1} respuesta(s) más` : ""}</div>
+          </div>
+          <button onClick={() => onActualizar(r.id, { respuestaVista: true })} style={{ ...btn, background: R.color, color: "#fff" }}>Entendido</button>
+        </div>
+      );
+    })()}
+
+    {/* Mensajes normales nuevos */}
+    {!u && nuevos.length > 0 && respuestas.length === 0 && (() => {
+      const m = nuevos[0];
+      return (
+        <div role="status" style={{ ...toast, top: 12, background: "#fff", border: `2px solid ${C.blue}` }}>
+          <Icono nombre="mensaje-recibido" tam={32} />
+          <div style={{ flex: "1 1 220px", minWidth: 0 }}>
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 14 }}>💬 {nuevos.length > 1 ? `${nuevos.length} mensajes nuevos` : "Mensaje nuevo"} de {m.remitente}</div>
+            <div style={{ fontSize: 12, color: C.gray, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.lugar ? `📍 ${textoLugar(m.lugar)} · ` : ""}{m.texto}</div>
+          </div>
+          <button onClick={() => onAbrir()} style={{ ...btn, background: C.blue, color: "#fff" }}>Ver</button>
+          <button onClick={() => setOcultos(o => [...o, ...nuevos.map(x => x.id)])} aria-label="Cerrar aviso" style={{ ...btn, background: "transparent", color: C.gray }}>✕</button>
+        </div>
+      );
+    })()}
+
+    {/* Aviso urgente a pantalla completa */}
+    {u && (() => {
+      const otros = hermanosDe(u, mensajes);
+      const yaVan = otros.filter(x => x.respuesta?.tipo === "voy");
+      const responder = tipo => onActualizar(u.id, { leido: true, leidoTs: ahora(), ...(tipo ? { respuesta: { tipo, ts: ahora() } } : {}) });
+      return (
+        <div role="alertdialog" aria-modal="true" aria-labelledby="aviso-urgente-titulo" style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(127,29,29,.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, width: "min(520px, 100%)", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,.4)" }}>
+            <div style={{ background: "#be123c", color: "#fff", padding: "16px 20px" }}>
+              <div id="aviso-urgente-titulo" style={{ fontSize: 22, fontWeight: 900 }}>🚨 AVISO URGENTE</div>
+              <div style={{ fontSize: 13, opacity: .9 }}>De {u.remitente} · {hora(u.ts)}{urgentes.length > 1 ? ` · ${urgentes.length - 1} aviso(s) más esperando` : ""}</div>
+            </div>
+            <div style={{ padding: 20 }}>
+              {u.lugar && <div style={{ fontSize: 22, fontWeight: 900, color: "#be123c", marginBottom: 10 }}>📍 {textoLugar(u.lugar)}</div>}
+              <div style={{ fontSize: 17, color: C.dark, marginBottom: 12 }}>{u.texto}</div>
+              {otros.length > 0 && (
+                <div style={{ fontSize: 13, color: C.gray, marginBottom: 12 }}>
+                  También avisado/a: {otros.map(x => x.destinatario).join(", ")}
+                  {yaVan.length > 0 && <div style={{ color: "#0f766e", fontWeight: 800, marginTop: 4 }}>🏃 {yaVan.map(x => x.destinatario).join(", ")} ya va de camino</div>}
+                </div>
+              )}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10 }}>
+                <button onClick={() => responder("voy")} style={{ ...btn, background: "#0f766e", color: "#fff", fontSize: 18, padding: "16px" }}>🏃 Voy</button>
+                <button onClick={() => responder("no")} style={{ ...btn, background: "#fef3c7", color: "#92400e", fontSize: 15, padding: "16px" }}>✋ No puedo</button>
+              </div>
+              <button onClick={() => responder(null)} style={{ ...btn, background: "transparent", color: C.gray, width: "100%", marginTop: 8, fontWeight: 600 }}>Cerrar sin responder</button>
+            </div>
+          </div>
+        </div>
+      );
+    })()}
+  </>);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GALVÁNGRAM - MENSAJERÍA RÁPIDA
 // ═══════════════════════════════════════════════════════════════════════════
 const ICONO_CARGO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", direccion: "cargo-direccion", secretaria: "cargo-secretaria", tic: "cargo-tic", orientacion: "tutor" };
 const ICONO_MENSAJE = { "Alumno enfermo": "alumno-enfermo", "Emergencia": "emergencia", "Urgencia en aula": "emergencia", "Falta material": "falta-material",
   "Alumno derivado": "alumno-derivado", "Cambio de guardia": "sustituto", "Falta un profesor": "profe-ausente", "Reunión importante": "eventos" };
-function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, horarios = {}, cursos = [], cuadrante = {}, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], coberturas = {}, C, inpStyle, selStyle, labelStyle }) {
+function Galvangramm({ vistaInicial = "enviar", mensajes, setMensajes, usuario, esJefatura, profesores, horarios = {}, cursos = [], cuadrante = {}, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], coberturas = {}, C, inpStyle, selStyle, labelStyle }) {
   // ¿Dónde estás? «auto» (según tu horario, guardia o clase que cubres) o «mano»
   const hoyISO = isoLocal();
   const [modoLugar, setModoLugar] = useState("auto");
@@ -3575,7 +3680,16 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
   const alternarDest = p => setDestinatarios(d => d.includes(p) ? d.filter(x => x !== p) : [...d, p]);
   const [tipoMensaje, setTipoMensaje] = useState("");
   const [mensajePersonalizado, setMensajePersonalizado] = useState("");
-  const [tab, setTab] = useState("enviar"); // "enviar" o "historial"
+  const [tab, setTab] = useState(vistaInicial); // "enviar" o "historial"
+  // Al abrir el historial, los mensajes recibidos quedan leídos (los urgentes se leen al responder)
+  useEffect(() => {
+    if (tab !== "historial") return;
+    if (!mensajes.some(m => m.destinatario === usuario && !m.leido && !m.urgente)) return;
+    const ts = new Date().toISOString();
+    setMensajes(prev => prev.map(m => m.destinatario === usuario && !m.leido && !m.urgente ? { ...m, leido: true, leidoTs: ts } : m));
+  }, [tab, mensajes, usuario, setMensajes]);
+  const responderEn = (id, tipo) => { const ts = new Date().toISOString(); setMensajes(prev => prev.map(m => m.id === id ? { ...m, leido: true, leidoTs: m.leidoTs || ts, respuesta: { tipo, ts } } : m)); };
+  const horaC = ts => new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
   
   const mensajesPredefinidos = esJefatura ? [
     { id: 1, label: "Cambio de guardia", texto: "Necesito que cambies tu turno de guardia" },
@@ -3609,14 +3723,15 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
       return;
     }
     
-    const base = Date.now();
+    const base = Date.now(), tsEnvio = new Date(base).toISOString();
     const nuevos = destinatarios.map((dest, i) => ({
       id: base + i,
+      aviso: base, // mismo aviso enviado a varios
       remitente: usuario,
       destinatario: dest,
       conCopia: destinatarios.filter(d => d !== dest),
       texto: textoFinal,
-      ts: new Date().toISOString(),
+      ts: tsEnvio,
       leido: false,
       urgente,
       lugar: lugar ? { grupo: lugar.grupo || "", aula: lugar.aula || "", edificio: lugar.edificio || "", origen: lugar.origen, hora: modoLugar === "auto" ? horaLugar : "" } : null,
@@ -3631,6 +3746,8 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
   };
   
   const mensajesNoLeidos = mensajes.filter(m => !m.leido && m.destinatario === usuario).length;
+  // Cada uno ve solo lo que envía y lo que recibe
+  const misMensajes = mensajes.filter(m => m.remitente === usuario || m.destinatario === usuario);
   
   return (
     <div>
@@ -3892,14 +4009,14 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
       {/* HISTORIAL */}
       {tab === "historial" && (
         <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-          {mensajes.length === 0 ? (
+          {misMensajes.length === 0 ? (
             <div style={{ textAlign: "center", color: C.gray, padding: 40 }}>
               <Icono nombre="mensajes" tam={72} style={{ margin: "0 auto 10px" }} />
               <div>Sin mensajes</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {mensajes.map(m => (
+              {misMensajes.map(m => (
                 <div key={m.id} style={{ background: m.destinatario === usuario ? "#E8F5F3" : "#FEF3C7", borderRadius: 10, padding: 12, borderLeft: `4px solid ${m.destinatario === usuario ? C.teal : C.blue}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                     <div style={{ fontWeight: 600, color: C.dark, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
@@ -3922,9 +4039,22 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
                   <div style={{ fontSize: 13, color: "#333", lineHeight: 1.5 }}>
                     {m.texto}
                   </div>
-                  {m.destinatario === usuario && !m.leido && (
-                    <div style={{ marginTop: 8, fontSize: 11, color: C.teal, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
-                      <Icono nombre="mensaje-sin-leer" tam={22} />Sin leer
+                  {/* Recibido: responder a un aviso urgente o ver lo que respondí */}
+                  {m.destinatario === usuario && m.urgente && !m.respuesta && (
+                    <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <button onClick={() => responderEn(m.id, "voy")} style={{ border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 800, cursor: "pointer", background: "#0f766e", color: "#fff" }}>🏃 Voy</button>
+                      <button onClick={() => responderEn(m.id, "no")} style={{ border: "none", borderRadius: 8, padding: "8px 14px", fontWeight: 800, cursor: "pointer", background: "#fef3c7", color: "#92400e" }}>✋ No puedo</button>
+                    </div>
+                  )}
+                  {m.destinatario === usuario && m.respuesta && (
+                    <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: RESPUESTAS[m.respuesta.tipo].color }}>Respondiste: {RESPUESTAS[m.respuesta.tipo].icono} {m.respuesta.tipo === "voy" ? "Voy" : "No puedo"} · {horaC(m.respuesta.ts)}</div>
+                  )}
+                  {/* Enviado: estado del mensaje */}
+                  {m.remitente === usuario && (
+                    <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, display: "inline-block", borderRadius: 6, padding: "2px 8px",
+                      color: m.respuesta ? RESPUESTAS[m.respuesta.tipo].color : m.leido ? C.blue : C.gray, background: m.respuesta ? RESPUESTAS[m.respuesta.tipo].bg : "transparent" }}>
+                      {m.respuesta ? `${RESPUESTAS[m.respuesta.tipo].icono} ${m.destinatario} ${RESPUESTAS[m.respuesta.tipo].txt} · ${horaC(m.respuesta.ts)}`
+                        : m.leido ? `✓✓ Leído${m.leidoTs ? ` · ${horaC(m.leidoTs)}` : ""}` : "✓ Enviado · sin leer"}
                     </div>
                   )}
                 </div>
@@ -5213,6 +5343,9 @@ export default function App() {
   // Guardias — nuevo sistema
   const [cuadrante, setCuadrante]     = useState({});
   const [coberturas, setCoberturas]   = useState({});
+  const [vistaGalv, setVistaGalv]     = useState({ v: "enviar", k: 0 });
+  const [ultimoProfe, setUltimoProfe] = useState(() => { try { return localStorage.getItem(PREFIJO + "ultimo_profe") || ""; } catch { return ""; } });
+  useEffect(() => { try { if (ultimoProfe) localStorage.setItem(PREFIJO + "ultimo_profe", ultimoProfe); } catch { /* sin almacenamiento */ } }, [ultimoProfe]); // vista con la que se abre Galvángram
   const [horarios, setHorarios]       = useState({}); // horario de clases semanal: "Lunes|3ª hora|Profesor" → { grupo, aula, edificio, materia } // quién cubre cada clase sin profe: "fecha|hora|idAusencia" → profesor
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [sustitutosGuardia, setSustitutosGuardia] = useState({}); // {fecha|hora|zona: profesor}
@@ -5358,7 +5491,7 @@ export default function App() {
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias); setCoberturas({});
     setHorarios(horarioEjemplo(DEMO_PROFESORES, [...new Set(conv.alumnos.map(a => a.curso))].sort()));
     setFirmas(ej.firmas); setListas([]);
-    if (ej.sugerido) setUsuario(ej.sugerido);
+    if (ej.sugerido) { setUsuario(ej.sugerido); setUltimoProfe(ej.sugerido); }
     // Sin avisos emergentes: la pantalla de entrada muestra que los datos están cargados
   }
 
@@ -5474,12 +5607,24 @@ export default function App() {
     onClose={() => setPrintInforme(false)} />;
 
   // ── Pantalla de entrada ──
+  // Abrir Galvángram en el historial (desde un aviso)
+  function abrirMensajes() {
+    if (perfil?.id === "profesor") setModuloProfesor("galvangramm");
+    if (perfil?.id === "jefatura") setModuloJefatura("galvangramm");
+    setTab("mensajeria");
+    setVistaGalv({ v: "historial", k: Date.now() });
+  }
+  const sinLeerMios = mensajes.filter(m => m.destinatario === usuario && !m.leido).length;
+
+  const profeDemo = usuario || ultimoProfe;
+  const tutoraDemo = (() => { const t = Object.entries(tutores).filter(([, v]) => v?.tutor && profesores.includes(v.tutor) && v.tutor !== profeDemo && !["Ana Jiménez", "Elena Vega"].includes(v.tutor)).sort(([a], [b]) => a.localeCompare(b))[0]; return t ? { nombre: t[1].tutor, curso: t[0] } : null; })();
   if (!perfil) return (
     <PantallaEntrada profesores={profesores} cuentas={cuentas} setCuentas={setCuentas}
-      nombreSugerido={usuario} onCargarEjemplo={cargarEjemploGuardias}
-      tutoraDemo={(() => { const t = Object.entries(tutores).filter(([, v]) => v?.tutor && profesores.includes(v.tutor) && v.tutor !== usuario && !["Ana Jiménez", "Elena Vega"].includes(v.tutor)).sort(([a], [b]) => a.localeCompare(b))[0]; return t ? { nombre: t[1].tutor, curso: t[0] } : null; })()}
+      nombreSugerido={profeDemo} onCargarEjemplo={cargarEjemploGuardias}
+      tutoraDemo={tutoraDemo}
       onEntrar={(nombre, p) => {
         setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre);
+        if (p.id === "profesor" && nombre !== tutoraDemo?.nombre && !["Ana Jiménez", "Elena Vega"].includes(nombre)) setUltimoProfe(nombre);
         guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(tabInicial(p.id));
       }} />
   );
@@ -5532,6 +5677,8 @@ export default function App() {
   return (
     <CorreosCentroCtx.Provider value={{ correos: correosCentro, setCorreos: setCorreosCentro, profes: profesores.map(p => ({ nombre: p, email: cuentas[p]?.email || (MODO_DEMO ? correoDemo(p) : "") })) }}>
     <div style={{ minHeight: "100vh", background: C.cream, fontFamily: "system-ui,sans-serif", width: "100%" }}>
+      {usuario && <AvisosMensajes mensajes={mensajes} usuario={usuario} C={C} onAbrir={abrirMensajes}
+        onActualizar={(id, cambios) => setMensajes(prev => prev.map(m => m.id === id ? { ...m, ...cambios } : m))} />}
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; padding: 0; }
@@ -5584,7 +5731,7 @@ export default function App() {
           {[
             { id: "alumnos",  label: "👨‍🎓 Partes",  icon: "📋" },
             { id: "guardias", label: "🔄 Guardias",  icon: "⏰" },
-            { id: "galvangramm", label: "💬 Galvángram", icon: "💬" },
+            { id: "galvangramm", label: `💬 Galvángram${sinLeerMios ? ` (${sinLeerMios})` : ""}`, icon: "💬" },
           ].map(m => (
             <button key={m.id}
               onClick={() => { setModuloProfesor(m.id); setTab(m.id === "alumnos" ? "partes" : (m.id === "guardias" ? "mi_guardia" : "mensajeria")); }}
@@ -5613,7 +5760,7 @@ export default function App() {
           {[
             { id: "alumnos",  label: "📋 Partes & Alumnos" },
             { id: "guardias", label: "🔄 Guardias & Ausencias" },
-            { id: "galvangramm", label: "💬 Galvángram" },
+            { id: "galvangramm", label: `💬 Galvángram${sinLeerMios ? ` (${sinLeerMios})` : ""}` },
           ].map(m => (
             <button key={m.id}
               onClick={() => { setModuloJefatura(m.id); setTab(m.id === "alumnos" ? "dashboard" : (m.id === "guardias" ? "cuadrante" : "mensajeria")); }}
@@ -6364,6 +6511,7 @@ export default function App() {
         {/* ── Galvángram (Jefatura & Profesor) ── */}
         {tab === "mensajeria" && (
           <Galvangramm 
+            key={vistaGalv.k} vistaInicial={vistaGalv.v}
             mensajes={mensajes} 
             setMensajes={setMensajes}
             usuario={usuario}
