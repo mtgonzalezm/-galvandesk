@@ -1921,7 +1921,7 @@ const ESTADOS_ZONA = {
   una:         { label: "🟡 Solo 1 profesor",    color: "#a16207", bg: "#fefce8" },
   descubierta: { label: "🔴 Descubierta",        color: "#be123c", bg: "#FDF0EF" },
 };
-function situacionZona({ fecha, hora, zonaId, profesores, cuadrante, apoyos = {}, sustitutos = {}, ausencias = [] }) {
+function situacionZona({ fecha, hora, zonaId, profesores, cuadrante, apoyos = {}, sustitutos = {}, ausencias = [], coberturas = {} }) {
   const k = `${fecha}|${hora}|${zonaId}`;
   const titular = profesores.find(p => cuadrante[`${fecha}|${hora}|${p}`] === zonaId) || "";
   const apoyo = apoyos[k] || "", sustituto = sustitutos[k] || "";
@@ -1931,16 +1931,35 @@ function situacionZona({ fecha, hora, zonaId, profesores, cuadrante, apoyos = {}
   if (titular && !tA) enZona.push(titular);
   if (apoyo && !aA) enZona.push(apoyo);
   // Huecos que puede cubrir el sustituto: primero el titular, luego el apoyo
-  const hueco = (!titular || tA) ? "titular" : (!apoyo || aA) ? "apoyo" : null;
+  let hueco = (!titular || tA) ? "titular" : (!apoyo || aA) ? "apoyo" : null;
   let sustituyeA = null;
   if (hueco && sustituto && !sA) {
     enZona.push(sustituto);
     sustituyeA = hueco === "titular" ? (titular || "titular sin asignar") : (apoyo || "apoyo sin asignar");
   }
-  const estado = enZona.length === 0 ? "descubierta"
-    : (titular && apoyo && !tA && !aA) ? "completa"
-    : enZona.length >= 2 ? "sustituto" : "una";
-  return { titular, apoyo, sustituto, tA, aA, sA, hueco, sustituyeA, enZona, estado };
+  // Quien ha salido de la zona para cubrir una clase deja de contar en ella
+  // (salvo en la zona de aula, cuyo trabajo es precisamente cubrir clases)
+  const enClase = {};
+  if (ZONAS_CENTRO.find(z => z.id === zonaId)?.tipo !== "aula") {
+    Object.entries(coberturas).forEach(([k, p]) => {
+      const [f, h, ausId] = k.split("|");
+      if (f === fecha && h === hora && (enZona.includes(p) || p === sustituto)) {
+        const a = ausencias.find(x => String(x.id) === ausId);
+        enClase[p] = a ? `${a.aula || "clase"} de ${a.profesor}` : "una clase";
+      }
+    });
+  }
+  const sale = enZona.filter(p => enClase[p]).length;
+  const quedan = enZona.filter(p => !enClase[p]);
+  // Si el titular o la pareja sale a cubrir una clase, entra el sustituto (si está libre)
+  if (!sustituyeA && sustituto && !sA && !enClase[sustituto] && !quedan.includes(sustituto)) {
+    const salio = [titular, apoyo].find(p => p && enClase[p]);
+    if (salio) { quedan.push(sustituto); sustituyeA = salio; hueco = salio === titular ? "titular" : "apoyo"; }
+  }
+  const estado = quedan.length === 0 ? "descubierta"
+    : sale === 0 && titular && apoyo && !tA && !aA ? "completa"
+    : quedan.length >= 2 ? "sustituto" : "una";
+  return { titular, apoyo, sustituto, tA, aA, sA, hueco, sustituyeA, enZona: quedan, enClase, estado };
 }
 // Todas las guardias de un profesor en una fecha: como titular, apoyo o sustituto
 function guardiasDeProfesor({ fecha, profesor, profesores, cuadrante, apoyos = {}, sustitutos = {}, ausencias = [] }) {
@@ -1980,6 +1999,116 @@ const TareaAusente = ({ a, C }) => (
     {a.enlace && <div><a href={a.enlace} target="_blank" rel="noopener noreferrer" style={{ color: C.blue, fontWeight: 600 }}>🔗 Ver recursos</a></div>}
   </div>
 );
+
+
+// ─── Cubrir clases sin profesor: candidatos por prioridad ───────────────────
+// coberturas: { "fecha|hora|idAusencia": profesor } — quién cubre cada clase en cada hora
+const claveCob = (fecha, hora, ausId) => `${fecha}|${hora}|${ausId}`;
+const PRIORIDADES_COB = {
+  1: { txt: "De guardia en aula", color: "#0f766e", bg: "#E8F5F3" },
+  2: { txt: "Sustituto en reserva", color: "#1d4ed8", bg: "#EEF5F8" },
+  // (dentro de cada grupo va primero quien está en el mismo edificio que la clase)
+  3: { txt: "Zona con dos, mismo edificio", color: "#92400e", bg: "#fef3c7" },
+  4: { txt: "Zona con dos, otro edificio", color: "#6b7280", bg: "#f3f4f6" },
+};
+// Clases cubiertas por un profesor en un día
+const clasesCubiertasDia = (fecha, profesor, coberturas) =>
+  Object.entries(coberturas).filter(([k, p]) => p === profesor && k.startsWith(`${fecha}|`)).length;
+// Clase que cubre un profesor a una hora (la ausencia) o null
+function claseQueCubre(fecha, hora, profesor, coberturas, ausencias) {
+  const k = Object.keys(coberturas).find(k => coberturas[k] === profesor && k.startsWith(`${fecha}|${hora}|`));
+  return k ? ausencias.find(a => String(a.id) === k.split("|")[2]) || null : null;
+}
+// Lista ordenada de quién puede cubrir la clase de una ausencia a una hora.
+// Solo profesorado de guardia a esa hora; nunca deja una zona vacía.
+function candidatosClase({ fecha, hora, ausencia, profesores, cuadrante, apoyos = {}, sustitutos = {}, ausencias = [], coberturas = {} }) {
+  const clave = claveCob(fecha, hora, ausencia.id);
+  const otras = Object.fromEntries(Object.entries(coberturas).filter(([k]) => k !== clave));
+  const ocupados = new Set(Object.entries(otras).filter(([k]) => k.startsWith(`${fecha}|${hora}|`)).map(([, p]) => p));
+  const falta = p => ausencias.some(a => isoLocal(a.fecha) === fecha && a.profesor === p && a.horas.includes(hora));
+  const pref = `${fecha}|${hora}|`;
+  const zonasHora = new Set([
+    ...profesores.map(p => cuadrante[`${pref}${p}`]).filter(Boolean),
+    ...[apoyos, sustitutos].flatMap(m => Object.keys(m).filter(k => k.startsWith(pref) && m[k]).map(k => k.split("|")[2])),
+  ]);
+  const mejor = {};
+  const proponer = (p, prioridad, zona, cerca) => {
+    if (!p || p === ausencia.profesor || falta(p) || ocupados.has(p)) return;
+    const peso = prioridad * 2 + (cerca ? 0 : 1);
+    if (!mejor[p] || peso < mejor[p].peso) mejor[p] = { profesor: p, prioridad, zona, cerca, peso };
+  };
+  zonasHora.forEach(zonaId => {
+    const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+    const sit = situacionZona({ fecha, hora, zonaId, profesores, cuadrante, apoyos, sustitutos, ausencias, coberturas: otras });
+    const nombreZona = z?.label || zonaId;
+    // Mismo edificio que la clase (o sin edificio conocido)
+    const cerca = !ausencia.edificio || !z?.edificio || z.edificio === "-" || z.edificio === ausencia.edificio;
+    if (z?.tipo === "aula") { sit.enZona.forEach(p => proponer(p, 1, nombreZona, true)); return; }
+    // El sustituto que no hace falta en su zona está libre
+    if (sit.sustituto && !sit.sA && !sit.sustituyeA && !sit.enClase[sit.sustituto]) proponer(sit.sustituto, 2, nombreZona, cerca);
+    // Si en la zona hay dos o más, puede salir uno (la zona nunca se queda vacía)
+    if (sit.enZona.length >= 2) sit.enZona.forEach(p => proponer(p, cerca ? 3 : 4, nombreZona, cerca));
+  });
+  return Object.values(mejor).map(c => ({
+    ...c,
+    cubiertas: clasesCubiertasDia(fecha, c.profesor, otras),
+    guardias: guardiasDelDia(fecha, c.profesor, cuadrante, apoyos, sustitutos),
+  })).sort((a, b) => a.peso - b.peso || a.cubiertas - b.cubiertas || a.guardias - b.guardias || a.profesor.localeCompare(b.profesor));
+}
+
+// Quién cubre una clase a una hora: sugerencias y botón de asignar (solo jefatura)
+function CubrirClase({ fecha, hora, ausencia, equipo, coberturas = {}, setCoberturas, puedeAsignar = false, C }) {
+  const [verTodos, setVerTodos] = useState(false);
+  const clave = claveCob(fecha, hora, ausencia.id);
+  const asignado = coberturas[clave];
+  const candidatos = candidatosClase({ fecha, hora, ausencia, ...equipo, coberturas });
+  const asignar = p => setCoberturas?.(prev => ({ ...prev, [clave]: p }));
+  const quitar = () => setCoberturas?.(prev => { const n = { ...prev }; delete n[clave]; return n; });
+  const btn = { border: "none", borderRadius: 8, padding: "6px 12px", fontWeight: 700, fontSize: 12, cursor: "pointer" };
+  const lista = verTodos ? candidatos : candidatos.slice(0, 3);
+  return (
+    <div style={{ background: asignado ? "#E8F5F3" : "#fff", border: `1px solid ${asignado ? C.teal : "#fbbf24"}`, borderRadius: 8, padding: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, justifyContent: "space-between" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>
+          <Ic n="hora-reloj" tam={20} />{conTramo(hora)}
+          {asignado
+            ? <span style={{ color: C.teal }}> · ✅ Cubre {asignado}</span>
+            : <span style={{ color: "#b45309" }}> · Sin cubrir</span>}
+        </div>
+        {asignado && puedeAsignar && <button onClick={quitar} style={{ ...btn, background: C.light, color: C.dark }}>Cambiar</button>}
+      </div>
+      {!asignado && (
+        candidatos.length === 0 ? (
+          <div style={{ fontSize: 12, color: C.salmon, fontWeight: 600, marginTop: 6 }}>No hay nadie de guardia libre a esta hora sin dejar una zona vacía.</div>
+        ) : (
+          <div style={{ marginTop: 8, display: "grid", gap: 6 }}>
+            {!puedeAsignar && <div style={{ fontSize: 11, color: C.gray }}>Jefatura confirmará quién la cubre. Sugerencias:</div>}
+            {lista.map((c, i) => {
+              const pr = PRIORIDADES_COB[c.prioridad];
+              return (
+                <div key={c.profesor} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8, background: i === 0 ? "#F0FAF7" : C.light, borderRadius: 8, padding: "6px 10px" }}>
+                  <div style={{ flex: "1 1 180px" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{i === 0 ? "⭐ " : ""}{c.profesor}</div>
+                    <div style={{ fontSize: 11, color: C.gray }}>
+                      <span style={{ color: pr.color, background: pr.bg, borderRadius: 6, padding: "1px 6px", fontWeight: 700 }}>{pr.txt}</span>
+                      {" "}{c.zona} · {c.cubiertas} clase(s) cubiertas hoy · {c.guardias} guardia(s)
+                    </div>
+                  </div>
+                  {puedeAsignar && <button onClick={() => asignar(c.profesor)} style={{ ...btn, background: i === 0 ? C.teal : C.dark, color: "#fff" }}>Asignar</button>}
+                </div>
+              );
+            })}
+            {candidatos.length > 3 && (
+              <button onClick={() => setVerTodos(v => !v)} style={{ ...btn, background: "transparent", color: C.blue, padding: 0, textAlign: "left" }}>
+                {verTodos ? "Ver menos" : `Ver los ${candidatos.length} candidatos`}
+              </button>
+            )}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
 
 // ─── Firmar guardia y pasar lista ────────────────────────────────────────────
 // Firma: {id, fecha, hora, zonaId, zona, profesor, rol, ts}
@@ -2495,7 +2624,7 @@ function datosEjemploGuardias(profesores) {
 // ═══════════════════════════════════════════════════════════════════════════
 // MI GUARDIA HOY (Profesor)
 // ═══════════════════════════════════════════════════════════════════════════
-function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos = [], profesores, cuadrante, apoyosGuardia, sustitutosGuardia = {}, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante, diaSeleccionadoGuardias, setDiaSeleccionadoGuardias }) {
+function MiGuardiaHoy({ coberturas = {}, firmas = [], setFirmas, listas = [], setListas, alumnos = [], profesores, cuadrante, apoyosGuardia, sustitutosGuardia = {}, ausencias, fProfesor, setFProfesor, C, selStyle, labelStyle, usuario, setShowCuadrante, diaSeleccionadoGuardias, setDiaSeleccionadoGuardias }) {
   const hoy     = new Date();
   const diasES  = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy  = diasES[hoy.getDay()];
@@ -2514,13 +2643,15 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
     setListaAbierta(null);
   }
 
-  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias, coberturas };
   const ahora = horaEnCurso();
   // Guardias de hoy: como titular, apoyo o sustituto
   const guardiasDia = guardiasDeProfesor({ fecha: hoyISO, profesor: fProfesor, ...equipo }).map(g => ({
     ...g,
     // Tareas de las clases sin profesor que afectan a esta guardia
     ausencias: tareasDeGuardia(g, hoyISO, ausencias),
+    // Clase que jefatura le ha asignado cubrir a esta hora
+    cubre: claseQueCubre(hoyISO, g.hora, fProfesor, coberturas, ausencias),
   }));
 
   return (
@@ -2738,6 +2869,7 @@ function MiGuardiaHoy({ firmas = [], setFirmas, listas = [], setListas, alumnos 
                   {esAhora && <span style={{ background:r.color, color:"#fff", borderRadius:20, padding:"4px 12px", fontSize:12, fontWeight:700 }}>⏱ AHORA</span>}
                 </div>
                 <div style={{ marginTop:12, padding:"6px 12px", background:r.bg, borderRadius:8, fontSize:12, fontWeight:700, color:r.color, display:"inline-block" }}><Ti tam={22}>{r.txt}</Ti></div>
+                {g.cubre && <div style={{ marginTop:10, padding:"10px 12px", borderRadius:8, fontSize:13, fontWeight:800, background:"#EEF5F8", border:`2px solid ${C.blue}`, color:C.blue }}>📋 Jefatura te ha asignado: cubres la clase de {g.cubre.profesor}{g.cubre.aula ? ` en ${g.cubre.aula}` : ""}</div>}
                 {aviso && <div style={{ marginTop:10, padding:"10px 12px", borderRadius:8, fontSize:13, fontWeight:700, ...aviso.estilo }}><Ti tam={22}>{aviso.txt}</Ti></div>}
                 <div style={{ marginTop:10, display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))", gap:6, fontSize:12, color:C.gray }}>
                   <div><Ic n="titular" tam={22} />Titular: {nombre(sit.titular, sit.tA)}</div>
@@ -3214,7 +3346,7 @@ function CuadranteGuardias({ profesores, cuadrante, setCuadrante, apoyosGuardia,
 // ═══════════════════════════════════════════════════════════════════════════
 // COORDINACIÓN DIARIA DE AUSENCIAS
 // ═══════════════════════════════════════════════════════════════════════════
-function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia, sustitutosGuardia = {}, profesoresGuardia, HORAS_GUARDIA, ZONAS_CENTRO, DIAS_SEMANA, C, inpStyle, selStyle, labelStyle, fechaCoordinacion, setFechaCoordinacion }) {
+function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia, sustitutosGuardia = {}, coberturas = {}, setCoberturas, HORAS_GUARDIA, ZONAS_CENTRO, C, inpStyle, labelStyle, fechaCoordinacion, setFechaCoordinacion }) {
   
   const diasES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   
@@ -3238,7 +3370,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
         
         if (zona) {
           const apoyo = apoyosGuardia[`${fechaSel}|${hora}|${zona.id}`] || "";
-          const sit = situacionZona({ fecha: fechaSel, hora, zonaId: zona.id, profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias });
+          const sit = situacionZona({ fecha: fechaSel, hora, zonaId: zona.id, profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias, coberturas });
           guardiasDia.push({
             sit,
             hora,
@@ -3253,6 +3385,7 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
     });
   }
   
+  const equipoCob = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
   // Agrupar guardias por edificio
   const guardiasEdificios = {};
   guardiasDia.forEach(g => {
@@ -3348,8 +3481,6 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {ausenciasDelDia.map((a, idx) => {
-                  // Buscar guardia del edificio de la ausencia
-                  const guardiaEdificio = guardiasDia.filter(g => g.edificio === a.edificio && a.horas.includes(g.hora))[0];
                   
                   return (
                     <div key={idx} style={{ background: "#FFF8E8", borderRadius: 8, padding: 12, borderLeft: "4px solid #fbbf24" }}>
@@ -3368,18 +3499,11 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
                         </div>
                       </div>
                       
-                      {/* ASIGNACIÓN */}
-                      <div style={{ background: "#E8F5F3", borderRadius: 6, padding: 10, marginTop: 10 }}>
-                        {guardiaEdificio ? (
-                          <div style={{ fontSize: 12, color: C.teal, fontWeight: 600 }}>
-                            ✅ <strong>CUBRE:</strong> {guardiaEdificio.profesor} (Guardia {guardiaEdificio.zona})
-                            {guardiaEdificio.apoyo && <div style={{ fontSize: 11, marginTop: 4, color: C.blue }}><Ic n="grupos" tam={20} />Apoyo disponible: {guardiaEdificio.apoyo}</div>}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>
-                            ⚠️ No hay guardia asignada en el Edificio {a.edificio} para esta hora
-                          </div>
-                        )}
+                      {/* QUIÉN CUBRE CADA HORA: sugerencias por prioridad y asignación con un clic */}
+                      <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                        {a.horas.filter(h => h !== "Recreo").sort((x, y) => HORAS.indexOf(x) - HORAS.indexOf(y)).map(h => (
+                          <CubrirClase key={h} fecha={isoLocal(fechaCoordinacion)} hora={h} ausencia={a} equipo={equipoCob} coberturas={coberturas} setCoberturas={setCoberturas} puedeAsignar C={C} />
+                        ))}
                       </div>
                     </div>
                   );
@@ -3598,7 +3722,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
 }
 
 
-function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias, C }) {
+function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias, coberturas = {}, C }) {
   const hoy      = new Date();
   const diasES   = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
   const diaHoy   = diasES[hoy.getDay()];
@@ -3611,7 +3735,7 @@ function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia
       const zona = cuadrante[`${fechaHoy}|${hora}|${prof}`];
       if (!zona) return;
       const z = ZONAS_CENTRO.find(z => z.id === zona);
-      const sit = situacionZona({ fecha: fechaHoy, hora, zonaId: zona, profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias });
+      const sit = situacionZona({ fecha: fechaHoy, hora, zonaId: zona, profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias, coberturas });
       asignaciones.push({ hora, zona: z?.label || zona, sit, estado: sit.estado });
     });
   });
@@ -3710,6 +3834,7 @@ function EquipoZona({ sit, C }) {
       {filas.map(f => {
         const estado = !f.p ? { txt: "Sin asignar", color: "#9f1239", bg: "#FDF0EF" }
           : f.falta ? { txt: "Falta", color: C.salmon, bg: "#FDF0EF" }
+          : sit.enClase?.[f.p] ? { txt: `Cubre ${sit.enClase[f.p]}`, color: "#1d4ed8", bg: "#EEF5F8" }
           : f.entra ? { txt: `Entra por ${f.entra}`, color: "#b45309", bg: "#fef3c7" }
           : f.rol === "Sustituto" ? { txt: "En reserva", color: C.gray, bg: C.light }
           : { txt: "En la zona", color: "#0f766e", bg: "#E8F5F3" };
@@ -3725,7 +3850,7 @@ function EquipoZona({ sit, C }) {
   );
 }
 
-function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], usuario = "", C }) {
+function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], coberturas = {}, setCoberturas, puedeAsignar = false, usuario = "", C }) {
   const [ahora, setAhora] = useState(() => new Date());
   const [horaElegida, setHoraElegida] = useState(""); // "" = la hora en curso
   useEffect(() => { const t = setInterval(() => setAhora(new Date()), 15000); return () => clearInterval(t); }, []);
@@ -3735,7 +3860,7 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
   const enCurso = horaEnCurso(ahora);
   const hora = horaElegida || enCurso;
   const siguiente = hora ? HORAS[HORAS.indexOf(hora) + 1] || null : horaSiguiente(ahora);
-  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias, coberturas };
 
   // Zonas de guardia de una hora, con su situación (las más urgentes primero)
   const zonasDe = h => {
@@ -3750,7 +3875,8 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
   const zonasSig = zonasDe(siguiente);
   const ausentesAhora = hora ? ausencias.filter(a => isoLocal(a.fecha) === fecha && a.horas.includes(hora)) : [];
   const clasesSinProfe = hora === "Recreo" ? [] : ausentesAhora;
-  const enAula = zonas.filter(z => ZONAS_CENTRO.find(x => x.id === z.zonaId)?.tipo === "aula").flatMap(z => z.sit.enZona);
+  const sinCubrir = clasesSinProfe.filter(a => !coberturas[claveCob(fecha, hora, a.id)]).length;
+  const miClase = usuario && hora ? claseQueCubre(fecha, hora, usuario, coberturas, ausencias) : null;
   const miGuardia = usuario && hora
     ? guardiasDeProfesor({ fecha, profesor: usuario, ...equipo }).filter(g => g.hora === hora)
     : [];
@@ -3810,7 +3936,13 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
         {/* Te toca ahora */}
         {usuario && (
           <div style={{ ...tarjeta, borderLeft: `6px solid ${miGuardia.length ? C.teal : "#d6d3d1"}` }}>
-            <div style={{ fontWeight: 800, color: C.dark, fontSize: 16, marginBottom: 8 }}><Ic n="guardias" tam={22} />{miGuardia.length ? "Te toca guardia" : "No tienes guardia a esta hora"}</div>
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 16, marginBottom: 8 }}><Ic n="guardias" tam={22} />{miGuardia.length || miClase ? "Te toca guardia" : "No tienes guardia a esta hora"}</div>
+            {miClase && (
+              <div style={{ background: "#EEF5F8", border: `2px solid ${C.blue}`, borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                <div style={{ fontWeight: 800, color: C.blue, fontSize: 15, marginBottom: 6 }}>📋 Jefatura te ha asignado: cubres la clase de {miClase.profesor}{miClase.aula ? ` en ${miClase.aula}` : ""}</div>
+                <TareaAusente a={miClase} C={C} />
+              </div>
+            )}
             {miGuardia.map((g, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 15, color: C.dark }}><strong>{g.zona}</strong> · como {g.rol}{g.rol === "sustituto" && g.sit.sustituyeA ? <span style={{ color: "#b45309", fontWeight: 700 }}> — entras por {g.sit.sustituyeA}</span> : ""}</div>
@@ -3830,7 +3962,7 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
             { label: "Solo 1 profesor", value: cuenta("una"), color: "#a16207" },
             { label: "Entra el sustituto", value: cuenta("sustituto"), color: C.amber },
             { label: "Completas", value: cuenta("completa"), color: C.teal },
-            { label: hora === "Recreo" ? "Ausentes" : "Clases sin profe", value: ausentesAhora.length, color: C.blue },
+            { label: hora === "Recreo" ? "Ausentes" : "Clases sin cubrir", value: hora === "Recreo" ? ausentesAhora.length : sinCubrir, color: C.blue },
           ].map(s => (
             <div key={s.label} style={{ background: C.white, borderRadius: 10, padding: 12, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -3842,10 +3974,14 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
         {/* Clases sin profe */}
         {clasesSinProfe.length > 0 && (
           <div style={tarjeta}>
-            <div style={{ fontWeight: 800, color: C.dark, fontSize: 15, marginBottom: 4 }}><Ic n="profe-ausente" tam={22} />Clases sin su profesor/a</div>
-            <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>De guardia en aula: {enAula.length ? enAula.join(", ") : <span style={{ color: C.salmon, fontWeight: 700 }}>nadie</span>}</div>
-            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))" }}>
-              {clasesSinProfe.map(a => <TareaAusente key={a.id} a={a} C={C} />)}
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 15, marginBottom: 10 }}><Ic n="profe-ausente" tam={22} />Clases sin su profesor/a · {sinCubrir ? <span style={{ color: "#b45309" }}>{sinCubrir} sin cubrir</span> : <span style={{ color: C.teal }}>todas cubiertas</span>}</div>
+            <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit,minmax(min(300px,100%),1fr))" }}>
+              {clasesSinProfe.map(a => (
+                <div key={a.id} style={{ display: "grid", gap: 6, alignContent: "start" }}>
+                  <TareaAusente a={a} C={C} />
+                  <CubrirClase fecha={fecha} hora={hora} ausencia={a} equipo={equipo} coberturas={coberturas} setCoberturas={setCoberturas} puedeAsignar={puedeAsignar} C={C} />
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -4860,6 +4996,7 @@ export default function App() {
 
   // Guardias — nuevo sistema
   const [cuadrante, setCuadrante]     = useState({});
+  const [coberturas, setCoberturas]   = useState({}); // quién cubre cada clase sin profe: "fecha|hora|idAusencia" → profesor
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [sustitutosGuardia, setSustitutosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [cuentas, setCuentas] = useState(CUENTAS_DEMO); // {nombre: {cargo, clave}}
@@ -4903,6 +5040,7 @@ export default function App() {
       const au = await sGet("ausencias");   if (au) setAusencias(au);
       const ap = await sGet("apoyos_guardia");     if (ap) setApoyosGuardia(ap);
       const su = await sGet("sustitutos_guardia"); if (su) setSustitutosGuardia(su);
+      const cob = await sGet("coberturas_clase"); if (cob) setCoberturas(cob);
       const pg = await sGet("profesores_guardia"); if (pg) setProfesoresGuardia(pg);
       const cu = await sGet("cuentas"); if (cu) setCuentas(cu);
       const fi = await sGet("firmas_guardia"); if (fi) setFirmas(fi);
@@ -4933,6 +5071,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("profesores", profesores); }, [profesores, loading]);
   useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias,   loading]);
   useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
+  useEffect(() => { if (!loading) sSet("coberturas_clase", coberturas); }, [coberturas, loading]);
   useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
   useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("sustitutos_guardia", sustitutosGuardia); }, [sustitutosGuardia, loading]);
@@ -4997,7 +5136,7 @@ export default function App() {
     const lista = [...new Set([...profesores, ...DEMO_PROFESORES])];
     setProfesores(lista);
     const ej = datosEjemploGuardias(DEMO_PROFESORES);
-    setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias);
+    setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias); setCoberturas({});
     setFirmas(ej.firmas); setListas([]);
     if (ej.sugerido) setUsuario(ej.sugerido);
     // Sin avisos emergentes: la pantalla de entrada muestra que los datos están cargados
@@ -5641,12 +5780,12 @@ export default function App() {
 
         {/* ── Ahora: la hora en curso (profesorado y jefatura) ── */}
         {tab === "ahora" && (
-          <AhoraGuardias profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} usuario={perfil.id === "profesor" ? (fProfesor || usuario) : ""} C={C} />
+          <AhoraGuardias profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} coberturas={coberturas} setCoberturas={setCoberturas} puedeAsignar={perfil.id === "jefatura"} usuario={perfil.id === "profesor" ? (fProfesor || usuario) : ""} C={C} />
         )}
 
         {/* ── Ver Guardias (profesor) ── */}
         {tab === "guardias_ver" && (
-          <ParteDia profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} C={C} />
+          <ParteDia profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} coberturas={coberturas} C={C} />
         )}
 
         {/* ── Mis Partes ── */}
@@ -5910,7 +6049,7 @@ export default function App() {
         {/* ── Baños live (Jefatura) ── */}
         {/* ── Mi Guardia Hoy (Profesor) ── */}
         {tab === "mi_guardia" && (
-          <MiGuardiaHoy firmas={firmas} setFirmas={setFirmas} listas={listas} setListas={setListas} alumnos={alumnos} profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} diaSeleccionadoGuardias={diaSeleccionadoGuardias} setDiaSeleccionadoGuardias={setDiaSeleccionadoGuardias} />
+          <MiGuardiaHoy coberturas={coberturas} firmas={firmas} setFirmas={setFirmas} listas={listas} setListas={setListas} alumnos={alumnos} profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} fProfesor={fProfesor} setFProfesor={setFProfesor} C={C} selStyle={selStyle} labelStyle={labelStyle} usuario={usuario} setShowCuadrante={setShowCuadrante} diaSeleccionadoGuardias={diaSeleccionadoGuardias} setDiaSeleccionadoGuardias={setDiaSeleccionadoGuardias} />
         )}
 
         {/* ── Notificar Ausencia (Profesor) ── */}
@@ -5947,7 +6086,7 @@ export default function App() {
 
         {/* ── Parte del Día (Jefatura) ── */}
         {tab === "parte_dia" && (
-          <ParteDia profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} C={C} />
+          <ParteDia profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} coberturas={coberturas} C={C} />
         )}
 
         {/* ── Coordinación Diaria de Ausencias (Jefatura) ── */}
@@ -5958,13 +6097,12 @@ export default function App() {
             cuadrante={cuadrante}
             apoyosGuardia={apoyosGuardia}
             sustitutosGuardia={sustitutosGuardia}
-            profesoresGuardia={profesoresGuardia}
+            coberturas={coberturas}
+            setCoberturas={setCoberturas}
             HORAS_GUARDIA={HORAS_GUARDIA}
             ZONAS_CENTRO={ZONAS_CENTRO}
-            DIAS_SEMANA={DIAS_SEMANA}
             C={C}
             inpStyle={inpStyle}
-            selStyle={selStyle}
             labelStyle={labelStyle}
             fechaCoordinacion={fechaCoordinacion}
             setFechaCoordinacion={setFechaCoordinacion}
@@ -6417,13 +6555,12 @@ export default function App() {
                 cuadrante={cuadrante} 
                 apoyosGuardia={apoyosGuardia} 
                 sustitutosGuardia={sustitutosGuardia}
-                profesoresGuardia={profesoresGuardia}
+                coberturas={coberturas}
+                setCoberturas={setCoberturas}
                 HORAS_GUARDIA={HORAS_GUARDIA}
                 ZONAS_CENTRO={ZONAS_CENTRO}
-                DIAS_SEMANA={DIAS_SEMANA}
                 C={C} 
                 inpStyle={inpStyle} 
-                selStyle={selStyle} 
                 labelStyle={labelStyle}
                 fechaCoordinacion={fechaCoordinacion}
                 setFechaCoordinacion={setFechaCoordinacion}
