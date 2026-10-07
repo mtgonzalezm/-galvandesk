@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react";
+import { Component, useState, useEffect, useRef, createContext, useContext } from "react";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 // ─── Paleta de colores ───────────────────────────────────────────────────────
@@ -5280,7 +5280,141 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// RED DE SEGURIDAD: errores e «Informar de un problema»
+// Los fallos quedan registrados y se pueden enviar por correo a la responsable.
+// Nunca se envían datos del alumnado: solo pantalla, perfil, hora y el error técnico.
+// ════════════════════════════════════════════════════════════════════════════
+const CORREO_SOPORTE = "mtgonzalezmunoz@educa.madrid.org";
+const VERSION_APP = import.meta.env.VITE_APP_VERSION || "local";
+const CLAVE_ERRORES = PREFIJO + "errores";
+function erroresGuardados() { try { return JSON.parse(localStorage.getItem(CLAVE_ERRORES) || "[]"); } catch { return []; } }
+function registrarError(origen, error, detalle = "") {
+  const ctx = (typeof window !== "undefined" && window.__rumboContexto) || {};
+  const e = { ts: new Date().toISOString(), origen, mensaje: String(error?.message || error || "Error desconocido").slice(0, 300),
+    detalle: String(detalle || error?.stack || "").split("\n").slice(0, 6).join("\n").slice(0, 600), pantalla: ctx.pantalla || "", perfil: ctx.perfil || "" };
+  try { localStorage.setItem(CLAVE_ERRORES, JSON.stringify([e, ...erroresGuardados()].slice(0, 10))); } catch { /* sin almacenamiento */ }
+  try { window.dispatchEvent(new CustomEvent("rumbo:error", { detail: e })); } catch { /* nada */ }
+  return e;
+}
+if (typeof window !== "undefined" && !window.__rumboErrores) {
+  window.__rumboErrores = true;
+  window.addEventListener("error", ev => { if (ev.error || ev.message) registrarError("script", ev.error || ev.message); });
+  window.addEventListener("unhandledrejection", ev => registrarError("promesa", ev.reason));
+}
+function textoInforme(descripcion = "", errorActual = null) {
+  const ctx = (typeof window !== "undefined" && window.__rumboContexto) || {};
+  const errores = errorActual ? [errorActual, ...erroresGuardados().filter(x => x.ts !== errorActual.ts)] : erroresGuardados();
+  const lineas = [
+    descripcion ? `QUÉ HA PASADO:\n${descripcion}\n` : "",
+    `Pantalla: ${ctx.pantalla || "—"} · Perfil: ${ctx.perfil || "—"}`,
+    `Fecha: ${new Date().toLocaleString("es-ES")}`,
+    `Versión: ${VERSION_APP}`,
+    `Navegador: ${typeof navigator !== "undefined" ? navigator.userAgent : "—"}`,
+    "",
+    errores.length ? "ÚLTIMOS ERRORES TÉCNICOS:" : "Sin errores técnicos registrados.",
+    ...errores.slice(0, 3).map(x => `- ${new Date(x.ts).toLocaleTimeString("es-ES")} [${x.origen} · ${x.pantalla || "—"}] ${x.mensaje}${x.detalle ? `\n  ${x.detalle.split("\n").slice(0, 3).join("\n  ")}` : ""}`),
+  ];
+  return lineas.filter(l => l !== "").join("\n");
+}
+function abrirCorreoInforme(asunto, cuerpo) {
+  const url = `mailto:${CORREO_SOPORTE}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo.slice(0, 1800))}`;
+  try { window.location.href = url; } catch { /* sin cliente de correo */ }
+}
+async function copiarTexto(t) { try { await navigator.clipboard.writeText(t); return true; } catch { return false; } }
+
+// Si una pantalla falla al dibujarse, en lugar de quedarse en blanco se muestra esto
+class RedSeguridad extends Component {
+  constructor(props) { super(props); this.state = { error: null, copiado: false }; }
+  static getDerivedStateFromError(error) { return { error }; }
+  componentDidCatch(error, info) { this.registrado = registrarError("pantalla", error, info?.componentStack); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    const informe = textoInforme("", this.registrado);
+    const btn = { border: "none", borderRadius: 10, padding: "12px 16px", fontWeight: 800, fontSize: 15, cursor: "pointer", width: "100%", marginTop: 10 };
+    return (
+      <div role="alert" style={{ minHeight: "100vh", background: C.cream, display: "flex", alignItems: "center", justifyContent: "center", padding: 16, fontFamily: "system-ui,sans-serif" }}>
+        <div style={{ background: "#fff", borderRadius: 16, padding: 24, maxWidth: 460, width: "100%", boxShadow: "0 10px 40px rgba(0,0,0,.15)" }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: C.dark }}>😕 Algo ha fallado en esta pantalla</div>
+          <p style={{ color: C.gray, fontSize: 14, lineHeight: 1.5 }}>No has hecho nada mal. Lo que habías guardado sigue en este dispositivo. Avisa a la responsable de la app para que lo arregle y vuelve a empezar.</p>
+          <button style={{ ...btn, background: C.teal, color: "#fff" }} onClick={() => abrirCorreoInforme("RumboAula: algo ha fallado", informe)}>📧 Avisar a la responsable</button>
+          <button style={{ ...btn, background: C.light, color: C.dark }} onClick={async () => this.setState({ copiado: await copiarTexto(informe) })}>{this.state.copiado ? "✅ Informe copiado" : "📋 Copiar el informe"}</button>
+          <button style={{ ...btn, background: "transparent", color: C.blue }} onClick={() => window.location.reload()}>🔄 Volver a empezar</button>
+          <div style={{ fontSize: 11, color: C.gray, marginTop: 10 }}>Si no se abre el correo, copia el informe y envíalo a {CORREO_SOPORTE}. No incluye datos del alumnado.</div>
+        </div>
+      </div>
+    );
+  }
+}
+
+// Botón siempre visible para informar de un problema, y aviso si salta un error
+function InformarProblema() {
+  const [abierto, setAbierto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  const [errorReciente, setErrorReciente] = useState(null);
+  useEffect(() => {
+    const h = ev => setErrorReciente(ev.detail);
+    window.addEventListener("rumbo:error", h);
+    return () => window.removeEventListener("rumbo:error", h);
+  }, []);
+  const informe = () => textoInforme(texto.trim(), errorReciente);
+  const btn = { border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 800, fontSize: 14, cursor: "pointer" };
+  return (<>
+    {errorReciente && !abierto && (
+      <div role="status" style={{ position: "fixed", left: 12, bottom: 60, zIndex: 250, background: "#FDF0EF", border: `2px solid ${C.salmon}`, borderRadius: 12, padding: "10px 12px", maxWidth: "min(360px, calc(100% - 24px))", boxShadow: "0 6px 20px rgba(0,0,0,.15)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 180px", fontSize: 13, color: "#9f1239", fontWeight: 700 }}>⚠️ Algo no ha ido bien en esta pantalla.</div>
+        <button style={{ ...btn, background: "#be123c", color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => setAbierto(true)}>Avisar</button>
+        <button aria-label="Cerrar" style={{ ...btn, background: "transparent", color: C.gray, padding: "6px 8px" }} onClick={() => setErrorReciente(null)}>✕</button>
+      </div>
+    )}
+    <button className="rumbo-informar" onClick={() => setAbierto(true)} aria-label="Informar de un problema"
+      style={{ position: "fixed", left: 12, bottom: 12, zIndex: 240, background: "#fff", color: C.dark, border: `1px solid ${C.light}`, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,.12)", opacity: .92 }}>
+      ⚠️ <span className="rumbo-informar-txt">Informar de un problema</span>
+    </button>
+    <style>{`@media (max-width: 600px) { .rumbo-informar-txt { display: none; } }`}</style>
+    {abierto && (
+      <div role="dialog" aria-modal="true" aria-labelledby="rumbo-informar-titulo" onClick={() => setAbierto(false)}
+        style={{ position: "fixed", inset: 0, zIndex: 350, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: "min(480px, 100%)", fontFamily: "system-ui,sans-serif" }}>
+          <div id="rumbo-informar-titulo" style={{ fontSize: 19, fontWeight: 900, color: C.dark, marginBottom: 4 }}>⚠️ Informar de un problema</div>
+          <div style={{ fontSize: 13, color: C.gray, marginBottom: 10 }}>Cuéntale a la responsable de la app qué ha pasado o qué no te cuadra.</div>
+          <textarea autoFocus value={texto} onChange={e => setTexto(e.target.value)} rows={4} placeholder="Ej.: al pulsar «Asignar» no ha pasado nada…"
+            style={{ width: "100%", boxSizing: "border-box", borderRadius: 10, border: `2px solid ${C.light}`, padding: 10, fontSize: 14, fontFamily: "inherit", resize: "vertical" }} />
+          {errorReciente && <div style={{ fontSize: 12, color: "#9f1239", marginTop: 6 }}>Se incluirá el error técnico que acaba de producirse.</div>}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 12 }}>
+            <button style={{ ...btn, background: C.teal, color: "#fff" }} onClick={() => { abrirCorreoInforme("RumboAula: informe de un problema", informe()); }}>📧 Abrir el correo</button>
+            <button style={{ ...btn, background: C.light, color: C.dark }} onClick={async () => setCopiado(await copiarTexto(informe()))}>{copiado ? "✅ Copiado" : "📋 Copiar el informe"}</button>
+          </div>
+          <div style={{ fontSize: 11, color: C.gray, marginTop: 10, lineHeight: 1.5 }}>
+            Se envía a {CORREO_SOPORTE} con la pantalla, tu perfil, la hora, la versión y los últimos errores técnicos. <strong>No se envían datos del alumnado.</strong> Si no se abre tu correo, copia el informe y envíalo tú.
+          </div>
+          <button style={{ ...btn, background: "transparent", color: C.gray, width: "100%", marginTop: 6 }} onClick={() => { setAbierto(false); setCopiado(false); }}>Cerrar</button>
+        </div>
+      </div>
+    )}
+  </>);
+}
+
+// Para comprobar la red de seguridad (pruebas automáticas): abrir la app con ?probar-fallo=pantalla o ?probar-fallo=script
+function ProbarFallo() {
+  const modo = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("probar-fallo") : null;
+  useEffect(() => { if (modo === "script") setTimeout(() => { throw new Error("Fallo de prueba (script)"); }, 50); }, [modo]);
+  if (modo === "pantalla") throw new Error("Fallo de prueba (pantalla)");
+  return null;
+}
+
 export default function App() {
+  return (
+    <RedSeguridad>
+      <ProbarFallo />
+      <AppInterna />
+      <InformarProblema />
+    </RedSeguridad>
+  );
+}
+
+function AppInterna() {
   const [perfil, setPerfil]       = useState(null);
   const [usuario, setUsuario]     = useState(null);
   const [tab, setTab]             = useState("partes");
@@ -5445,6 +5579,8 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
   useEffect(() => { if (!loading) sSet("coberturas_clase", coberturas); }, [coberturas, loading]);
   useEffect(() => { if (!loading) sSet("horarios_clase", horarios); }, [horarios, loading]);
+  // Pantalla y perfil actuales, para los informes de errores
+  useEffect(() => { window.__rumboContexto = { pantalla: perfil ? tab : "entrada", perfil: perfil?.id || "sin entrar" }; }, [perfil, tab]);
   useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
   useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("sustitutos_guardia", sustitutosGuardia); }, [sustitutosGuardia, loading]);

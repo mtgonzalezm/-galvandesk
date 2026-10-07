@@ -1,0 +1,35 @@
+# Pruebas automáticas de RumboAula: se ejecutan con cada cambio.
+# Si alguna falla, el cambio sale con una ✗ roja y no debe publicarse.
+name: Pruebas
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TZ: Europe/Madrid
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Compilar la app
+        run: npm run build
+      - name: Instalar el navegador de pruebas
+        run: npx playwright install --with-deps chromium
+      - name: Pasar las pruebas (escritorio y móvil)
+        run: npm test
+      - name: Guardar el informe si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: informe-pruebas
+          path: playwright-report
+          retention-days: 14
