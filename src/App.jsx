@@ -654,7 +654,7 @@ export function VisorDocumentos() {
   if (!pdf && !excel) return null;
   const barra = { position: "sticky", top: 0, zIndex: 2, background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "12px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" };
   const bb = { background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.4)", color: "#fff", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontWeight: 700, fontSize: 13 };
-  const fondo = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 400, display: "flex", alignItems: "stretch", justifyContent: "center", padding: "2vh 2vw", fontFamily: "system-ui,sans-serif" };
+  const fondo = { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 2000, display: "flex", alignItems: "stretch", justifyContent: "center", padding: "2vh 2vw", fontFamily: "system-ui,sans-serif" };
   const caja = { background: C.white, borderRadius: 14, width: "100%", maxWidth: 1200, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.35)" };
 
   if (pdf) return (
@@ -1281,6 +1281,7 @@ function InformesGuardados({ informes, setInformes, partes, banos, tutores, C })
 }
 
 function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
+  const [avisoAlta, setAvisoAlta] = useState("");
   const [nuevoAlumno, setNuevoAlumno] = useState({ nombre: "", curso: "", tutor: "", email: "", telefono: "", nia: "" });
   const [preview, setPreview] = useState(null);
   const [importMsg, setImportMsg] = useState(null);
@@ -1323,12 +1324,15 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
   }
 
   function confirmarImport() {
-    setAlumnos(prev => {
-      const existingNias = new Set(prev.map(a => a.nia).filter(Boolean));
-      const nuevos = preview.filter(a => !a.nia || !existingNias.has(a.nia));
-      return [...prev, ...nuevos];
-    });
-    setImportMsg({ type: "ok", text: `✅ ${preview.length} alumno(s) importados correctamente.` });
+    // Un alumno ya está si coincide su NIA o, si no hay NIA, su nombre y curso
+    const norm = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const clave = a => a.nia ? `nia:${String(a.nia).trim()}` : `nc:${norm(a.nombre)}|${norm(a.curso)}`;
+    const vistos = new Set(alumnos.map(clave));
+    const nuevos = [];
+    preview.forEach(a => { const k = clave(a); if (!vistos.has(k)) { vistos.add(k); nuevos.push(a); } });
+    const repetidos = preview.length - nuevos.length;
+    setAlumnos(prev => [...prev, ...nuevos]);
+    setImportMsg({ type: "ok", text: `✅ ${nuevos.length} alumno(s) importados correctamente.${repetidos ? ` ${repetidos} ya estaban y no se han duplicado.` : ""}` });
     setPreview(null);
   }
 
@@ -1420,12 +1424,19 @@ function AdminAlumnos({ alumnos, setAlumnos, inpStyle, C }) {
           <h3 style={{ marginTop: 0, color: C.dark, display: "flex", alignItems: "center", gap: 10 }}><Icono nombre="anadir-manual" tam={40} />Añadir alumno manualmente</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             {[["nombre", "Nombre completo *"], ["curso", "Curso / Aula *"], ["tutor", "Tutor de grupo"], ["email", "Email familia"], ["telefono", "Teléfono familia"], ["nia", "NIA / DNI"]].map(([k, ph]) => (
-              <input key={k} value={nuevoAlumno[k] || ""} onChange={e => setNuevoAlumno(p => ({ ...p, [k]: e.target.value }))} placeholder={ph} style={inpStyle} />
+              <input key={k} aria-label={ph.replace(" *", "")} list={k === "curso" ? "rumbo-cursos-alta" : undefined} value={nuevoAlumno[k] || ""} onChange={e => { setAvisoAlta(""); setNuevoAlumno(p => ({ ...p, [k]: e.target.value })); }} placeholder={ph} style={inpStyle} />
             ))}
+            <datalist id="rumbo-cursos-alta">{[...new Set(alumnos.map(a => a.curso))].sort().map(c => <option key={c} value={c} />)}</datalist>
           </div>
+          {avisoAlta && <div role="alert" style={{ marginTop: 10, color: "#9f1239", fontWeight: 700, fontSize: 13 }}>{avisoAlta}</div>}
           <Btn onClick={() => {
-            if (!nuevoAlumno.nombre || !nuevoAlumno.curso) return;
-            setAlumnos(prev => [...prev, { ...nuevoAlumno, id: Date.now() }]);
+            const nombre = (nuevoAlumno.nombre || "").trim(), curso = (nuevoAlumno.curso || "").trim();
+            if (!nombre || !curso) { setAvisoAlta("Escribe el nombre completo y el curso: son obligatorios."); return; }
+            const igual = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+            if (alumnos.some(a => (nuevoAlumno.nia && a.nia === nuevoAlumno.nia) || (igual(a.nombre) === igual(nombre) && igual(a.curso) === igual(curso)))) {
+              setAvisoAlta(`${nombre} ya está dado/a de alta en ${curso}.`); return;
+            }
+            setAlumnos(prev => [...prev, { ...nuevoAlumno, nombre, curso, id: Date.now() }]);
             setNuevoAlumno({ nombre: "", curso: "", tutor: "", email: "", telefono: "", nia: "" });
             // Feedback visual
             setFeedbackAñadir(true);
@@ -3610,7 +3621,7 @@ function AvisosMensajes({ mensajes, usuario, onActualizar, onAbrir, C }) {
   const ahora = () => new Date().toISOString();
   const hora = ts => new Date(ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
   const u = urgentes[0];
-  const toast = { position: "fixed", left: "50%", transform: "translateX(-50%)", zIndex: 300, width: "min(560px, calc(100% - 24px))", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.25)", padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
+  const toast = { position: "fixed", left: "50%", transform: "translateX(-50%)", zIndex: 2100, width: "min(560px, calc(100% - 24px))", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,.25)", padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" };
   const btn = { border: "none", borderRadius: 8, padding: "8px 12px", fontWeight: 800, cursor: "pointer", fontSize: 13 };
   return (<>
     {/* Respuestas a mis avisos */}
@@ -3649,7 +3660,7 @@ function AvisosMensajes({ mensajes, usuario, onActualizar, onAbrir, C }) {
       const yaVan = otros.filter(x => x.respuesta?.tipo === "voy");
       const responder = tipo => onActualizar(u.id, { leido: true, leidoTs: ahora(), ...(tipo ? { respuesta: { tipo, ts: ahora() } } : {}) });
       return (
-        <div role="alertdialog" aria-modal="true" aria-labelledby="aviso-urgente-titulo" style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(127,29,29,.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="aviso-urgente-titulo" style={{ position: "fixed", inset: 0, zIndex: 2200, background: "rgba(127,29,29,.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
           <div style={{ background: "#fff", borderRadius: 16, width: "min(520px, 100%)", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,.4)" }}>
             <div style={{ background: "#be123c", color: "#fff", padding: "16px 20px" }}>
               <div id="aviso-urgente-titulo" style={{ fontSize: 22, fontWeight: 900 }}>🚨 AVISO URGENTE</div>
@@ -5362,7 +5373,7 @@ function InformarProblema() {
   const btn = { border: "none", borderRadius: 10, padding: "10px 14px", fontWeight: 800, fontSize: 14, cursor: "pointer" };
   return (<>
     {errorReciente && !abierto && (
-      <div role="status" style={{ position: "fixed", left: 12, bottom: 60, zIndex: 250, background: "#FDF0EF", border: `2px solid ${C.salmon}`, borderRadius: 12, padding: "10px 12px", maxWidth: "min(360px, calc(100% - 24px))", boxShadow: "0 6px 20px rgba(0,0,0,.15)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      <div role="status" style={{ position: "fixed", left: 12, bottom: 60, zIndex: 2150, background: "#FDF0EF", border: `2px solid ${C.salmon}`, borderRadius: 12, padding: "10px 12px", maxWidth: "min(360px, calc(100% - 24px))", boxShadow: "0 6px 20px rgba(0,0,0,.15)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
         <div style={{ flex: "1 1 180px", fontSize: 13, color: "#9f1239", fontWeight: 700 }}>⚠️ Algo no ha ido bien en esta pantalla.</div>
         <button style={{ ...btn, background: "#be123c", color: "#fff", padding: "6px 10px", fontSize: 12 }} onClick={() => setAbierto(true)}>Avisar</button>
         <button aria-label="Cerrar" style={{ ...btn, background: "transparent", color: C.gray, padding: "6px 8px" }} onClick={() => setErrorReciente(null)}>✕</button>
@@ -5375,7 +5386,7 @@ function InformarProblema() {
     <style>{`@media (max-width: 600px) { .rumbo-informar-txt { display: none; } }`}</style>
     {abierto && (
       <div role="dialog" aria-modal="true" aria-labelledby="rumbo-informar-titulo" onClick={() => setAbierto(false)}
-        style={{ position: "fixed", inset: 0, zIndex: 350, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+        style={{ position: "fixed", inset: 0, zIndex: 2300, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
         <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, padding: 20, width: "min(480px, 100%)", fontFamily: "system-ui,sans-serif" }}>
           <div id="rumbo-informar-titulo" style={{ fontSize: 19, fontWeight: 900, color: C.dark, marginBottom: 4 }}>⚠️ Informar de un problema</div>
           <div style={{ fontSize: 13, color: C.gray, marginBottom: 10 }}>Cuéntale a la responsable de la app qué ha pasado o qué no te cuadra.</div>
@@ -5680,8 +5691,10 @@ function AppInterna() {
     const delAlumnoTri = partesActuales.filter(p => { const f = isoLocal(p.ts); return p.alumnoId === parte.alumnoId && f >= tri.desde && f <= tri.hasta; });
     const total  = delAlumnoTri.length + 1;
     const leves  = delAlumnoTri.filter(p => p.gravedad === "leve").length + (parte.gravedad === "leve" ? 1 : 0);
-    const hora   = new Date(parte.ts).getHours();
-    const fueraHorario = hora < 8 || hora >= 15;
+    const minParte = new Date(parte.ts).getHours() * 60 + new Date(parte.ts).getMinutes();
+    const aMinH = t => { const [h, m] = t.trim().split(":").map(Number); return h * 60 + m; };
+    const iniJornada = aMinH(HORARIO[HORAS[0]].split("–")[0]) - 30, finJornada = aMinH(HORARIO[HORAS[HORAS.length - 1]].split("–")[1]);
+    const fueraHorario = minParte < iniJornada || minParte > finJornada;
     // Avisa cada 3 partes: al llegar a 3, 6, 9...
     if (parte.gravedad === "leve" && leves % UMBRAL_AVISO === 0) nuevasAlertas.push({ id: Date.now() + 1, tipo: "acumulacion_leves", alumno: parte.alumno, curso: parte.curso, msg: `Acumulación de ${leves} partes leves en ${tri.texto} — Considerar sanción`, ts: parte.ts, leida: false });
     if (total % UMBRAL_AVISO === 0) nuevasAlertas.push({ id: Date.now() + 2, tipo: "total_partes", alumno: parte.alumno, curso: parte.curso, msg: `Ha alcanzado ${total} partes en ${tri.texto}`, ts: parte.ts, leida: false });
@@ -6800,9 +6813,13 @@ function AppInterna() {
                     : <div style={{ fontSize: 12, color: C.gray, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}><Icono nombre="tutor" tam={24} />El informe incluye el tutor/a de cada grupo. Elige un curso para ver o cambiar su tutor/a.</div>}
                   <div style={{ background: C.cream, borderRadius: 8, padding: 12, marginBottom: 16, fontSize: 13, color: C.dark }}>
                     El informe incluirá <strong>{partesFiltrados.length} parte(s)</strong>
-                    {filtCurso && ` · ${filtCurso}`}{filtGravedad && ` · ${GRAVEDAD.find(g => g.id === filtGravedad)?.label}`}
+                    {filtCurso && ` · ${filtCurso}`}{filtAlumno && ` · ${alumnos.find(a => a.id === parseInt(filtAlumno))?.nombre || "un alumno"}`}{filtGravedad && ` · ${GRAVEDAD.find(g => g.id === filtGravedad)?.label}`}
                     {filtFechaDesde && ` · Desde: ${fmtD(filtFechaDesde)}`}{filtFechaHasta && ` · Hasta: ${fmtD(filtFechaHasta)}`}
                   </div>
+                  {(filtCurso || filtAlumno || filtGravedad || filtFechaDesde || filtFechaHasta) && (
+                    <button onClick={() => { setFiltCurso(""); setFiltAlumno(""); setFiltGravedad(""); setFiltFechaDesde(""); setFiltFechaHasta(""); }}
+                      style={{ border: "none", background: "transparent", color: C.blue, fontWeight: 700, cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>Limpiar filtros</button>
+                  )}
                   <Btn onClick={() => setPrintInforme(true)} disabled={partesFiltrados.length === 0} color={C.teal} style={{ width: "100%", fontSize: 15, padding: "14px" }}>
                     <Ic n="informe" tam={20} />Ver informe de partes y descargar PDF
                   </Btn>
