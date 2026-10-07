@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:4173',
     locale: 'es-ES',
