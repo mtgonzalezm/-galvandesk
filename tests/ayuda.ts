@@ -1,0 +1,40 @@
+import { expect, type Page } from '@playwright/test'
+
+// Un miércoles lectivo a 5ª hora, en hora de Madrid
+export const AHORA = new Date('2026-10-07T12:50:00+02:00')
+
+export function vigilarErrores(page: Page) {
+  const errores: string[] = []
+  page.on('pageerror', e => { if (!/Fallo de prueba/.test(e.message)) errores.push(e.message) })
+  return errores
+}
+
+export async function empezar(page: Page, hora = AHORA) {
+  await page.clock.install({ time: hora })
+  page.on('dialog', d => d.accept())
+  await page.goto('/')
+  const empezarBtn = page.getByRole('button', { name: /Empezar/ })
+  if (await empezarBtn.count()) await empezarBtn.first().click()
+}
+
+export async function entrar(page: Page, texto: string | RegExp) {
+  await page.getByRole('button').filter({ hasText: texto }).first().click()
+  await expect(page.getByRole('button', { name: /Salir/ })).toBeVisible()
+}
+export const comoProfe = (page: Page) => entrar(page, 'poner partes, guardias')
+export const comoJefatura = (page: Page) => entrar(page, 'Entras como Ana Jiménez')
+export const comoAdmin = (page: Page) => entrar(page, 'Entras como Elena Vega')
+export async function salir(page: Page) {
+  await page.getByRole('button', { name: /Salir/ }).first().click()
+  await expect(page.locator('#gd-otro-profe')).toBeVisible()
+}
+export const sinFalloEnPantalla = (page: Page) => expect(page.getByText('Algo ha fallado en esta pantalla')).toHaveCount(0)
+
+// Lee un dato guardado por la app
+export const leer = (page: Page, clave: string) =>
+  page.evaluate(k => JSON.parse(localStorage.getItem('galvandesk:' + k) || 'null'), clave)
+
+export async function pestaña(page: Page, nombre: string | RegExp) {
+  await page.getByRole('button', typeof nombre === 'string' ? { name: nombre, exact: true } : { name: nombre }).first().click()
+  await sinFalloEnPantalla(page)
+}
