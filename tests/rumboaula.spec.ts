@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 // Todas las pruebas usan un miércoles lectivo a 5ª hora (12:50) y los datos de ejemplo.
-const AHORA = new Date('2026-10-07T12:50:00')
+const AHORA = new Date('2026-10-07T12:50:00+02:00')
 
 // Errores de la página: si salta alguno, la prueba falla
 function vigilarErrores(page: Page) {
@@ -81,7 +81,7 @@ test('Ahora: muestra la hora en curso y el equipo de cada zona', async ({ page }
 
 test('Cubrir clases: jefatura asigna y la profe lo ve', async ({ page }) => {
   const errores = vigilarErrores(page)
-  await empezar(page, new Date('2026-10-07T10:40:00'))
+  await empezar(page, new Date('2026-10-07T10:40:00+02:00'))
   await comoJefatura(page)
   await page.getByRole('button', { name: /Guardias & Ausencias/ }).click()
   await page.getByRole('button', { name: 'Ahora', exact: true }).click()
@@ -126,7 +126,7 @@ test('Galvángram: aviso urgente a la pareja de guardia, respuesta «Voy»', asy
 })
 
 test('Galvángram: un aviso urgente no se envía sin lugar', async ({ page }) => {
-  await empezar(page, new Date('2026-10-07T10:40:00'))
+  await empezar(page, new Date('2026-10-07T10:40:00+02:00'))
   await comoProfe(page)
   const avisos: string[] = []
   page.on('dialog', d => avisos.push(d.message()))
