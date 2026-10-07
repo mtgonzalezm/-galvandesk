@@ -2300,7 +2300,7 @@ const AYUDAS = {
     "Abajo tienes los informes: al pulsar se abren en pantalla y desde ahí los descargas o imprimes. «Ver y descargar en Excel» muestra una hoja por tema, con nombres, grupos y faltas.",
     "También puedes sacar los partes de un alumno o de un grupo, o las ausencias de un profesor, solo en esas fechas."] },
   partes: { titulo: "Poner un parte", pasos: [
-    "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su tutor, el contacto de la familia y cuántos partes lleva.",
+    "Escribe el nombre o el curso del alumno y elígelo de la lista. Verás su curso, su tutor/a y los partes que le has puesto tú; si eres su tutor/a, también el contacto de la familia y todos sus partes.",
     "Elige la hora, el tipo y la gravedad, y después la falta tipificada de la lista oficial.",
     "Describe lo ocurrido con hechos concretos.",
     "Pulsa «Generar Parte». El parte lleva el tutor/a del grupo y su correo.",
@@ -6225,10 +6225,25 @@ function AppInterna() {
               )}
               {alumnoSel && (
                 <div style={{ background: C.cream, borderRadius: 8, padding: 12, margin: "8px 0 16px", fontSize: 13, border: `1px solid #ddd` }}>
-                  <div><strong>Curso:</strong> {alumnoSel.curso} | <strong>Tutor:</strong> {alumnoSel.tutor}</div>
-                  <div style={{ marginTop: 4 }}><Ic n="mensaje-enviar" tam={20} />{alumnoSel.email} · 📱 {alumnoSel.telefono}</div>
-                  {partesLeves(alumnoSel.id) >= 3 && <div style={{ marginTop: 6, color: C.salmon, fontWeight: 600 }}>⚠️ Acumulación: {partesLeves(alumnoSel.id)} partes leves</div>}
-                  <div style={{ marginTop: 2, color: C.gray }}>Total partes: {partesDeAlumno(alumnoSel.id).length}</div>
+                  {(() => {
+                    // Datos del alumnado: solo los ve el profesorado implicado. El tutor/a del grupo ve
+                    // el contacto y todos sus partes; el resto, solo los partes que le ha puesto él/ella.
+                    const tutorAl = tutorDeGrupo(tutores, alumnos, alumnoSel.curso) || alumnoSel.tutor;
+                    const yo = fProfesor || usuario;
+                    const esTutor = !!yo && tutorAl === yo;
+                    const mios = partesDeAlumno(alumnoSel.id).filter(p => p.profesor === yo);
+                    return (<>
+                      <div><strong>Curso:</strong> {alumnoSel.curso} | <strong>Tutor/a:</strong> {tutorAl || "—"}</div>
+                      {esTutor ? (<>
+                        <div style={{ marginTop: 4 }}><Ic n="mensaje-enviar" tam={20} />{alumnoSel.email} · 📱 {alumnoSel.telefono}</div>
+                        {partesLeves(alumnoSel.id) >= 3 && <div style={{ marginTop: 6, color: C.salmon, fontWeight: 600 }}>⚠️ Acumulación: {partesLeves(alumnoSel.id)} partes leves</div>}
+                        <div style={{ marginTop: 2, color: C.gray }}>Eres su tutor/a · Partes en total: {partesDeAlumno(alumnoSel.id).length}</div>
+                      </>) : (<>
+                        <div style={{ marginTop: 4, color: C.gray }}>Partes que le has puesto tú: <strong style={{ color: C.dark }}>{mios.length}</strong></div>
+                        <div style={{ marginTop: 2, fontSize: 12, color: C.gray }}>El contacto de la familia aparece al generar el parte, para que puedas avisarla.</div>
+                      </>)}
+                    </>);
+                  })()}
                 </div>
               )}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 16, marginTop: 8 }}>
