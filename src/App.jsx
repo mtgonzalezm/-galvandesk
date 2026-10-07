@@ -3685,6 +3685,182 @@ function ParteDia({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// AHORA — la hora en curso de un vistazo (profesorado y jefatura)
+// ════════════════════════════════════════════════════════════════════════════
+// Minutos desde medianoche de "8:30"
+const aMinutos = t => { const [h, m] = String(t).trim().split(":").map(Number); return h * 60 + m; };
+const tramoMin = hora => (HORARIO[hora] || "0:00 – 0:00").split("–").map(aMinutos);
+// Siguiente hora del horario a partir de un momento (o null si ya ha terminado la jornada)
+function horaSiguiente(ahora = new Date()) {
+  const min = ahora.getHours() * 60 + ahora.getMinutes();
+  return HORAS.find(h => tramoMin(h)[0] > min) || null;
+}
+const ORDEN_ESTADO = { descubierta: 0, una: 1, sustituto: 2, completa: 3 };
+
+function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], usuario = "", C }) {
+  const [ahora, setAhora] = useState(() => new Date());
+  const [horaElegida, setHoraElegida] = useState(""); // "" = la hora en curso
+  useEffect(() => { const t = setInterval(() => setAhora(new Date()), 15000); return () => clearInterval(t); }, []);
+
+  const fecha = isoLocal(ahora);
+  const lectivo = esLectivo(ahora);
+  const enCurso = horaEnCurso(ahora);
+  const hora = horaElegida || enCurso;
+  const siguiente = hora ? HORAS[HORAS.indexOf(hora) + 1] || null : horaSiguiente(ahora);
+  const equipo = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+
+  // Zonas de guardia de una hora, con su situación (las más urgentes primero)
+  const zonasDe = h => {
+    if (!h) return [];
+    const ids = [...new Set(profesores.map(p => cuadrante[`${fecha}|${h}|${p}`]).filter(Boolean))];
+    return ids.map(zonaId => {
+      const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+      return { zonaId, zona: z?.label || zonaId, edificio: z?.edificio, sit: situacionZona({ fecha, hora: h, zonaId, ...equipo }) };
+    }).sort((a, b) => ORDEN_ESTADO[a.sit.estado] - ORDEN_ESTADO[b.sit.estado] || a.zona.localeCompare(b.zona));
+  };
+  const zonas = zonasDe(hora);
+  const zonasSig = zonasDe(siguiente);
+  const ausentesAhora = hora ? ausencias.filter(a => isoLocal(a.fecha) === fecha && a.horas.includes(hora)) : [];
+  const clasesSinProfe = hora === "Recreo" ? [] : ausentesAhora;
+  const enAula = zonas.filter(z => ZONAS_CENTRO.find(x => x.id === z.zonaId)?.tipo === "aula").flatMap(z => z.sit.enZona);
+  const miGuardia = usuario && hora
+    ? guardiasDeProfesor({ fecha, profesor: usuario, ...equipo }).filter(g => g.hora === hora)
+    : [];
+
+  // Progreso del tramo en curso
+  let progreso = null;
+  if (hora && hora === enCurso) {
+    const [ini, fin] = tramoMin(hora);
+    const min = ahora.getHours() * 60 + ahora.getMinutes();
+    progreso = { pct: Math.round(((min - ini) / (fin - ini)) * 100), quedan: fin - min };
+  }
+  const reloj = ahora.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  const cuenta = e => zonas.filter(z => z.sit.estado === e).length;
+  const tarjeta = { background: C.white, borderRadius: 12, padding: 16, boxShadow: "0 2px 10px rgba(0,0,0,0.06)", marginBottom: 14 };
+
+  return (
+    <div>
+      {/* Cabecera con reloj */}
+      <div style={{ background: C.dark, color: "#fff", borderRadius: 14, padding: "18px 20px", marginBottom: 16, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Icono nombre="hora-reloj" tam={44} />
+          <div>
+            <div style={{ fontSize: 11, opacity: .75, letterSpacing: 1 }}>{ahora.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" }).toUpperCase()}</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>
+              {!lectivo ? "Hoy no es día lectivo" : hora ? conTramo(hora) : siguiente ? `Antes de ${siguiente}` : "La jornada ha terminado"}
+            </div>
+            {horaElegida && horaElegida !== enCurso && <div style={{ fontSize: 12, opacity: .8 }}>Estás viendo otra hora · ahora es {enCurso || "fuera del horario"}</div>}
+          </div>
+        </div>
+        <div style={{ fontSize: 40, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{reloj}</div>
+        {progreso && (
+          <div style={{ width: "100%" }}>
+            <div style={{ height: 8, background: "rgba(255,255,255,.2)", borderRadius: 6, overflow: "hidden" }}>
+              <div style={{ width: `${progreso.pct}%`, height: "100%", background: C.teal }} />
+            </div>
+            <div style={{ fontSize: 12, opacity: .85, marginTop: 4 }}>Quedan {progreso.quedan} min{siguiente ? ` · después: ${conTramo(siguiente)}` : " · última hora del día"}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Ver otra hora (útil para preparar la siguiente o fuera del horario) */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+        {[["", "En curso"], ...HORAS.map(h => [h, h])].map(([v, t]) => (
+          <button key={t} onClick={() => setHoraElegida(v)}
+            style={{ border: `1px solid ${horaElegida === v ? C.dark : "#d6d3d1"}`, background: horaElegida === v ? C.dark : C.white, color: horaElegida === v ? "#fff" : C.dark, borderRadius: 20, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+            {t}{v === enCurso && v ? " ●" : ""}
+          </button>
+        ))}
+      </div>
+
+      {!lectivo || !hora ? (
+        <div style={{ ...tarjeta, textAlign: "center", color: C.gray, padding: 28 }}>
+          {!lectivo ? "Fin de semana: no hay guardias." : siguiente ? `Aún no ha empezado la jornada. La primera es ${conTramo(siguiente)}.` : "No hay ninguna hora en curso."}
+          <div style={{ fontSize: 13, marginTop: 6 }}>Puedes elegir una hora arriba para verla.</div>
+        </div>
+      ) : (<>
+        {/* Te toca ahora */}
+        {usuario && (
+          <div style={{ ...tarjeta, borderLeft: `6px solid ${miGuardia.length ? C.teal : "#d6d3d1"}` }}>
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 16, marginBottom: 8 }}><Ic n="guardias" tam={22} />{miGuardia.length ? "Te toca guardia" : "No tienes guardia a esta hora"}</div>
+            {miGuardia.map((g, i) => (
+              <div key={i} style={{ marginBottom: 10 }}>
+                <div style={{ fontSize: 15, color: C.dark }}><strong>{g.zona}</strong> · como {g.rol}{g.rol === "sustituto" && g.sit.sustituyeA ? <span style={{ color: "#b45309", fontWeight: 700 }}> — entras por {g.sit.sustituyeA}</span> : ""}</div>
+                <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>En la zona: {g.sit.enZona.join(", ") || "nadie"}</div>
+                <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+                  {tareasDeGuardia(g, fecha, ausencias).map(a => <TareaAusente key={a.id} a={a} C={C} />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Resumen */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(110px,1fr))", gap: 10, marginBottom: 14 }}>
+          {[
+            { label: "Descubiertas", value: cuenta("descubierta"), color: C.salmon },
+            { label: "Solo 1 profesor", value: cuenta("una"), color: "#a16207" },
+            { label: "Entra el sustituto", value: cuenta("sustituto"), color: C.amber },
+            { label: "Completas", value: cuenta("completa"), color: C.teal },
+            { label: hora === "Recreo" ? "Ausentes" : "Clases sin profe", value: ausentesAhora.length, color: C.blue },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.white, borderRadius: 10, padding: 12, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,0.06)", borderTop: `4px solid ${s.color}` }}>
+              <div style={{ fontSize: 24, fontWeight: 800, color: s.color }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Clases sin profe */}
+        {clasesSinProfe.length > 0 && (
+          <div style={tarjeta}>
+            <div style={{ fontWeight: 800, color: C.dark, fontSize: 15, marginBottom: 4 }}><Ic n="profe-ausente" tam={22} />Clases sin su profesor/a</div>
+            <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>De guardia en aula: {enAula.length ? enAula.join(", ") : <span style={{ color: C.salmon, fontWeight: 700 }}>nadie</span>}</div>
+            <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))" }}>
+              {clasesSinProfe.map(a => <TareaAusente key={a.id} a={a} C={C} />)}
+            </div>
+          </div>
+        )}
+
+        {/* Zonas de guardia */}
+        <div style={{ ...tarjeta, padding: 0, overflow: "hidden" }}>
+          <div style={{ background: hora === "Recreo" ? C.blue : C.dark, color: "#fff", padding: "10px 16px", fontWeight: 700, fontSize: 14 }}><Ic n="guardias" tam={20} />Zonas de guardia · {hora}</div>
+          {zonas.length === 0 ? (
+            <div style={{ padding: 22, textAlign: "center", color: C.gray, fontSize: 13 }}>No hay zonas en el cuadrante para esta hora.</div>
+          ) : zonas.map(z => {
+            const e = ESTADOS_ZONA[z.sit.estado];
+            return (
+              <div key={z.zonaId} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: `1px solid ${C.cream}` }}>
+                <span style={{ color: e.color, background: e.bg, borderRadius: 8, padding: "3px 8px", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{e.label}</span>
+                <div style={{ flex: "1 1 200px" }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{z.zona}</div>
+                  <div style={{ fontSize: 12, color: C.gray }}>
+                    {z.sit.enZona.length ? `En la zona: ${z.sit.enZona.join(", ")}` : "Nadie en la zona"}
+                    {z.sit.sustituyeA && <span style={{ color: "#b45309" }}> · {z.sit.sustituto} entra por {z.sit.sustituyeA}</span>}
+                    {[[z.sit.titular, z.sit.tA], [z.sit.apoyo, z.sit.aA], [z.sit.sustituto, z.sit.sA]].filter(([p, f]) => p && f).map(([p]) => <span key={p} style={{ color: C.salmon }}> · falta {p}</span>)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Siguiente hora */}
+        {siguiente && (
+          <div style={{ ...tarjeta, background: C.light, fontSize: 13, color: C.dark }}>
+            <strong>Siguiente: {conTramo(siguiente)}</strong> — {zonasSig.length} zona(s)
+            {zonasSig.filter(z => z.sit.estado === "descubierta").length > 0
+              ? <span style={{ color: C.salmon, fontWeight: 700 }}> · {zonasSig.filter(z => z.sit.estado === "descubierta").length} descubierta(s): {zonasSig.filter(z => z.sit.estado === "descubierta").map(z => z.zona).join(", ")}</span>
+              : <span style={{ color: C.teal }}> · ninguna descubierta</span>}
+            <button onClick={() => setHoraElegida(siguiente)} style={{ marginLeft: 8, border: "none", background: "transparent", color: C.blue, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Ver →</button>
+          </div>
+        )}
+      </>)}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GESTIÓN DE AUSENCIAS (Jefatura)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -4936,6 +5112,7 @@ export default function App() {
         ]
       : moduloProfesor === "guardias"
       ? [
+          { id: "ahora",          label: "⏰ Ahora", color: "#f59e0b" },
           { id: "mi_guardia",     label: "🔄 Mi Guardia Hoy", color: "#06b6d4" },
           { id: "notif_ausencia", label: "📢 Notificar Ausencia", color: "#ec4899" },
           { id: "guardias_ver",   label: "📄 Ver Guardias", color: "#10b981" },
@@ -4955,6 +5132,7 @@ export default function App() {
         ]
       : moduloJefatura === "guardias"
       ? [
+          { id: "ahora",         label: "⏰ Ahora", color: "#f59e0b" },
           { id: "cuadrante",     label: "📅 Cuadrante", color: "#06b6d4" },
           { id: "coordinacion",  label: "🔄 Coordinación Diaria", color: "#8b5cf6" },
           { id: "parte_dia",     label: "🔄 Parte del Día", color: "#ec4899" },
@@ -5434,6 +5612,11 @@ export default function App() {
               </Btn>
             </Card>
           </div>
+        )}
+
+        {/* ── Ahora: la hora en curso (profesorado y jefatura) ── */}
+        {tab === "ahora" && (
+          <AhoraGuardias profesores={profesores} cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia} ausencias={ausencias} usuario={perfil.id === "profesor" ? (fProfesor || usuario) : ""} C={C} />
         )}
 
         {/* ── Ver Guardias (profesor) ── */}
