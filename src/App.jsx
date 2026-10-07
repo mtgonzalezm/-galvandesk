@@ -2302,9 +2302,9 @@ const AYUDAS = {
     "Todas las zonas de guardia de hoy, hora a hora, con quién está en cada una.",
     "En naranja, las zonas en las que entra el sustituto; en rojo, las que se han quedado sin nadie."] },
   mensajeria: { titulo: "Galvángram", pasos: [
-    "Elige a quién va el mensaje.",
     "Toca un mensaje rápido o escribe el tuyo; el texto se puede retocar.",
     "En «¿Dónde estás?», deja que se rellene según tu horario o escribe a mano el aula, el edificio y el grupo. En los avisos urgentes es obligatorio.",
+    "En «¿A quién avisar?» aparecen los profes de guardia de esa hora por zonas, primero los de tu edificio. Toca un nombre o «Avisar a la zona»; también puedes añadir a cualquier otro profesor/a.",
     "Pulsa «Enviar Mensaje». Lo verá al abrir la app: no llega como notificación al móvil."] },
   dashboard: { titulo: "Resumen del día", pasos: [
     "De un vistazo: partes por gravedad, alumnos fuera del aula, profesores ausentes y alertas.",
@@ -3564,14 +3564,15 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
   // ¿Dónde estás? «auto» (según tu horario, guardia o clase que cubres) o «mano»
   const hoyISO = isoLocal();
   const [modoLugar, setModoLugar] = useState("auto");
-  const [horaLugar, setHoraLugar] = useState(() => horaEnCurso() && horaEnCurso() !== "Recreo" ? horaEnCurso() : "1ª hora");
+  const [horaLugar, setHoraLugar] = useState(() => horaEnCurso() || "1ª hora");
   const [lugarMano, setLugarMano] = useState({ grupo: "", aula: "", edificio: "" });
   const equipoLugar = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
   const lugarAuto = esLectivo(new Date()) ? dondeEsta({ fecha: hoyISO, hora: horaLugar, profesor: usuario, horarios, coberturas, equipo: equipoLugar }) : null;
   const hayHorarios = Object.keys(horarios).length > 0;
   const aulasConocidas = [...new Set(Object.values(horarios).map(h => h.aula).filter(Boolean))].sort();
   const lugar = modoLugar === "auto" ? lugarAuto : (lugarMano.grupo || lugarMano.aula || lugarMano.edificio ? { origen: "mano", ...lugarMano } : null);
-  const [destinatario, setDestinatario] = useState("");
+  const [destinatarios, setDestinatarios] = useState([]); // se puede avisar a varios (p. ej. a la pareja de guardia de una zona)
+  const alternarDest = p => setDestinatarios(d => d.includes(p) ? d.filter(x => x !== p) : [...d, p]);
   const [tipoMensaje, setTipoMensaje] = useState("");
   const [mensajePersonalizado, setMensajePersonalizado] = useState("");
   const [tab, setTab] = useState("enviar"); // "enviar" o "historial"
@@ -3595,8 +3596,8 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
       alert("📍 En un aviso urgente hay que indicar dónde estás (aula, edificio o grupo).");
       return;
     }
-    if (!destinatario) {
-      alert("Selecciona destinatario");
+    if (!destinatarios.length) {
+      alert("Elige a quién va el mensaje");
       return;
     }
     
@@ -3608,19 +3609,21 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
       return;
     }
     
-    const nuevoMensaje = {
-      id: Date.now(),
+    const base = Date.now();
+    const nuevos = destinatarios.map((dest, i) => ({
+      id: base + i,
       remitente: usuario,
-      destinatario: destinatario,
+      destinatario: dest,
+      conCopia: destinatarios.filter(d => d !== dest),
       texto: textoFinal,
       ts: new Date().toISOString(),
       leido: false,
       urgente,
       lugar: lugar ? { grupo: lugar.grupo || "", aula: lugar.aula || "", edificio: lugar.edificio || "", origen: lugar.origen, hora: modoLugar === "auto" ? horaLugar : "" } : null,
-    };
+    }));
     
-    setMensajes(prev => [nuevoMensaje, ...prev]);
-    setDestinatario("");
+    setMensajes(prev => [...nuevos, ...prev]);
+    setDestinatarios([]);
     setTipoMensaje("");
     setMensajePersonalizado("");
     setLugarMano({ grupo: "", aula: "", edificio: "" });
@@ -3674,16 +3677,6 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
       {/* ENVIAR MENSAJE */}
       {tab === "enviar" && (
         <div style={{ background: C.white, borderRadius: 12, padding: 20, boxShadow: "0 2px 10px rgba(0,0,0,0.06)" }}>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="selecciona-profesor" tam={30} />Destinatario</label>
-            <select value={destinatario} onChange={e => setDestinatario(e.target.value)} style={selStyle}>
-              <option value="">— Selecciona profesor —</option>
-              {profesores.filter(p => p !== usuario).map(p => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-          </div>
-          
           <div style={{ marginBottom: 16 }}>
             <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}><Icono nombre="mensajes" tam={30} />Tipo de Mensaje</label>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -3739,7 +3732,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
                     <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8, fontSize: 12, color: C.gray }}>
                       Hora:
                       <select value={horaLugar} onChange={e => setHoraLugar(e.target.value)} style={{ ...selStyle, width: "auto", padding: "6px 10px", fontSize: 13 }}>
-                        {HORAS.filter(h => h !== "Recreo").map(h => <option key={h} value={h}>{conTramo(h)}{h === horaEnCurso() ? " · ahora" : ""}</option>)}
+                        {HORAS.map(h => <option key={h} value={h}>{conTramo(h)}{h === horaEnCurso() ? " · ahora" : ""}</option>)}
                       </select>
                     </div>
                     {lugarAuto ? (
@@ -3781,6 +3774,103 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
             );
           })()}
 
+          {/* ¿A QUIÉN AVISAR? — profesorado de guardia por zonas en esa hora */}
+          {(() => {
+            const pref = `${hoyISO}|${horaLugar}|`;
+            const ids = [...new Set([
+              ...profesores.map(p => cuadrante[`${pref}${p}`]).filter(Boolean),
+              ...[apoyosGuardia, sustitutosGuardia].flatMap(m => Object.keys(m).filter(k => k.startsWith(pref) && m[k]).map(k => k.split("|")[2])),
+            ])];
+            const miEdificio = lugar?.edificio || "";
+            const zonasG = ids.map(zonaId => {
+              const z = ZONAS_CENTRO.find(z => z.id === zonaId);
+              const sit = situacionZona({ fecha: hoyISO, hora: horaLugar, zonaId, ...equipoLugar, coberturas });
+              const cerca = !!miEdificio && z?.edificio === miEdificio;
+              return { zonaId, nombre: z?.label || zonaId, tipo: z?.tipo, cerca, sit };
+            }).sort((a, b) => (b.cerca - a.cerca) || ((a.tipo === "aula") - (b.tipo === "aula")) || a.nombre.localeCompare(b.nombre));
+            const rol = (sit, p) => p === sit.titular ? "Titular" : p === sit.apoyo ? "Pareja" : sit.sustituyeA ? `Sustituto · entra por ${sit.sustituyeA}` : "Sustituto · en reserva, libre";
+            const chip = (p, activo, ocupado) => ({
+              display: "inline-flex", flexDirection: "column", alignItems: "flex-start", padding: "6px 10px", borderRadius: 8, cursor: ocupado ? "default" : "pointer", textAlign: "left",
+              border: `2px solid ${activo ? C.blue : "#d6d3d1"}`, background: activo ? "#EEF5F8" : ocupado ? C.light : "#fff", opacity: ocupado ? .65 : 1,
+            });
+            return (
+              <div style={{ marginBottom: 16, background: C.light, borderRadius: 10, padding: 14 }}>
+                <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <Icono nombre="guardias" tam={30} />¿A quién avisar?
+                </label>
+                <div style={{ fontSize: 12, color: C.gray, marginBottom: 10 }}>
+                  Profesorado de guardia a {conTramo(horaLugar)}{esLectivo(new Date()) ? "" : " (hoy no es lectivo)"}. Toca un nombre para enviárselo{miEdificio ? <>; primero, la zona de <strong>tu edificio ({miEdificio})</strong></> : ""}.
+                </div>
+                {zonasG.length === 0 ? (
+                  <div style={{ fontSize: 13, color: C.gray, background: "#fff", borderRadius: 8, padding: 10 }}>No hay guardias en el cuadrante para esta hora. Elige el destinatario en la lista de abajo.</div>
+                ) : (
+                  <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit,minmax(min(280px,100%),1fr))", marginBottom: 12 }}>
+                    {zonasG.map(z => {
+                      const e = ESTADOS_ZONA[z.sit.estado];
+                      const disponibles = z.sit.enZona.filter(p => p !== usuario);
+                      const s2 = z.sit;
+                      const reserva = s2.sustituto && !s2.sA && !s2.sustituyeA && !s2.enClase?.[s2.sustituto] && s2.sustituto !== usuario ? s2.sustituto : null;
+                      const faltan = [[s2.titular, s2.tA], [s2.apoyo, s2.aA], [s2.sustituto, s2.sA]].filter(([p, f]) => p && f).map(([p]) => p);
+                      const todos = disponibles.length > 0 && disponibles.every(p => destinatarios.includes(p));
+                      const ocupados = Object.entries(z.sit.enClase || {});
+                      return (
+                        <div key={z.zonaId} style={{ background: "#fff", borderRadius: 10, padding: 10, border: `2px solid ${z.cerca ? C.teal : "transparent"}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                            <span style={{ fontWeight: 800, fontSize: 13, color: C.dark }}>{z.cerca ? "⭐ " : ""}{z.nombre}</span>
+                            <span style={{ color: e.color, background: e.bg, borderRadius: 6, padding: "1px 6px", fontWeight: 700, fontSize: 11 }}>{e.label}</span>
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                            {disponibles.map(p => (
+                              <button key={p} type="button" onClick={() => alternarDest(p)} style={chip(p, destinatarios.includes(p), false)}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{destinatarios.includes(p) ? "✓ " : ""}{p}</span>
+                                <span style={{ fontSize: 10, color: C.gray, fontWeight: 600 }}>{rol(z.sit, p)}</span>
+                              </button>
+                            ))}
+                            {reserva && (
+                              <button type="button" onClick={() => alternarDest(reserva)} style={{ ...chip(reserva, destinatarios.includes(reserva), false), borderStyle: destinatarios.includes(reserva) ? "solid" : "dashed" }}>
+                                <span style={{ fontSize: 13, fontWeight: 700, color: C.dark }}>{destinatarios.includes(reserva) ? "✓ " : ""}{reserva}</span>
+                                <span style={{ fontSize: 10, color: C.gray, fontWeight: 600 }}>{rol(s2, reserva)}</span>
+                              </button>
+                            )}
+                            {ocupados.map(([p, clase]) => (
+                              <span key={p} style={chip(p, false, true)} title="Está cubriendo una clase">
+                                <span style={{ fontSize: 13, fontWeight: 700, color: C.gray }}>{p}</span>
+                                <span style={{ fontSize: 10, color: "#1d4ed8", fontWeight: 600 }}>Ocupado · cubre {clase}</span>
+                              </span>
+                            ))}
+                            {disponibles.length === 0 && ocupados.length === 0 && <span style={{ fontSize: 12, color: C.salmon, fontWeight: 700 }}>Nadie en la zona</span>}
+                          </div>
+                          {faltan.length > 0 && <div style={{ fontSize: 11, color: C.salmon, marginTop: 6 }}>Falta: {faltan.join(", ")}</div>}
+                          {disponibles.length > 1 && (
+                            <button type="button" onClick={() => setDestinatarios(d => todos ? d.filter(x => !disponibles.includes(x)) : [...new Set([...d, ...disponibles])])}
+                              style={{ marginTop: 8, border: "none", background: "transparent", color: C.blue, fontWeight: 700, fontSize: 12, cursor: "pointer", padding: 0 }}>
+                              {todos ? "Quitar a la zona" : "📣 Avisar a la zona"}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12, color: C.gray, fontWeight: 700 }}>Otro destinatario:</span>
+                  <select value="" onChange={e => { if (e.target.value) alternarDest(e.target.value); }} style={{ ...selStyle, width: "auto", flex: "1 1 200px" }}>
+                    <option value="">— Añadir a cualquier profesor/a —</option>
+                    {profesores.filter(p => p !== usuario && !destinatarios.includes(p)).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div style={{ marginTop: 10, fontSize: 13, color: C.dark }}>
+                  <strong>Para:</strong>{" "}
+                  {destinatarios.length === 0 ? <span style={{ color: C.gray }}>nadie todavía</span> : destinatarios.map(p => (
+                    <span key={p} style={{ display: "inline-flex", alignItems: "center", gap: 4, background: "#EEF5F8", color: C.blue, borderRadius: 14, padding: "2px 8px", margin: "2px 4px 2px 0", fontWeight: 700, fontSize: 12 }}>
+                      {p}<button type="button" onClick={() => alternarDest(p)} style={{ border: "none", background: "transparent", color: C.blue, cursor: "pointer", fontWeight: 800, padding: 0 }} aria-label={`Quitar a ${p}`}>×</button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           <button
             onClick={handleEnviar}
             style={{
@@ -3815,6 +3905,7 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, h
                     <div style={{ fontWeight: 600, color: C.dark, fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
                       <Icono nombre={m.remitente === usuario ? "boton-enviar" : (m.leido ? "mensaje-leido" : "mensaje-recibido")} tam={28} />
                       {m.remitente === usuario ? "A: " : "De: "}{m.remitente === usuario ? m.destinatario : m.remitente}
+                      {m.conCopia?.length > 0 && <span style={{ fontSize: 11, color: C.gray, fontWeight: 500 }}>· también a {m.conCopia.join(", ")}</span>}
                     </div>
                     <div style={{ fontSize: 11, color: C.gray, display: "flex", alignItems: "center", gap: 5 }}>
                       <Icono nombre="hora-mensaje" tam={20} />
