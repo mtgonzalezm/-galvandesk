@@ -2304,6 +2304,7 @@ const AYUDAS = {
   mensajeria: { titulo: "Galvángram", pasos: [
     "Elige a quién va el mensaje.",
     "Toca un mensaje rápido o escribe el tuyo; el texto se puede retocar.",
+    "En «¿Dónde estás?», deja que se rellene según tu horario o escribe a mano el aula, el edificio y el grupo. En los avisos urgentes es obligatorio.",
     "Pulsa «Enviar Mensaje». Lo verá al abrir la app: no llega como notificación al móvil."] },
   dashboard: { titulo: "Resumen del día", pasos: [
     "De un vistazo: partes por gravedad, alumnos fuera del aula, profesores ausentes y alertas.",
@@ -3518,13 +3519,58 @@ function CoordinacionAusencias({ profesores, ausencias, cuadrante, apoyosGuardia
 }
 
 
+// ─── Horario de clases y «dónde estoy» ───────────────────────────────────────
+// horarios: { "Lunes|3ª hora|Profesor": { grupo, aula, edificio, materia } } — se repite cada semana
+const EDIFICIOS = [...new Set(ZONAS_CENTRO.map(z => z.edificio).filter(e => e && e !== "-"))];
+const MATERIAS_DEMO = ["Matemáticas", "Lengua", "Inglés", "Música", "Geografía e Historia", "Biología", "Física y Química", "Tecnología", "Educación Física", "Plástica", "Francés", "Informática"];
+// Horario de ejemplo para la demo: cada profe da su materia en varios grupos (≈3 de cada 5 horas)
+function horarioEjemplo(profesores, cursos) {
+  const horarios = {};
+  if (!cursos.length) return horarios;
+  const aulaDe = g => { const gi = cursos.indexOf(g); const ed = EDIFICIOS[gi % EDIFICIOS.length] || "A"; return { aula: `Aula ${ed}${(gi % 2) + 1}.${String(gi + 1).padStart(2, "0")}`, edificio: ed }; };
+  const horasClase = HORAS.filter(h => h !== "Recreo" && h !== "7ª hora");
+  profesores.forEach((p, i) => {
+    DIAS_SEMANA.forEach((dia, d) => {
+      horasClase.forEach((hora, hi) => {
+        if ((i * 7 + d * 3 + hi) % 5 >= 3) return; // hora libre
+        const grupo = cursos[(i * 5 + d * 2 + hi) % cursos.length];
+        horarios[`${dia}|${hora}|${p}`] = { grupo, ...aulaDe(grupo), materia: MATERIAS_DEMO[i % MATERIAS_DEMO.length] };
+      });
+    });
+  });
+  return horarios;
+}
+const textoLugar = l => l ? [l.grupo, l.aula, l.edificio && `Edificio ${l.edificio}`].filter(Boolean).join(" · ") : "";
+// Dónde está un profe a una hora: primero la clase que cubre, luego su guardia y por último su horario
+function dondeEsta({ fecha, hora, profesor, horarios = {}, coberturas = {}, equipo }) {
+  if (!hora || !profesor) return null;
+  const a = claseQueCubre(fecha, hora, profesor, coberturas, equipo.ausencias || []);
+  if (a) return { origen: "cobertura", detalle: `Cubres la clase de ${a.profesor}`, grupo: a.aula || "", aula: "", edificio: a.edificio || "" };
+  const g = guardiasDeProfesor({ fecha, profesor, ...equipo, coberturas }).find(x => x.hora === hora);
+  if (g) return { origen: "guardia", detalle: `De guardia (${g.rol})`, grupo: "", aula: g.zona, edificio: g.edificio && g.edificio !== "-" ? g.edificio : "" };
+  const h = horarios[`${DIAS_ES[parseISO(fecha).getDay()]}|${hora}|${profesor}`];
+  if (h) return { origen: "horario", detalle: h.materia ? `Clase de ${h.materia}` : "Según tu horario", grupo: h.grupo, aula: h.aula, edificio: h.edificio };
+  return null;
+}
+const URGENTES = ["Alumno enfermo", "Emergencia", "Urgencia en aula"];
+
 // ═══════════════════════════════════════════════════════════════════════════
 // GALVÁNGRAM - MENSAJERÍA RÁPIDA
 // ═══════════════════════════════════════════════════════════════════════════
 const ICONO_CARGO = { profesor: "cargo-profesor", jefatura: "cargo-jefatura", direccion: "cargo-direccion", secretaria: "cargo-secretaria", tic: "cargo-tic", orientacion: "tutor" };
 const ICONO_MENSAJE = { "Alumno enfermo": "alumno-enfermo", "Emergencia": "emergencia", "Urgencia en aula": "emergencia", "Falta material": "falta-material",
   "Alumno derivado": "alumno-derivado", "Cambio de guardia": "sustituto", "Falta un profesor": "profe-ausente", "Reunión importante": "eventos" };
-function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C, inpStyle, selStyle, labelStyle }) {
+function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, horarios = {}, cursos = [], cuadrante = {}, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], coberturas = {}, C, inpStyle, selStyle, labelStyle }) {
+  // ¿Dónde estás? «auto» (según tu horario, guardia o clase que cubres) o «mano»
+  const hoyISO = isoLocal();
+  const [modoLugar, setModoLugar] = useState("auto");
+  const [horaLugar, setHoraLugar] = useState(() => horaEnCurso() && horaEnCurso() !== "Recreo" ? horaEnCurso() : "1ª hora");
+  const [lugarMano, setLugarMano] = useState({ grupo: "", aula: "", edificio: "" });
+  const equipoLugar = { profesores, cuadrante, apoyos: apoyosGuardia, sustitutos: sustitutosGuardia, ausencias };
+  const lugarAuto = esLectivo(new Date()) ? dondeEsta({ fecha: hoyISO, hora: horaLugar, profesor: usuario, horarios, coberturas, equipo: equipoLugar }) : null;
+  const hayHorarios = Object.keys(horarios).length > 0;
+  const aulasConocidas = [...new Set(Object.values(horarios).map(h => h.aula).filter(Boolean))].sort();
+  const lugar = modoLugar === "auto" ? lugarAuto : (lugarMano.grupo || lugarMano.aula || lugarMano.edificio ? { origen: "mano", ...lugarMano } : null);
   const [destinatario, setDestinatario] = useState("");
   const [tipoMensaje, setTipoMensaje] = useState("");
   const [mensajePersonalizado, setMensajePersonalizado] = useState("");
@@ -3543,6 +3589,12 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
   ];
   
   const handleEnviar = () => {
+    const tipoLabel = mensajesPredefinidos.find(m => m.id === tipoMensaje)?.label || "";
+    const urgente = URGENTES.includes(tipoLabel);
+    if (urgente && !lugar) {
+      alert("📍 En un aviso urgente hay que indicar dónde estás (aula, edificio o grupo).");
+      return;
+    }
     if (!destinatario) {
       alert("Selecciona destinatario");
       return;
@@ -3562,13 +3614,16 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
       destinatario: destinatario,
       texto: textoFinal,
       ts: new Date().toISOString(),
-      leido: false
+      leido: false,
+      urgente,
+      lugar: lugar ? { grupo: lugar.grupo || "", aula: lugar.aula || "", edificio: lugar.edificio || "", origen: lugar.origen, hora: modoLugar === "auto" ? horaLugar : "" } : null,
     };
     
     setMensajes(prev => [nuevoMensaje, ...prev]);
     setDestinatario("");
     setTipoMensaje("");
     setMensajePersonalizado("");
+    setLugarMano({ grupo: "", aula: "", edificio: "" });
     alert("✅ Mensaje enviado");
   };
   
@@ -3663,6 +3718,69 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
             />
           </div>
           
+          {/* ¿DÓNDE ESTÁS? — según el horario o a mano */}
+          {(() => {
+            const tipoLabel = mensajesPredefinidos.find(m => m.id === tipoMensaje)?.label || "";
+            const urgente = URGENTES.includes(tipoLabel);
+            const pill = activo => ({ flex: 1, padding: "10px 12px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 700,
+              border: `2px solid ${activo ? C.blue : C.light}`, background: activo ? "#EEF5F8" : "#fff", color: activo ? C.blue : C.gray });
+            const ORIGEN = { cobertura: "📋 Clase que cubres (asignada por jefatura)", guardia: "🔄 Tu guardia de esta hora", horario: "📅 Tu horario de clases" };
+            return (
+              <div style={{ marginBottom: 16, background: urgente && !lugar ? "#FDF0EF" : C.light, border: `2px solid ${urgente ? (lugar ? C.teal : C.salmon) : "transparent"}`, borderRadius: 10, padding: 14 }}>
+                <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <Icono nombre="aula" tam={30} />📍 ¿Dónde estás?{urgente && <span style={{ color: C.salmon, fontSize: 12 }}> · obligatorio en avisos urgentes</span>}
+                </label>
+                <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                  <button type="button" onClick={() => setModoLugar("auto")} style={pill(modoLugar === "auto")}>📅 Según mi horario</button>
+                  <button type="button" onClick={() => setModoLugar("mano")} style={pill(modoLugar === "mano")}>✏️ A mano</button>
+                </div>
+                {modoLugar === "auto" ? (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8, fontSize: 12, color: C.gray }}>
+                      Hora:
+                      <select value={horaLugar} onChange={e => setHoraLugar(e.target.value)} style={{ ...selStyle, width: "auto", padding: "6px 10px", fontSize: 13 }}>
+                        {HORAS.filter(h => h !== "Recreo").map(h => <option key={h} value={h}>{conTramo(h)}{h === horaEnCurso() ? " · ahora" : ""}</option>)}
+                      </select>
+                    </div>
+                    {lugarAuto ? (
+                      <div style={{ background: "#fff", border: `1px solid ${C.teal}`, borderRadius: 8, padding: "10px 12px" }}>
+                        <div style={{ fontSize: 11, color: C.gray, fontWeight: 700 }}>{ORIGEN[lugarAuto.origen]} · {lugarAuto.detalle}</div>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: C.dark, marginTop: 2 }}>📍 {textoLugar(lugarAuto)}</div>
+                      </div>
+                    ) : (
+                      <div style={{ background: "#fff", border: `1px dashed ${C.salmon}`, borderRadius: 8, padding: "10px 12px", fontSize: 13, color: C.dark }}>
+                        {!esLectivo(new Date()) ? "Hoy no es día lectivo." : !hayHorarios ? "Todavía no hay horarios de clase cargados." : "A esa hora no tienes clase ni guardia en tu horario."}
+                        {" "}<button type="button" onClick={() => setModoLugar("mano")} style={{ border: "none", background: "none", color: C.blue, fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 13 }}>Escríbelo a mano →</button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(150px,100%),1fr))", gap: 8 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: C.gray, fontWeight: 700, marginBottom: 4 }}>AULA</div>
+                      <input list="rumbo-aulas" value={lugarMano.aula} onChange={e => setLugarMano(l => ({ ...l, aula: e.target.value }))} placeholder="Ej.: Aula A1.03, Laboratorio…" style={inpStyle} />
+                      <datalist id="rumbo-aulas">{aulasConocidas.map(a => <option key={a} value={a} />)}</datalist>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: C.gray, fontWeight: 700, marginBottom: 4 }}>EDIFICIO</div>
+                      <select value={lugarMano.edificio} onChange={e => setLugarMano(l => ({ ...l, edificio: e.target.value }))} style={selStyle}>
+                        <option value="">—</option>
+                        {EDIFICIOS.map(e => <option key={e} value={e}>Edificio {e}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: C.gray, fontWeight: 700, marginBottom: 4 }}>GRUPO</div>
+                      <select value={lugarMano.grupo} onChange={e => setLugarMano(l => ({ ...l, grupo: e.target.value }))} style={selStyle}>
+                        <option value="">—</option>
+                        {cursos.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <button
             onClick={handleEnviar}
             style={{
@@ -3703,6 +3821,13 @@ function Galvangramm({ mensajes, setMensajes, usuario, esJefatura, profesores, C
                       {new Date(m.ts).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                     </div>
                   </div>
+                  {m.lugar && (
+                    <div style={{ marginBottom: 6, padding: "6px 10px", borderRadius: 8, fontWeight: 800, fontSize: m.urgente ? 15 : 13,
+                      background: m.urgente ? "#FDF0EF" : "#fff", color: m.urgente ? "#be123c" : C.dark, border: `1px solid ${m.urgente ? C.salmon : C.light}` }}>
+                      {m.urgente ? "🚨 " : ""}📍 {textoLugar(m.lugar)}
+                      <span style={{ fontSize: 11, fontWeight: 600, color: C.gray }}>{m.lugar.origen === "mano" ? " · indicado a mano" : ` · según ${m.lugar.origen === "horario" ? "su horario" : m.lugar.origen === "guardia" ? "su guardia" : "la clase que cubre"}${m.lugar.hora ? ` (${m.lugar.hora})` : ""}`}</span>
+                    </div>
+                  )}
                   <div style={{ fontSize: 13, color: "#333", lineHeight: 1.5 }}>
                     {m.texto}
                   </div>
@@ -4996,7 +5121,8 @@ export default function App() {
 
   // Guardias — nuevo sistema
   const [cuadrante, setCuadrante]     = useState({});
-  const [coberturas, setCoberturas]   = useState({}); // quién cubre cada clase sin profe: "fecha|hora|idAusencia" → profesor
+  const [coberturas, setCoberturas]   = useState({});
+  const [horarios, setHorarios]       = useState({}); // horario de clases semanal: "Lunes|3ª hora|Profesor" → { grupo, aula, edificio, materia } // quién cubre cada clase sin profe: "fecha|hora|idAusencia" → profesor
   const [apoyosGuardia, setApoyosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [sustitutosGuardia, setSustitutosGuardia] = useState({}); // {fecha|hora|zona: profesor}
   const [cuentas, setCuentas] = useState(CUENTAS_DEMO); // {nombre: {cargo, clave}}
@@ -5041,6 +5167,7 @@ export default function App() {
       const ap = await sGet("apoyos_guardia");     if (ap) setApoyosGuardia(ap);
       const su = await sGet("sustitutos_guardia"); if (su) setSustitutosGuardia(su);
       const cob = await sGet("coberturas_clase"); if (cob) setCoberturas(cob);
+      const hor = await sGet("horarios_clase"); if (hor) setHorarios(hor);
       const pg = await sGet("profesores_guardia"); if (pg) setProfesoresGuardia(pg);
       const cu = await sGet("cuentas"); if (cu) setCuentas(cu);
       const fi = await sGet("firmas_guardia"); if (fi) setFirmas(fi);
@@ -5072,6 +5199,7 @@ export default function App() {
   useEffect(() => { if (!loading) sSet("guardias",   guardias);   }, [guardias,   loading]);
   useEffect(() => { if (!loading) sSet("cuadrante", cuadrante); }, [cuadrante, loading]);
   useEffect(() => { if (!loading) sSet("coberturas_clase", coberturas); }, [coberturas, loading]);
+  useEffect(() => { if (!loading) sSet("horarios_clase", horarios); }, [horarios, loading]);
   useEffect(() => { if (!loading) sSet("ausencias", ausencias); }, [ausencias, loading]);
   useEffect(() => { if (!loading) sSet("apoyos_guardia", apoyosGuardia); }, [apoyosGuardia, loading]);
   useEffect(() => { if (!loading) sSet("sustitutos_guardia", sustitutosGuardia); }, [sustitutosGuardia, loading]);
@@ -5137,6 +5265,7 @@ export default function App() {
     setProfesores(lista);
     const ej = datosEjemploGuardias(DEMO_PROFESORES);
     setCuadrante(ej.cuadrante); setApoyosGuardia(ej.apoyos); setSustitutosGuardia(ej.sustitutos); setAusencias(ej.ausencias); setCoberturas({});
+    setHorarios(horarioEjemplo(DEMO_PROFESORES, [...new Set(conv.alumnos.map(a => a.curso))].sort()));
     setFirmas(ej.firmas); setListas([]);
     if (ej.sugerido) setUsuario(ej.sugerido);
     // Sin avisos emergentes: la pantalla de entrada muestra que los datos están cargados
@@ -6149,6 +6278,9 @@ export default function App() {
             usuario={usuario}
             esJefatura={perfil.id === "jefatura"}
             profesores={profesores}
+            horarios={horarios} cursos={cursos}
+            cuadrante={cuadrante} apoyosGuardia={apoyosGuardia} sustitutosGuardia={sustitutosGuardia}
+            ausencias={ausencias} coberturas={coberturas}
             C={C}
             inpStyle={inpStyle}
             selStyle={selStyle}
