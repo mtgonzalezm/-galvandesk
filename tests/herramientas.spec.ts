@@ -9,7 +9,7 @@ test('Nuevo parte: se crea, aparece en Mis partes y en Jefatura, y el PDF se des
   const antes = (await leer(page, 'partes')).length
   await page.getByPlaceholder('Nombre o curso…').first().fill('Lucía Martínez')
   await page.getByText('Lucía Martínez García').first().click()
-  await expect(page.getByText(/Total partes:/)).toBeVisible()
+  await expect(page.getByText(/Eres su tutor\/a · Partes en total/)).toBeVisible()
   await page.locator('select').filter({ hasText: 'Muy Grave' }).first().selectOption({ label: '⚠️ Grave' })
   await page.getByPlaceholder(/Describe detalladamente/).fill('Prueba automática: interrumpe la clase repetidamente.')
   await page.getByRole('button', { name: /Generar Parte/ }).click()
@@ -228,7 +228,7 @@ test('Administración: tutorías y profesorado', async ({ page }) => {
   await comoProfe(page)
   await page.getByPlaceholder('Nombre o curso…').first().fill('Lucía Martínez')
   await page.getByText('Lucía Martínez García').first().click()
-  await expect(page.getByText(/Tutor:\s*Nuria Gil/)).toBeVisible()
+  await expect(page.getByText(/Tutor\/a:\s*Nuria Gil/)).toBeVisible()
   expect(errores).toEqual([])
 })
 
@@ -265,5 +265,28 @@ test('Administración: alta manual de alumno, sin duplicados y con aviso de camp
   expect((await leer(page, 'alumnos')).length).toBe(antes + 1)
   await page.getByRole('button', { name: /Lista completa/ }).click()
   await expect(page.getByText(`${antes + 1} alumno(s) en el sistema`)).toBeVisible()
+  expect(errores).toEqual([])
+})
+
+test('Ficha del alumno: el contacto y el total de partes solo los ve su tutor/a', async ({ page }) => {
+  const errores = vigilarErrores(page)
+  await empezar(page)
+  await comoProfe(page) // Carmen López, tutora de 1º ESO A
+  // Alumno de otro grupo: solo sus propios partes y sin contacto de la familia
+  await page.getByPlaceholder('Nombre o curso…').first().fill('Diego Sánchez')
+  await page.getByText('Diego Sánchez Blanco').first().click()
+  await expect(page.getByText(/Partes que le has puesto tú:\s*1/)).toBeVisible()
+  await expect(page.getByText('El contacto de la familia aparece al generar el parte')).toBeVisible()
+  await expect(page.getByText(/Partes en total/)).toHaveCount(0)
+  const al = (await leer(page, 'alumnos')).find((a: { nombre: string }) => a.nombre === 'Diego Sánchez Blanco')
+  await expect(page.getByText(al.email)).toHaveCount(0)
+  // Al generar el parte, quien lo pone sí ve cómo avisar a la familia
+  await page.getByPlaceholder(/Describe detalladamente/).fill('Prueba automática de privacidad.')
+  await page.getByRole('button', { name: /Generar Parte/ }).click()
+  await expect(page.getByText(/✅ Parte generado/)).toBeVisible()
+  // Alumna de su tutoría: ve el contacto y el total
+  await page.getByPlaceholder('Nombre o curso…').first().fill('Lucía Martínez')
+  await page.getByText('Lucía Martínez García').first().click()
+  await expect(page.getByText(/Eres su tutor\/a · Partes en total/)).toBeVisible()
   expect(errores).toEqual([])
 })
