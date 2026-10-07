@@ -71,3 +71,13 @@ export default defineConfig([
   },
 ])
 ```
+
+## Pruebas automáticas
+
+Cada cambio se comprueba solo en GitHub (pestaña **Actions**): se entra con cada perfil, se abren todas las pantallas y se repasan los recorridos clave (vista «Ahora», cubrir clases, avisos de Galvángram, red de seguridad), en escritorio y en móvil. Un cambio con ✗ roja no debe publicarse.
+
+En local: `npm run build && npm test`.
+
+## Informar de fallos
+
+La app tiene una red de seguridad: si una pantalla falla, en lugar de quedarse en blanco ofrece avisar a la responsable, y hay un botón «Informar de un problema» siempre visible. Los informes llevan la pantalla, el perfil, la hora, la versión y el error técnico, nunca datos del alumnado.

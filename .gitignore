@@ -24,3 +24,7 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+
+# Pruebas automáticas
+test-results/
+playwright-report/
