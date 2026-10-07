@@ -345,6 +345,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
       <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: C.dark, margin: "8px 0 2px" }}>{pasoNum(3, false)} Dentro, usa los botones de arriba</div>
       <div style={{ fontSize: 12, color: C.gray, marginLeft: 32 }}>Los botones de colores cambian de pantalla. Para cambiar de perfil, pulsa «Salir» y vuelves aquí.</div>
       <button onClick={() => setGlobo(true)} style={{ ...enlace, marginTop: 10, marginLeft: 32 }}>❓ Ver otra vez las instrucciones</button>
+      <button onClick={() => abrirPreguntas("instalar")} style={{ ...enlace, marginTop: 6, marginLeft: 32, display: "block" }}>📲 Cómo instalarla en el móvil o el ordenador · Preguntas frecuentes</button>
     </div>
   ) : null;
 
@@ -5292,6 +5293,114 @@ function EstadisticasDocumentos({ avisos = {}, setAvisos, modo = "jefatura", usu
 }
 
 // ════════════════════════════════════════════════════════════════════════════
+// PREGUNTAS FRECUENTES (también desde la pantalla de entrada)
+// Las respuestas sobre datos y mensajes describen la versión de demostración:
+// cambiarlas cuando la app funcione con el servidor del centro.
+// ════════════════════════════════════════════════════════════════════════════
+// El navegador avisa si la app se puede instalar con un botón (Chrome, Edge, Android)
+if (typeof window !== "undefined" && !window.__rumboInstalarEscucha) {
+  window.__rumboInstalarEscucha = true;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.__rumboInstalar = e; window.dispatchEvent(new Event("rumbo:instalable")); });
+  window.addEventListener("appinstalled", () => { window.__rumboInstalar = null; window.dispatchEvent(new Event("rumbo:instalable")); });
+}
+const abrirPreguntas = (id = "") => window.dispatchEvent(new CustomEvent("rumbo:faq", { detail: id }));
+function tipoDispositivo() {
+  if (typeof navigator === "undefined") return "ordenador";
+  const ua = navigator.userAgent || "";
+  if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "iphone";
+  if (/Android/i.test(ua)) return "android";
+  return "ordenador";
+}
+
+function GuiaInstalar() {
+  const [disp, setDisp] = useState(tipoDispositivo);
+  const [puede, setPuede] = useState(() => !!(typeof window !== "undefined" && window.__rumboInstalar));
+  const instalada = typeof window !== "undefined" && (window.matchMedia?.("(display-mode: standalone)").matches || navigator.standalone);
+  useEffect(() => { const h = () => setPuede(!!window.__rumboInstalar); window.addEventListener("rumbo:instalable", h); return () => window.removeEventListener("rumbo:instalable", h); }, []);
+  const instalar = async () => { const ev = window.__rumboInstalar; if (!ev) return; ev.prompt(); try { await ev.userChoice; } catch { /* nada */ } window.__rumboInstalar = null; setPuede(false); };
+  const PASOS = {
+    android: { titulo: "Móvil Android (Chrome)", pasos: ["Abre rumboaula.vercel.app en Chrome.", "Toca el menú ⋮ (arriba a la derecha).", "Elige «Instalar aplicación» o «Añadir a pantalla de inicio».", "Confirma: el icono de RumboAula aparece con tus aplicaciones."] },
+    iphone: { titulo: "iPhone o iPad (Safari)", pasos: ["Abre rumboaula.vercel.app en Safari (en otros navegadores del iPhone puede no aparecer la opción).", "Toca el botón Compartir (el cuadrado con una flecha hacia arriba).", "Desliza y elige «Añadir a pantalla de inicio».", "Toca «Añadir»: el icono aparece en tu pantalla de inicio."] },
+    ordenador: { titulo: "Ordenador (Chrome o Edge)", pasos: ["Abre rumboaula.vercel.app en Chrome o Edge.", "Pulsa el icono de instalar que aparece a la derecha de la barra de direcciones (una pantalla con una flecha).", "Si no lo ves: menú ⋮ › «Enviar, guardar y compartir» › «Instalar página como aplicación» en Chrome, o menú … › «Aplicaciones» › «Instalar este sitio como aplicación» en Edge.", "Se abrirá en su propia ventana y quedará en el menú de inicio o en el Dock. En Firefox no se puede instalar: guarda la página en marcadores."] },
+  };
+  const tab = id => ({ border: `2px solid ${disp === id ? C.teal : C.light}`, background: disp === id ? "#E8F5F3" : "#fff", color: disp === id ? C.teal : C.gray, borderRadius: 8, padding: "6px 10px", fontSize: 12, fontWeight: 700, cursor: "pointer" });
+  return (
+    <div>
+      <p style={{ margin: "0 0 8px" }}>Para ver la demostración <strong>no hace falta instalar nada</strong>: basta con abrir <strong>rumboaula.vercel.app</strong> en el navegador. Instalarla solo sirve para tenerla a mano, con su icono, como cualquier otra aplicación.</p>
+      {instalada ? <p style={{ color: C.teal, fontWeight: 700 }}>✅ Ya la estás usando instalada en este dispositivo.</p>
+        : puede && <button onClick={instalar} style={{ border: "none", borderRadius: 10, background: C.teal, color: "#fff", fontWeight: 800, padding: "10px 16px", cursor: "pointer", margin: "4px 0 10px" }}>📲 Instalar ahora en este dispositivo</button>}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "6px 0 8px" }} role="tablist" aria-label="Tipo de dispositivo">
+        {Object.entries(PASOS).map(([id, v]) => <button key={id} role="tab" aria-selected={disp === id} onClick={() => setDisp(id)} style={tab(id)}>{v.titulo}</button>)}
+      </div>
+      <ol style={{ margin: "0 0 6px", paddingLeft: 20 }}>{PASOS[disp].pasos.map(t => <li key={t} style={{ marginBottom: 4 }}>{t}</li>)}</ol>
+      <p style={{ margin: "8px 0 0", color: C.gray, fontSize: 13 }}>Después, para la demostración: pulsa «Cargar los datos de ejemplo» y elige un perfil (Profesor/a, Tutor/a, Jefatura o Administración). Recuerda que en esta versión cada dispositivo tiene sus propios datos.</p>
+    </div>
+  );
+}
+
+const PREGUNTAS = [
+  { id: "instalar", q: "¿Cómo instalo RumboAula en el móvil o en el ordenador para ver una demostración?", a: <GuiaInstalar /> },
+  { id: "datos", q: "¿Dónde se guardan los datos?", a: <>
+    <p>En esta <strong>versión de demostración</strong>, en el navegador del dispositivo que estás usando: no se envían a ningún sitio. Por eso todo lo que ves es ficticio y <strong>no deben introducirse datos reales</strong> de alumnado ni de familias.</p>
+    <p>Cuando se use en un centro, los datos estarán <strong>solo en un servidor del propio centro</strong> (o en los de EducaMadrid) y no saldrán de él.</p></> },
+  { id: "dispositivos", q: "¿La puedo usar en el móvil y en el ordenador?", a: <>
+    <p>Sí: es la misma aplicación, con el mismo enlace, en cualquier navegador. Se adapta a la pantalla del móvil, la tableta o el ordenador.</p>
+    <p>En esta versión, cada dispositivo guarda sus propios datos: lo que hagas en el móvil no aparece en el ordenador. Cuando funcione con el servidor del centro, verás lo mismo en todos.</p></> },
+  { id: "mensajes", q: "¿Por qué no le ha llegado mi mensaje a un compañero?", a: <>
+    <p>Porque en esta versión los mensajes de Galvángram se quedan en el dispositivo donde se escriben. En la demostración, para ver cómo llega un aviso, pulsa «Salir» y entra como quien lo ha recibido en «Entrar como otro profe del claustro».</p>
+    <p>Con el servidor del centro, el mensaje llegará al momento al móvil o al ordenador del compañero.</p></> },
+  { id: "privacidad", q: "¿Quién puede ver mis mensajes de Galvángram?", a: <p>Solo tú y las personas a las que se lo envías. Cada uno ve únicamente los mensajes que ha enviado o recibido.</p> },
+  { id: "emergencia", q: "¿Qué hago en una emergencia?", a: <>
+    <p>Sigue el <strong>protocolo del centro</strong>: llama a conserjería o a jefatura y avisa en persona si hace falta. RumboAula ayuda a avisar más rápido a los profes de guardia de tu zona, con el aula indicada, pero <strong>no sustituye</strong> al protocolo.</p></> },
+  { id: "alumnado", q: "¿Qué datos del alumnado guarda y quién los ve?", a: <>
+    <p>Nombre, curso, tutor/a y contacto de la familia (importados de Raíces), los partes, las salidas al baño y las listas pasadas en guardia.</p>
+    <p>Solo los ven <strong>jefatura y el profesorado implicado</strong>: quien pone el parte y el tutor/a del grupo. El resto del claustro no tiene acceso a ellos. Los informes de fallos de la app <strong>nunca</strong> incluyen datos del alumnado.</p></> },
+  { id: "ley", q: "¿Respeta la ley de protección de datos y de menores?", a: <>
+    <p>RumboAula está <strong>diseñada para cumplir</strong> el Reglamento General de Protección de Datos (RGPD), la Ley Orgánica 3/2018 de Protección de Datos Personales y garantía de los derechos digitales, y la normativa de protección de menores, además del Decreto 32/2019 de convivencia de la Comunidad de Madrid:</p>
+    <ul style={{ margin: "0 0 8px", paddingLeft: 20 }}>
+      <li>Solo recoge los datos necesarios para la convivencia y las guardias.</li>
+      <li>Los datos del alumnado solo los ven jefatura y el profesorado implicado.</li>
+      <li>Los datos se quedan en el centro y no se comparten con terceros.</li>
+      <li>Los avisos al móvil no llevan nombres ni datos personales.</li>
+    </ul>
+    <p>Antes de usarla con datos reales, se someterá a la <strong>aprobación del equipo directivo y de la Delegación de Protección de Datos de la Consejería de Educación de la Comunidad de Madrid</strong>. Mientras tanto, es una versión de demostración con datos ficticios.</p></> },
+  { id: "fallos", q: "¿Qué hago si algo falla?", a: <p>Pulsa «⚠️ Informar de un problema» (abajo a la izquierda) y cuenta qué ha pasado: se envía por correo a la responsable con la pantalla, tu perfil, la hora y el error técnico. Si una pantalla se rompe, la propia app te ofrecerá avisar.</p> },
+  { id: "oficial", q: "¿Es una herramienta oficial?", a: <p>Es un <strong>prototipo</strong> creado por una profesora para mejorar la convivencia y la organización de las guardias. Todavía no está aprobado para datos reales: antes de usarlo en el centro tienen que darle el visto bueno el equipo directivo y la Delegación de Protección de Datos de la Consejería de Educación.</p> },
+];
+
+function PreguntasFrecuentes() {
+  const [abierto, setAbierto] = useState(false);
+  const [desplegada, setDesplegada] = useState("");
+  useEffect(() => {
+    const h = ev => { setAbierto(true); if (ev.detail) setDesplegada(ev.detail); };
+    window.addEventListener("rumbo:faq", h);
+    return () => window.removeEventListener("rumbo:faq", h);
+  }, []);
+  useEffect(() => { if (!abierto) return; const k = e => { if (e.key === "Escape") setAbierto(false); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [abierto]);
+  if (!abierto) return null;
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="rumbo-faq-titulo" onClick={() => setAbierto(false)}
+      style={{ position: "fixed", inset: 0, zIndex: 2250, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 12, fontFamily: "system-ui,sans-serif" }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#fff", borderRadius: 16, width: "min(680px, 100%)", maxHeight: "92vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
+        <div style={{ background: `linear-gradient(90deg,${C.dark},${C.blue})`, color: "#fff", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <div id="rumbo-faq-titulo" style={{ fontWeight: 900, fontSize: 18 }}>❓ Preguntas frecuentes</div>
+          <button onClick={() => setAbierto(false)} aria-label="Cerrar preguntas frecuentes" style={{ background: "rgba(255,255,255,.2)", border: "1px solid rgba(255,255,255,.4)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>✕</button>
+        </div>
+        <div style={{ overflowY: "auto", padding: "8px 18px 18px", fontSize: 14, lineHeight: 1.55, color: C.dark }}>
+          {PREGUNTAS.map(({ id, q, a }) => (
+            <details key={id} open={desplegada === id} onToggle={e => { if (e.currentTarget.open) setDesplegada(id); else if (desplegada === id) setDesplegada(""); }}
+              style={{ borderBottom: `1px solid ${C.light}`, padding: "10px 0" }}>
+              <summary style={{ cursor: "pointer", fontWeight: 800, fontSize: 15, color: C.dark, listStyle: "revert" }}>{q}</summary>
+              <div style={{ marginTop: 8 }}>{a}</div>
+            </details>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 // RED DE SEGURIDAD: errores e «Informar de un problema»
 // Los fallos quedan registrados y se pueden enviar por correo a la responsable.
 // Nunca se envían datos del alumnado: solo pantalla, perfil, hora y el error técnico.
@@ -5383,7 +5492,7 @@ function InformarProblema() {
       style={{ position: "fixed", left: 12, bottom: 12, zIndex: 240, background: "#fff", color: C.dark, border: `1px solid ${C.light}`, borderRadius: 20, padding: "7px 12px", fontSize: 12, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 10px rgba(0,0,0,.12)", opacity: .92 }}>
       ⚠️ <span className="rumbo-informar-txt">Informar de un problema</span>
     </button>
-    <style>{`@media (max-width: 600px) { .rumbo-informar-txt { display: none; } }`}</style>
+    <style>{`@media (max-width: 600px) { .rumbo-informar-txt, .gd-faq-txt { display: none; } }`}</style>
     {abierto && (
       <div role="dialog" aria-modal="true" aria-labelledby="rumbo-informar-titulo" onClick={() => setAbierto(false)}
         style={{ position: "fixed", inset: 0, zIndex: 2300, background: "rgba(0,0,0,.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
@@ -5421,6 +5530,7 @@ export default function App() {
       <ProbarFallo />
       <AppInterna />
       <InformarProblema />
+      <PreguntasFrecuentes />
     </RedSeguridad>
   );
 }
@@ -5887,6 +5997,10 @@ function AppInterna() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
           {perfilesPermitidos(cuentas, usuario).length > 1 && <SelectorPerfil perfiles={perfilesPermitidos(cuentas, usuario)} actual={perfil} onCambiar={cambiarPerfil} cargos={cargoDe(cuentas, usuario).label} />}
+          <button onClick={() => abrirPreguntas()} aria-label="Preguntas frecuentes"
+            style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+            ❓ <span className="gd-faq-txt">Preguntas</span>
+          </button>
           <button onClick={salir} 
             onMouseOver={e => { e.currentTarget.style.background = "rgba(255,255,255,0.25)"; }}
             onMouseOut={e => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; }}

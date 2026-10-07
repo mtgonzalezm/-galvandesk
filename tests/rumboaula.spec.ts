@@ -178,3 +178,26 @@ test('Informar de un problema: siempre disponible', async ({ page }) => {
   await expect(dialogo).toContainText('No se envían datos del alumnado')
   await expect(dialogo.getByRole('button', { name: /Abrir el correo/ })).toBeVisible()
 })
+
+test('Preguntas frecuentes: desde la entrada (cómo instalar) y desde dentro de la app', async ({ page, isMobile }) => {
+  const errores = vigilarErrores(page)
+  await empezar(page)
+  await page.getByRole('button', { name: /Cómo instalarla en el móvil o el ordenador/ }).click()
+  const faq = page.getByRole('dialog', { name: 'Preguntas frecuentes' })
+  await expect(faq).toBeVisible()
+  // La guía de instalación sale abierta y elige el dispositivo
+  await expect(faq.getByText('no hace falta instalar nada')).toBeVisible()
+  await expect(faq.getByRole('tab', { selected: true })).toContainText(isMobile ? 'Android' : 'Ordenador')
+  await faq.getByRole('tab', { name: /iPhone/ }).click()
+  await expect(faq.getByText('Añadir a pantalla de inicio')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(faq).toHaveCount(0)
+  // Desde dentro de la app
+  await comoProfe(page)
+  await page.getByRole('button', { name: 'Preguntas frecuentes' }).click()
+  await page.getByText('¿Qué datos del alumnado guarda y quién los ve?').click()
+  await expect(page.getByText(/Solo los ven jefatura y el profesorado implicado/)).toBeVisible()
+  await page.getByRole('button', { name: 'Cerrar preguntas frecuentes' }).click()
+  await expect(page.getByRole('dialog', { name: 'Preguntas frecuentes' })).toHaveCount(0)
+  expect(errores).toEqual([])
+})
