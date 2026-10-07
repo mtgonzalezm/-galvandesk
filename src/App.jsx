@@ -3698,6 +3698,33 @@ function horaSiguiente(ahora = new Date()) {
 }
 const ORDEN_ESTADO = { descubierta: 0, una: 1, sustituto: 2, completa: 3 };
 
+// Equipo de una zona: titular, apoyo (pareja) y sustituto, con quién falta y quién entra
+function EquipoZona({ sit, C }) {
+  const filas = [
+    { rol: "Titular", p: sit.titular, falta: sit.tA },
+    { rol: "Apoyo (pareja)", p: sit.apoyo, falta: sit.aA },
+    { rol: "Sustituto", p: sit.sustituto, falta: sit.sA, entra: sit.sustituyeA },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 6, marginTop: 6 }}>
+      {filas.map(f => {
+        const estado = !f.p ? { txt: "Sin asignar", color: "#9f1239", bg: "#FDF0EF" }
+          : f.falta ? { txt: "Falta", color: C.salmon, bg: "#FDF0EF" }
+          : f.entra ? { txt: `Entra por ${f.entra}`, color: "#b45309", bg: "#fef3c7" }
+          : f.rol === "Sustituto" ? { txt: "En reserva", color: C.gray, bg: C.light }
+          : { txt: "En la zona", color: "#0f766e", bg: "#E8F5F3" };
+        return (
+          <div key={f.rol} style={{ background: estado.bg, borderRadius: 8, padding: "6px 10px" }}>
+            <div style={{ fontSize: 10, color: C.gray, fontWeight: 700, letterSpacing: .5, textTransform: "uppercase" }}>{f.rol}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: f.p ? C.dark : "#9f1239", textDecoration: f.falta ? "line-through" : "none" }}>{f.p || "—"}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: estado.color }}>{estado.txt}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGuardia = {}, ausencias = [], usuario = "", C }) {
   const [ahora, setAhora] = useState(() => new Date());
   const [horaElegida, setHoraElegida] = useState(""); // "" = la hora en curso
@@ -3787,7 +3814,7 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
             {miGuardia.map((g, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
                 <div style={{ fontSize: 15, color: C.dark }}><strong>{g.zona}</strong> · como {g.rol}{g.rol === "sustituto" && g.sit.sustituyeA ? <span style={{ color: "#b45309", fontWeight: 700 }}> — entras por {g.sit.sustituyeA}</span> : ""}</div>
-                <div style={{ fontSize: 12, color: C.gray, marginTop: 2 }}>En la zona: {g.sit.enZona.join(", ") || "nadie"}</div>
+                <EquipoZona sit={g.sit} C={C} />
                 <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
                   {tareasDeGuardia(g, fecha, ausencias).map(a => <TareaAusente key={a.id} a={a} C={C} />)}
                 </div>
@@ -3831,15 +3858,13 @@ function AhoraGuardias({ profesores, cuadrante, apoyosGuardia = {}, sustitutosGu
           ) : zonas.map(z => {
             const e = ESTADOS_ZONA[z.sit.estado];
             return (
-              <div key={z.zonaId} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10, padding: "10px 16px", borderBottom: `1px solid ${C.cream}` }}>
-                <span style={{ color: e.color, background: e.bg, borderRadius: 8, padding: "3px 8px", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{e.label}</span>
-                <div style={{ flex: "1 1 200px" }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: C.dark }}>{z.zona}</div>
-                  <div style={{ fontSize: 12, color: C.gray }}>
-                    {z.sit.enZona.length ? `En la zona: ${z.sit.enZona.join(", ")}` : "Nadie en la zona"}
-                    {z.sit.sustituyeA && <span style={{ color: "#b45309" }}> · {z.sit.sustituto} entra por {z.sit.sustituyeA}</span>}
-                    {[[z.sit.titular, z.sit.tA], [z.sit.apoyo, z.sit.aA], [z.sit.sustituto, z.sit.sA]].filter(([p, f]) => p && f).map(([p]) => <span key={p} style={{ color: C.salmon }}> · falta {p}</span>)}
-                  </div>
+              <div key={z.zonaId} style={{ padding: "12px 16px", borderBottom: `1px solid ${C.cream}` }}>
+                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.dark }}>{z.zona}</div>
+                  <span style={{ color: e.color, background: e.bg, borderRadius: 8, padding: "3px 8px", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>{e.label}</span>
+                </div>
+                <div>
+                  <EquipoZona sit={z.sit} C={C} />
                 </div>
               </div>
             );
