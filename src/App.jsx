@@ -258,7 +258,7 @@ async function hashClave(nombre, clave) {
 }
 
 // ─── Pantalla de entrada: nombre → clave → perfil ───────────────────────────
-function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEjemplo, nombreSugerido, tutoraDemo }) {
+function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEjemplo, nombreSugerido, tutoraDemo, sinLeerPor = {} }) {
   // Demostración: globo de bienvenida con los pasos, la primera vez en esta pestaña
   const [globo, setGlobo] = useState(() => { try { return MODO_DEMO && !sessionStorage.getItem("galvandesk:globo"); } catch { return MODO_DEMO; } });
   const [ejemploListo, setEjemploListo] = useState(() => { try { return !!sessionStorage.getItem("galvandesk:ejemplo"); } catch { return false; } });
@@ -324,6 +324,24 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
           <div style={{ fontSize: 11, color: C.gray }}>{b.sub}</div>
         </button>
       ))}
+      {/* Demo: entrar como cualquier profe (p. ej. quien ha recibido un aviso de Galvángram) */}
+      {(ejemploListo || profesores.length > 4) && (() => {
+        const conAvisos = profesores.filter(p => sinLeerPor[p]).sort((a, b) => sinLeerPor[b].urgentes - sinLeerPor[a].urgentes || a.localeCompare(b));
+        const resto = profesores.filter(p => !sinLeerPor[p]).sort((a, b) => a.localeCompare(b));
+        const etiqueta = p => { const n = sinLeerPor[p]; return n ? `${p} · ${n.urgentes ? "🚨" : "🔔"} ${n.total} mensaje(s) nuevo(s)` : p; };
+        return (
+          <div style={{ background: C.cream, border: `2px dashed ${C.teal}`, borderRadius: 10, padding: "10px 14px", marginBottom: 8 }}>
+            <label htmlFor="gd-otro-profe" style={{ fontSize: 14, fontWeight: 700, color: C.dark, display: "block" }}>👥 Entrar como otro profe del claustro</label>
+            <div style={{ fontSize: 11, color: C.gray, marginBottom: 6 }}>Para ver un mensaje de Galvángram, entra como quien lo ha recibido.</div>
+            <select id="gd-otro-profe" value="" onChange={e => { if (e.target.value) onEntrar(e.target.value, PERFILES[0], { otro: true }); }}
+              style={{ width: "100%", padding: "10px 12px", borderRadius: 8, border: `1px solid ${C.teal}`, fontSize: 14, background: "#fff" }}>
+              <option value="">— Elige un profe —</option>
+              {conAvisos.length > 0 && <optgroup label="Con mensajes sin leer">{conAvisos.map(p => <option key={p} value={p}>{etiqueta(p)}</option>)}</optgroup>}
+              <optgroup label="Todo el claustro">{resto.map(p => <option key={p} value={p}>{p}</option>)}</optgroup>
+            </select>
+          </div>
+        );
+      })()}
       <div style={{ display: "flex", alignItems: "center", fontSize: 14, fontWeight: 800, color: C.dark, margin: "8px 0 2px" }}>{pasoNum(3, false)} Dentro, usa los botones de arriba</div>
       <div style={{ fontSize: 12, color: C.gray, marginLeft: 32 }}>Los botones de colores cambian de pantalla. Para cambiar de perfil, pulsa «Salir» y vuelves aquí.</div>
       <button onClick={() => setGlobo(true)} style={{ ...enlace, marginTop: 10, marginLeft: 32 }}>❓ Ver otra vez las instrucciones</button>
@@ -3742,7 +3760,10 @@ function Galvangramm({ vistaInicial = "enviar", mensajes, setMensajes, usuario, 
     setTipoMensaje("");
     setMensajePersonalizado("");
     setLugarMano({ grupo: "", aula: "", edificio: "" });
-    alert("✅ Mensaje enviado");
+    const para = destinatarios.join(", ");
+    alert(MODO_DEMO
+      ? `✅ Mensaje enviado a ${para}.\n\nEn la demo, para ver cómo le llega: pulsa «Salir» y, en «Entrar como otro profe del claustro», elige a ${destinatarios.length > 1 ? "uno de ellos" : para}.`
+      : `✅ Mensaje enviado a ${para}.`);
   };
   
   const mensajesNoLeidos = mensajes.filter(m => !m.leido && m.destinatario === usuario).length;
@@ -5622,9 +5643,10 @@ export default function App() {
     <PantallaEntrada profesores={profesores} cuentas={cuentas} setCuentas={setCuentas}
       nombreSugerido={profeDemo} onCargarEjemplo={cargarEjemploGuardias}
       tutoraDemo={tutoraDemo}
-      onEntrar={(nombre, p) => {
+      sinLeerPor={mensajes.filter(m => !m.leido).reduce((acc, m) => { const a = acc[m.destinatario] || { total: 0, urgentes: 0 }; a.total++; if (m.urgente) a.urgentes++; acc[m.destinatario] = a; return acc; }, {})}
+      onEntrar={(nombre, p, opciones = {}) => {
         setUsuario(nombre); if (profesores.includes(nombre)) setFProfesor(nombre);
-        if (p.id === "profesor" && nombre !== tutoraDemo?.nombre && !["Ana Jiménez", "Elena Vega"].includes(nombre)) setUltimoProfe(nombre);
+        if (p.id === "profesor" && !opciones.otro && nombre !== tutoraDemo?.nombre && !["Ana Jiménez", "Elena Vega"].includes(nombre)) setUltimoProfe(nombre);
         guardarSesion({ usuario: nombre, perfil: p }); setPerfil(p); setTab(tabInicial(p.id));
       }} />
   );
