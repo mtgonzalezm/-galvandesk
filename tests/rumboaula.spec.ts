@@ -201,3 +201,17 @@ test('Preguntas frecuentes: desde la entrada (cómo instalar) y desde dentro de 
   await expect(page.getByRole('dialog', { name: 'Preguntas frecuentes' })).toHaveCount(0)
   expect(errores).toEqual([])
 })
+
+test('Manual de uso: enlazado desde la app y con sus imágenes', async ({ page }) => {
+  await empezar(page)
+  await expect(page.getByRole('link', { name: '📘 Manual de uso' })).toHaveAttribute('href', '/manual/')
+  await page.goto('/manual/')
+  await expect(page.getByRole('heading', { name: 'Manual de uso' })).toBeVisible()
+  // Todas las imágenes del manual existen
+  const rotas = await page.evaluate(async () => {
+    const urls = [...new Set([...document.querySelectorAll('img')].map(i => i.getAttribute('src')).concat([...document.querySelectorAll('[data-ampliar]')].map(b => b.getAttribute('data-ampliar'))))].filter(Boolean)
+    const r = await Promise.all(urls.map(async u => [u, (await fetch(new URL(u, location.href))).ok]))
+    return r.filter(([, ok]) => !ok).map(([u]) => u)
+  })
+  expect(rotas).toEqual([])
+})
