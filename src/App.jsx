@@ -346,6 +346,7 @@ function PantallaEntrada({ profesores, cuentas, setCuentas, onEntrar, onCargarEj
       <div style={{ fontSize: 12, color: C.gray, marginLeft: 32 }}>Los botones de colores cambian de pantalla. Para cambiar de perfil, pulsa «Salir» y vuelves aquí.</div>
       <button onClick={() => setGlobo(true)} style={{ ...enlace, marginTop: 10, marginLeft: 32 }}>❓ Ver otra vez las instrucciones</button>
       <button onClick={() => abrirPreguntas("instalar")} style={{ ...enlace, marginTop: 6, marginLeft: 32, display: "block" }}>📲 Cómo instalarla en el móvil o el ordenador · Preguntas frecuentes</button>
+      <a href="/manual/" target="_blank" rel="noopener" style={{ ...enlace, marginTop: 6, marginLeft: 32, display: "block", textDecoration: "none" }}>📘 Manual de uso</a>
     </div>
   ) : null;
 
@@ -5387,6 +5388,10 @@ function PreguntasFrecuentes() {
           <button onClick={() => setAbierto(false)} aria-label="Cerrar preguntas frecuentes" style={{ background: "rgba(255,255,255,.2)", border: "1px solid rgba(255,255,255,.4)", color: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontWeight: 700 }}>✕</button>
         </div>
         <div style={{ overflowY: "auto", padding: "8px 18px 18px", fontSize: 14, lineHeight: 1.55, color: C.dark }}>
+          <a href="/manual/" target="_blank" rel="noopener" style={{ display: "flex", alignItems: "center", gap: 12, margin: "8px 0 4px", padding: "12px 14px", borderRadius: 12, background: "#E8F5F3", border: `2px solid ${C.teal}`, color: C.dark, textDecoration: "none" }}>
+            <Icono nombre="como-se-usa" tam={36} />
+            <span><strong style={{ fontSize: 15 }}>📘 Manual de uso</strong><br /><span style={{ fontSize: 13, color: C.gray }}>Paso a paso, por perfiles, con las pantallas reales. Se abre en otra pestaña.</span></span>
+          </a>
           {PREGUNTAS.map(({ id, q, a }) => (
             <details key={id} open={desplegada === id} onToggle={e => { if (e.currentTarget.open) setDesplegada(id); else if (desplegada === id) setDesplegada(""); }}
               style={{ borderBottom: `1px solid ${C.light}`, padding: "10px 0" }}>
